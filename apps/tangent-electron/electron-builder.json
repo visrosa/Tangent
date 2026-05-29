@@ -126,6 +126,8 @@
 	},
 	"linux": {
 		"category": "Office",
+		"maintainer": "visrosa at https://github.com/visrosa/Tangent",
+		"vendor": "visrosa/Tangent",
 		"target": [
 			{
 				"target": "AppImage",
@@ -169,6 +171,10 @@
 				"mimeType": "image/bmp"
 			}
 		]
+	},
+	"rpm": {
+		"group": "Applications/Productivity",
+		"summary": "Tangent note-writing and thought-mapping app"
 	},
 	"publish": [
 		{

@@ -13,9 +13,10 @@ const args = new Set(process.argv.slice(2))
 const vendorNpmCache = args.has('--vendor-npm-cache')
 const vendorNode = args.has('--vendor-node')
 const series = process.env.UBUNTU_SERIES || 'noble'
+const defaultMaintainerName = 'visrosa (https://github.com/visrosa/Tangent)'
 const maintainer = process.env.DEBEMAIL
-	? `${process.env.DEBFULLNAME || appPackage.author?.name || 'Tangent Maintainers'} <${process.env.DEBEMAIL}>`
-	: `${appPackage.author?.name || 'Tangent Maintainers'} <${appPackage.author?.email || 'maintainers@example.invalid'}>`
+	? `${process.env.DEBFULLNAME || defaultMaintainerName} <${process.env.DEBEMAIL}>`
+	: `${defaultMaintainerName} <maintainers@example.invalid>`
 
 const channel = appPackage.version.includes('-') ? 'beta' : 'stable'
 const sourcePackage = channel === 'beta' ? 'tangent-beta' : 'tangent'
@@ -124,7 +125,7 @@ Maintainer: ${maintainer}
 Build-Depends: debhelper-compat (= 13), nodejs, npm, dpkg-dev
 Standards-Version: 4.7.0
 Rules-Requires-Root: no
-Homepage: https://www.tangentnotes.com/
+Homepage: https://github.com/visrosa/Tangent
 
 Package: ${debianPackage}
 Architecture: amd64
@@ -142,7 +143,7 @@ writeFile(path.join(debianDir, 'changelog'), `${sourcePackage} (${debianVersion}
 
 writeFile(path.join(debianDir, 'rules'), `#!/usr/bin/make -f
 
-export TANGENT_DEB_CHANNEL=${channel}
+export TANGENT_CHANNEL=${channel}
 export npm_config_cache=$(CURDIR)/vendor/npm-cache
 export npm_config_offline=true
 export npm_config_audit=false
@@ -171,7 +172,7 @@ writeFile(path.join(debianDir, 'source', 'format'), '3.0 (quilt)\n')
 writeFile(path.join(debianDir, 'source', 'options'), 'extend-diff-ignore = "(^|/)package-lock\\.json$"\n')
 writeFile(path.join(debianDir, 'copyright'), `Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: Tangent
-Source: https://github.com/suchnsuch/tangent-public
+Source: https://github.com/visrosa/Tangent
 
 Files: *
 Copyright: 2022 Taylor Hadden

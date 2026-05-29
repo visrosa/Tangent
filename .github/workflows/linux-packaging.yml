@@ -9,8 +9,8 @@ on:
       - "v*"
 
 jobs:
-  deb:
-    name: Build .deb
+  linux-packages:
+    name: Build Linux packages
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -27,22 +27,24 @@ jobs:
           node-version: "22"
           cache: npm
 
-      - name: Install Debian packaging tools
-        run: sudo apt-get update && sudo apt-get install -y debhelper devscripts dpkg-dev lintian
+      - name: Install Linux packaging tools
+        run: sudo apt-get update && sudo apt-get install -y debhelper devscripts dpkg-dev lintian rpm
 
       - name: Install npm dependencies
         run: npm ci --workspaces --include-workspace-root
 
-      - name: Build Debian package
-        run: npm run package:linux:deb
+      - name: Build Linux packages
+        run: npm run package:linux:packages
 
-      - name: Upload .deb artifact
+      - name: Upload Linux package artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: tangent-deb
-          path: apps/tangent-electron/dist/*.deb
+          name: tangent-linux-packages
+          path: |
+            apps/tangent-electron/dist/*.deb
+            apps/tangent-electron/dist/*.rpm
 
-      - name: Publish .deb to GitHub Release
+      - name: Publish Linux packages to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
@@ -53,9 +55,9 @@ jobs:
           fi
 
           if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "Tangent Debian package." $RELEASE_FLAGS
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "Tangent Linux packages." $RELEASE_FLAGS
           fi
-          gh release upload "$GITHUB_REF_NAME" apps/tangent-electron/dist/*.deb --clobber
+          gh release upload "$GITHUB_REF_NAME" apps/tangent-electron/dist/*.deb apps/tangent-electron/dist/*.rpm --clobber
 
   ppa-source:
     name: Prepare PPA source (${{ matrix.series }})
@@ -87,7 +89,7 @@ jobs:
         run: npm run package:ppa-source -- --vendor-npm-cache --vendor-node
         env:
           UBUNTU_SERIES: ${{ matrix.series }}
-          DEBFULLNAME: Tangent Maintainers
+          DEBFULLNAME: visrosa (https://github.com/visrosa/Tangent)
           DEBEMAIL: maintainer@ubuntu.com
 
       - name: Lint source package

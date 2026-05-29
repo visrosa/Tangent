@@ -7,7 +7,7 @@
 	"scripts": {
 		"test": "npm run test --workspaces --if-present",
 		"build": "npm run build --workspaces --if-present",
-		"package:linux:deb": "node scripts/packaging/build-linux-deb.cjs",
+		"package:linux:packages": "node scripts/packaging/build-linux-deb.cjs",
 		"package:ppa-source": "node scripts/packaging/prepare-ppa-source.cjs"
 	},
 	"author": "Taylor Hadden",

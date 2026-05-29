@@ -9,14 +9,14 @@ const appDir = path.join(repoRoot, 'apps', 'tangent-electron')
 const appPackagePath = path.join(appDir, 'package.json')
 const appPackage = JSON.parse(fs.readFileSync(appPackagePath, 'utf8'))
 
-const requestedChannel = process.env.TANGENT_DEB_CHANNEL
+const requestedChannel = process.env.TANGENT_CHANNEL
 const inferredChannel = appPackage.version.includes('-') ? 'beta' : 'stable'
 const channel = requestedChannel || inferredChannel
 const packageName = channel === 'beta' ? 'tangent-beta' : 'tangent'
 const minimumNodeMajor = 22
 
 if (!['stable', 'beta'].includes(channel)) {
-	console.error(`Unsupported TANGENT_DEB_CHANNEL "${channel}". Use "stable" or "beta".`)
+	console.error(`Unsupported TANGENT_CHANNEL "${channel}". Use "stable" or "beta".`)
 	process.exit(1)
 }
 
@@ -40,9 +40,9 @@ function run(command, args, options = {}) {
 	}
 }
 
-console.log(`Building Debian package for ${appPackage.productName || appPackage.name}`)
+console.log(`Building Linux packages for ${appPackage.productName || appPackage.name}`)
 console.log(`Version: ${appPackage.version}`)
-console.log(`Debian package name: ${packageName}`)
+console.log(`Linux package name: ${packageName}`)
 
 run('npm', ['run', 'build', '--workspace', 'packages/tangent-query-parser'])
 run('npm', ['run', 'build', '--workspace', 'packages/tangent-html-to-markdown'])
@@ -56,10 +56,13 @@ run('npm', [
 	'electron-builder',
 	'--linux',
 	'deb',
+	'rpm',
 	'--x64',
 	'--publish',
 	'never',
 	'-c.linux.executableName=tangent',
 	`-c.deb.packageName=${packageName}`,
-	`-c.deb.artifactName=${packageName}-\${version}-\${arch}.\${ext}`
+	`-c.deb.artifactName=${packageName}-\${version}-\${arch}.\${ext}`,
+	`-c.rpm.packageName=${packageName}`,
+	`-c.rpm.artifactName=${packageName}-\${version}-\${arch}.\${ext}`
 ])
