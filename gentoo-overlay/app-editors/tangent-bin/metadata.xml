@@ -5,7 +5,7 @@
     <remote-id type="github">visrosa/Tangent</remote-id>
   </upstream>
   <longdescription lang="en">
-    Binary Tangent package that installs app.asar from release zip assets
+    Binary Tangent package that installs app.asar from release tarball assets
     and runs it using the system Electron runtime.
   </longdescription>
 </pkgmetadata>
