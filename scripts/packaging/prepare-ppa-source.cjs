@@ -46,7 +46,7 @@ function run(command, args, options = {}) {
 }
 
 function hasCommand(command) {
-	const result = spawnSync(command, ['--version'], {
+	const result = spawnSync('sh', ['-c', `command -v ${command}`], {
 		cwd: repoRoot,
 		stdio: 'ignore',
 		shell: process.platform === 'win32'
@@ -143,11 +143,11 @@ writeFile(path.join(debianDir, 'changelog'), `${sourcePackage} (${debianVersion}
 writeFile(path.join(debianDir, 'rules'), `#!/usr/bin/make -f
 
 export TANGENT_DEB_CHANNEL=${channel}
-export npm_config_cache=$(CURDIR)/debian/vendor/npm-cache
+export npm_config_cache=$(CURDIR)/vendor/npm-cache
 export npm_config_offline=true
 export npm_config_audit=false
 export npm_config_fund=false
-export PATH := $(CURDIR)/debian/vendor/node/bin:$(PATH)
+export PATH := $(CURDIR)/vendor/node/bin:$(PATH)
 
 %:
 \tdh $@
@@ -180,14 +180,14 @@ License: Apache-2.0
 
 if (vendorNpmCache) {
 	const npmCache = process.env.npm_config_cache || path.join(os.homedir(), '.npm')
-	const cacheDest = path.join(debianDir, 'vendor', 'npm-cache')
+	const cacheDest = path.join(sourceDir, 'vendor', 'npm-cache')
 	console.log(`Vendoring npm cache from ${npmCache}`)
 	fs.cpSync(npmCache, cacheDest, { recursive: true })
 }
 
 if (vendorNode) {
 	const nodeHome = getNodeHome()
-	const nodeDest = path.join(debianDir, 'vendor', 'node')
+	const nodeDest = path.join(sourceDir, 'vendor', 'node')
 	console.log(`Vendoring Node runtime from ${nodeHome}`)
 	fs.cpSync(nodeHome, nodeDest, { recursive: true })
 }
