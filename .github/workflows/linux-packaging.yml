@@ -1,4 +1,4 @@
-name: Debian packaging
+name: Linux packaging
 
 on:
   workflow_dispatch:
@@ -28,7 +28,7 @@ jobs:
           cache: npm
 
       - name: Install Linux packaging tools
-        run: sudo apt-get update && sudo apt-get install -y debhelper devscripts dpkg-dev lintian rpm
+        run: sudo apt-get update && sudo apt-get install -y debhelper devscripts dpkg-dev lintian rpm zstd
 
       - name: Install npm dependencies
         run: npm ci --workspaces --include-workspace-root
@@ -36,13 +36,19 @@ jobs:
       - name: Build Linux packages
         run: npm run package:linux:packages
 
+      - name: Prepare Gentoo source assets
+        run: npm run package:gentoo-source
+
       - name: Upload Linux package artifacts
         uses: actions/upload-artifact@v4
         with:
           name: tangent-linux-packages
           path: |
+            apps/tangent-electron/dist/*-linux.tar.gz
             apps/tangent-electron/dist/*.deb
             apps/tangent-electron/dist/*.rpm
+            dist/gentoo-source/*-source.tar.gz
+            dist/gentoo-source/*-vendor.tar.zst
 
       - name: Publish Linux packages to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
@@ -61,7 +67,7 @@ jobs:
           else
             gh release edit "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "$RELEASE_NOTES"
           fi
-          gh release upload "$GITHUB_REF_NAME" apps/tangent-electron/dist/*.deb apps/tangent-electron/dist/*.rpm --clobber
+          gh release upload "$GITHUB_REF_NAME" apps/tangent-electron/dist/*-linux.tar.gz apps/tangent-electron/dist/*.deb apps/tangent-electron/dist/*.rpm dist/gentoo-source/*-source.tar.gz dist/gentoo-source/*-vendor.tar.zst --clobber
 
   ppa-source:
     name: Prepare PPA source (${{ matrix.series }})

@@ -14,6 +14,9 @@ const inferredChannel = appPackage.version.includes('-') ? 'beta' : 'stable'
 const channel = requestedChannel || inferredChannel
 const packageName = channel === 'beta' ? 'tangent-beta' : 'tangent'
 const minimumNodeMajor = 22
+const distDir = path.join(appDir, 'dist')
+const linuxUnpackedDir = path.join(distDir, 'linux-unpacked')
+const linuxTarballName = `${packageName}-${appPackage.version}-linux.tar.gz`
 
 if (!['stable', 'beta'].includes(channel)) {
 	console.error(`Unsupported TANGENT_CHANNEL "${channel}". Use "stable" or "beta".`)
@@ -66,3 +69,10 @@ run('npm', [
 	`-c.rpm.packageName=${packageName}`,
 	`-c.rpm.artifactName=${packageName}-\${version}-\${arch}.\${ext}`
 ])
+
+if (!fs.existsSync(linuxUnpackedDir)) {
+	console.error(`Expected linux-unpacked output at ${linuxUnpackedDir}, but it was not found.`)
+	process.exit(1)
+}
+
+run('tar', ['-czf', linuxTarballName, 'linux-unpacked'], { cwd: distDir })
