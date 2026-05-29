@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - debian_packaging
+      - linux_packaging
     tags:
       - "v*"
 
