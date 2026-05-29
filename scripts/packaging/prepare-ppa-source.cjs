@@ -2,7 +2,6 @@
 
 const { spawnSync } = require('child_process')
 const fs = require('fs')
-const os = require('os')
 const path = require('path')
 
 const repoRoot = path.resolve(__dirname, '..', '..')
@@ -102,15 +101,6 @@ function writeFile(filePath, contents, mode) {
 	if (mode) fs.chmodSync(filePath, mode)
 }
 
-function getNodeHome() {
-	const binDir = path.dirname(process.execPath)
-	const nodeHome = path.dirname(binDir)
-	if (!fs.existsSync(path.join(nodeHome, 'bin', 'node'))) {
-		throw new Error(`Could not find Node home from ${process.execPath}`)
-	}
-	return nodeHome
-}
-
 fs.rmSync(outputRoot, { recursive: true, force: true })
 fs.mkdirSync(outputRoot, { recursive: true })
 copyTree(repoRoot, sourceDir)
@@ -122,7 +112,7 @@ writeFile(path.join(debianDir, 'control'), `Source: ${sourcePackage}
 Section: editors
 Priority: optional
 Maintainer: ${maintainer}
-Build-Depends: debhelper-compat (= 13), nodejs, npm, dpkg-dev
+Build-Depends: debhelper-compat (= 13), nodejs, npm
 Standards-Version: 4.7.0
 Rules-Requires-Root: no
 Homepage: https://github.com/visrosa/Tangent
@@ -141,14 +131,11 @@ writeFile(path.join(debianDir, 'changelog'), `${sourcePackage} (${debianVersion}
  -- ${maintainer}  ${new Date().toUTCString().replace('GMT', '+0000')}
 `)
 
-writeFile(path.join(debianDir, 'rules'), `#!/usr/bin/make -f
+let rules = `#!/usr/bin/make -f
 
 export TANGENT_CHANNEL=${channel}
-export npm_config_cache=$(CURDIR)/vendor/npm-cache
-export npm_config_offline=true
 export npm_config_audit=false
 export npm_config_fund=false
-export PATH := $(CURDIR)/vendor/node/bin:$(PATH)
 
 %:
 \tdh $@
@@ -166,7 +153,23 @@ override_dh_auto_install:
 \tdpkg-deb -x apps/tangent-electron/dist/${debianPackage}-*.deb debian/${debianPackage}
 
 override_dh_auto_test:
-`, 0o755)
+`
+
+if (vendorNpmCache) {
+	rules = rules.replace(
+		`export npm_config_audit=false`,
+		`export npm_config_cache=$(CURDIR)/vendor/npm-cache\nexport npm_config_offline=true\nexport npm_config_audit=false`
+	)
+}
+
+if (vendorNode) {
+	rules = rules.replace(
+		`export npm_config_fund=false`,
+		`export npm_config_fund=false\nexport PATH := $(CURDIR)/vendor/node/bin:$(PATH)`
+	)
+}
+
+writeFile(path.join(debianDir, 'rules'), rules, 0o755)
 
 writeFile(path.join(debianDir, 'source', 'format'), '3.0 (quilt)\n')
 writeFile(path.join(debianDir, 'source', 'options'), 'extend-diff-ignore = "(^|/)package-lock\\.json$"\n')
@@ -180,14 +183,18 @@ License: Apache-2.0
 `)
 
 if (vendorNpmCache) {
-	const npmCache = process.env.npm_config_cache || path.join(os.homedir(), '.npm')
+	const npmCache = process.env.npm_config_cache || path.join(process.env.HOME || '', '.npm')
 	const cacheDest = path.join(sourceDir, 'vendor', 'npm-cache')
 	console.log(`Vendoring npm cache from ${npmCache}`)
 	fs.cpSync(npmCache, cacheDest, { recursive: true })
 }
 
 if (vendorNode) {
-	const nodeHome = getNodeHome()
+	const binDir = path.dirname(process.execPath)
+	const nodeHome = path.dirname(binDir)
+	if (!fs.existsSync(path.join(nodeHome, 'bin', 'node'))) {
+		throw new Error(`Could not find Node home from ${process.execPath}`)
+	}
 	const nodeDest = path.join(sourceDir, 'vendor', 'node')
 	console.log(`Vendoring Node runtime from ${nodeHome}`)
 	fs.cpSync(nodeHome, nodeDest, { recursive: true })

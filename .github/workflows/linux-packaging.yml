@@ -96,14 +96,14 @@ jobs:
         run: npm ci --workspaces --include-workspace-root
 
       - name: Prepare Launchpad source package
-        run: npm run package:ppa-source -- --vendor-npm-cache --vendor-node
+        run: npm run package:ppa-source
         env:
           UBUNTU_SERIES: ${{ matrix.series }}
           DEBFULLNAME: visrosa (https://github.com/visrosa/Tangent)
           DEBEMAIL: maintainer@ubuntu.com
 
       - name: Lint source package
-        run: lintian dist/ppa-source/${{ matrix.series }}/*.changes || true
+        run: lintian dist/ppa-source/${{ matrix.series }}/*.changes
 
       - name: Upload source package
         uses: actions/upload-artifact@v4
