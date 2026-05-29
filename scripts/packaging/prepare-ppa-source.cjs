@@ -154,6 +154,8 @@ export PATH := $(CURDIR)/debian/vendor/node/bin:$(PATH)
 
 override_dh_auto_build:
 \tnpm ci --workspaces --include-workspace-root --offline
+\tnpm run build --workspace packages/tangent-query-parser
+\tnpm run build --workspace packages/tangent-html-to-markdown
 \tnpm run build --workspace lib/typewriter
 \tnpm run build --workspace apps/tangent-electron
 \tnpm exec --workspace apps/tangent-electron -- electron-builder --linux deb --x64 --publish never -c.deb.packageName=${debianPackage} -c.deb.artifactName=${debianPackage}-\${version}-\${arch}.\${ext}

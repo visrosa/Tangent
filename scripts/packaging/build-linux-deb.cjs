@@ -44,6 +44,8 @@ console.log(`Building Debian package for ${appPackage.productName || appPackage.
 console.log(`Version: ${appPackage.version}`)
 console.log(`Debian package name: ${packageName}`)
 
+run('npm', ['run', 'build', '--workspace', 'packages/tangent-query-parser'])
+run('npm', ['run', 'build', '--workspace', 'packages/tangent-html-to-markdown'])
 run('npm', ['run', 'build', '--workspace', 'lib/typewriter'])
 run('npm', ['run', 'build', '--workspace', 'apps/tangent-electron'])
 run('npm', [
