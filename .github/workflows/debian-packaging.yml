@@ -3,6 +3,8 @@ name: Debian packaging
 on:
   workflow_dispatch:
   push:
+    branches:
+      - debian_packaging
     tags:
       - "v*"
 

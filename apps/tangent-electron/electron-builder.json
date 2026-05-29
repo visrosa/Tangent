@@ -2,10 +2,8 @@
 	"appId": "com.SuchnSuch.Tangent",
 	"productName": "Tangent",
 	"copyright": "Copyright © 2022 Taylor Hadden",
-
 	"generateUpdatesFilesForAllChannels": true,
 	"electronVersion": "42.1.0",
-
 	"files": [
 		"node_modules/**/*",
 		"static/**/*",
@@ -14,17 +12,21 @@
 		{
 			"from": "__build",
 			"to": "__build",
-			"filter": ["**/*",
-				"!bundle/app.css", "!bundle/app.css.map"
+			"filter": [
+				"**/*",
+				"!bundle/app.css",
+				"!bundle/app.css.map"
 			]
 		},
 		{
 			"from": "__build/bundle",
 			"to": "static",
-			"filter": ["*.css", "*.css.map"]
+			"filter": [
+				"*.css",
+				"*.css.map"
+			]
 		}
 	],
-
 	"mac": {
 		"category": "public.app-category.productivity",
 		"hardenedRuntime": true,
@@ -39,12 +41,17 @@
 		"extendInfo": {
 			"CFBundleDocumentTypes": [
 				{
-					"LSItemContentTypes": ["public.folder", "public.directory"],
+					"LSItemContentTypes": [
+						"public.folder",
+						"public.directory"
+					],
 					"CFBundleTypeRole": "Editor",
 					"LSHandlerRank": "Alternate"
 				},
 				{
-					"LSItemContentTypes": ["public.plain-text"],
+					"LSItemContentTypes": [
+						"public.plain-text"
+					],
 					"CFBundleTypeRole": "Editor",
 					"LSHandlerRank": "Default"
 				},
@@ -63,16 +70,21 @@
 			]
 		}
 	},
-
 	"win": {
 		"target": [
 			{
 				"target": "nsis",
-				"arch": ["x64", "arm64"]
+				"arch": [
+					"x64",
+					"arm64"
+				]
 			},
 			{
 				"target": "portable",
-				"arch": ["x64", "arm64"]
+				"arch": [
+					"x64",
+					"arm64"
+				]
 			}
 		],
 		"signtoolOptions": {
@@ -80,36 +92,53 @@
 		},
 		"fileAssociations": [
 			{
-				"ext": ["md", "mdx"],
+				"ext": [
+					"md",
+					"mdx"
+				],
 				"description": "Markdown Files",
 				"role": "Editor",
 				"rank": "Alternate"
 			},
 			{
-				"ext": ["jpg", "jpeg", "png", "PNG", "gif", "bmp", "svg"],
+				"ext": [
+					"jpg",
+					"jpeg",
+					"png",
+					"PNG",
+					"gif",
+					"bmp",
+					"svg"
+				],
 				"description": "Images Files",
 				"role": "Viewer"
 			}
 		]
 	},
-
 	"nsis": {
 		"artifactName": "${productName}-Setup-${version}.${ext}",
 		"oneClick": false,
 		"allowElevation": true,
 		"allowToChangeInstallationDirectory": true
 	},
-
 	"portable": {
 		"artifactName": "${productName}-Portable-${version}.${ext}"
 	},
-
 	"linux": {
 		"category": "Office",
-		"target": {
-			"target": "AppImage",
-			"arch": ["x64", "arm64"]
-		},
+		"target": [
+			{
+				"target": "AppImage",
+				"arch": [
+					"x64"]
+			},
+			{
+				"target": "deb",
+				"arch": [
+					"x64"
+				]
+			}
+		],
 		"fileAssociations": [
 			{
 				"ext": "md",
@@ -141,7 +170,6 @@
 			}
 		]
 	},
-
 	"publish": [
 		{
 			"provider": "s3",
@@ -149,6 +177,5 @@
 			"path": "/Tangent/Releases/"
 		}
 	],
-
 	"afterSign": "build/notarize.js"
 }
