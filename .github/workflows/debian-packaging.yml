@@ -9,8 +9,8 @@ on:
       - "v*"
 
 jobs:
-  beta-deb:
-    name: Build beta .deb
+  deb:
+    name: Build .deb
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -33,24 +33,27 @@ jobs:
       - name: Install npm dependencies
         run: npm ci --workspaces --include-workspace-root
 
-      - name: Build beta Debian package
+      - name: Build Debian package
         run: npm run package:linux:deb
-        env:
-          TANGENT_DEB_CHANNEL: beta
 
-      - name: Upload beta .deb artifact
+      - name: Upload .deb artifact
         uses: actions/upload-artifact@v4
         with:
-          name: tangent-beta-deb
+          name: tangent-deb
           path: apps/tangent-electron/dist/*.deb
 
-      - name: Publish beta .deb to GitHub Release
+      - name: Publish .deb to GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          RELEASE_FLAGS=""
+          if [[ "$GITHUB_REF_NAME" == *"alpha"* || "$GITHUB_REF_NAME" == *"beta"* || "$GITHUB_REF_NAME" == *"rc"* ]]; then
+            RELEASE_FLAGS="--prerelease"
+          fi
+
           if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "Tangent beta Debian package." --prerelease
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "Tangent Debian package." $RELEASE_FLAGS
           fi
           gh release upload "$GITHUB_REF_NAME" apps/tangent-electron/dist/*.deb --clobber
 

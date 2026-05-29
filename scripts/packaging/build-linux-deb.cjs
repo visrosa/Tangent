@@ -59,6 +59,7 @@ run('npm', [
 	'--x64',
 	'--publish',
 	'never',
+	'-c.linux.executableName=tangent',
 	`-c.deb.packageName=${packageName}`,
 	`-c.deb.artifactName=${packageName}-\${version}-\${arch}.\${ext}`
 ])
