@@ -133,12 +133,6 @@
 				"target": "AppImage",
 				"arch": [
 					"x64"]
-			},
-			{
-				"target": "deb",
-				"arch": [
-					"x64"
-				]
 			}
 		],
 		"fileAssociations": [
@@ -173,8 +167,8 @@
 		]
 	},
 	"rpm": {
-		"group": "Applications/Productivity",
-		"summary": "Tangent note-writing and thought-mapping app"
+		"packageCategory": "Applications/Productivity",
+		"synopsis": "Tangent note-writing and thought-mapping app"
 	},
 	"publish": [
 		{
