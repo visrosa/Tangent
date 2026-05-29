@@ -54,8 +54,12 @@ jobs:
             RELEASE_FLAGS="--prerelease"
           fi
 
+          RELEASE_NOTES=$'Linux packages from this fork are provided as-is and not supported by the upstream project.\nUpstream: https://github.com/suchnsuch/Tangent\nRPM packages are currently untested. If you use an RPM-based distribution, please report results or issues.'
+
           if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "Tangent Linux packages." $RELEASE_FLAGS
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "$RELEASE_NOTES" $RELEASE_FLAGS
+          else
+            gh release edit "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "$RELEASE_NOTES"
           fi
           gh release upload "$GITHUB_REF_NAME" apps/tangent-electron/dist/*.deb apps/tangent-electron/dist/*.rpm --clobber
 
