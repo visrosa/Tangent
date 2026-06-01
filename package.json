@@ -6,7 +6,10 @@
 	"type": "module",
 	"scripts": {
 		"test": "npm run test --workspaces --if-present",
-		"build": "npm run build --workspaces --if-present"
+		"build": "npm run build --workspaces --if-present",
+		"package:linux:packages": "node scripts/packaging/build-linux-deb.cjs",
+		"package:ppa-source": "node scripts/packaging/prepare-ppa-source.cjs",
+		"package:gentoo-source": "node scripts/packaging/prepare-gentoo-source.cjs"
 	},
 	"author": "Taylor Hadden",
 	"license": "Apache-2.0",
