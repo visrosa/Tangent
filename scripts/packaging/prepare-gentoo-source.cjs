@@ -12,8 +12,8 @@ const appPackage = JSON.parse(fs.readFileSync(appPackagePath, 'utf8'))
 const distRoot = path.join(repoRoot, 'dist', 'gentoo-source')
 const sourceRootName = `tangent-${appPackage.version}`
 const sourceRoot = path.join(distRoot, sourceRootName)
-const sourceTarball = path.join(distRoot, `${sourceRootName}-source.tar.gz`)
-const vendorTarball = path.join(distRoot, `${sourceRootName}-vendor.tar.zst`)
+const sourceTarball = path.join(distRoot, `${sourceRootName}-gentoo-source.tar.gz`)
+const vendorTarball = path.join(distRoot, `${sourceRootName}-gentoo-vendor.tar.zst`)
 
 function run(command, args, options = {}) {
 	console.log(`\n> ${command} ${args.join(' ')}`)
