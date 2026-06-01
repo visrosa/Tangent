@@ -73,6 +73,7 @@ function copyTree(from, to) {
 fs.rmSync(distRoot, { recursive: true, force: true })
 fs.mkdirSync(distRoot, { recursive: true })
 copyTree(repoRoot, sourceRoot)
+run('tar', ['-czf', sourceTarball, '-C', distRoot, sourceRootName])
 
 const npmCache = process.env.npm_config_cache || path.join(process.env.HOME || '', '.npm')
 if (!fs.existsSync(npmCache)) {
@@ -98,7 +99,6 @@ if (fs.existsSync(electronBuilderCache)) {
 	fs.cpSync(electronBuilderCache, path.join(vendorRoot, 'electron-builder-cache'), { recursive: true })
 }
 
-run('tar', ['-czf', sourceTarball, '-C', distRoot, sourceRootName])
 run('tar', ['--zstd', '-cf', vendorTarball, '-C', sourceRoot, 'vendor'])
 
 console.log('\nGentoo source assets:')
