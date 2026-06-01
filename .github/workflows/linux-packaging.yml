@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - linux_packaging
+      - versions/tangent-v*
     tags:
-      - "v*"
+      - "tangent-v*"
 
 jobs:
   linux-packages:
