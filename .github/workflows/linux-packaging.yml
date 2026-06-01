@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - versions/tangent-v0.11
+      - versions/tangent-v*
     tags:
       - "tangent-v*"
 
