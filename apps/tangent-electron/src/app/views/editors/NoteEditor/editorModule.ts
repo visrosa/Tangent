@@ -57,6 +57,8 @@ interface VerifyListOptions {
 	targetIndent: string,
 	// Whether to apply the line's list format or incorporate into siblings'
 	basis: 'self' | 'rebasis'
+	// Whether to enforce that unordered glyphs are the same
+	normalizeUnorderedGlyphs: boolean
 }
 
 // Force the inclusion of elements so it is included in the module
@@ -212,7 +214,7 @@ export default function editorModule(editor: Editor, options: {
 	
 	function pushVerification<T>(instruction: VerificationInstruction<T>) {
 		if (verificationInstructions.length === 0) {
-			requestCallbackOnIdle(() => {
+			setTimeout(() => {
 				const instructions = verificationInstructions
 				verificationInstructions = []
 
@@ -225,7 +227,7 @@ export default function editorModule(editor: Editor, options: {
 					change.apply()
 				}
 				allowVerification = true
-			})
+			}, 0)
 		}
 		verificationInstructions.push(instruction)
 	}
@@ -237,7 +239,11 @@ export default function editorModule(editor: Editor, options: {
 	function isListGlyphCreationChange(delta: Delta) {
 		const changeInsert = getEditInfo(delta)
 		if (changeInsert?.insert?.length === 1) {
-			return changeInsert.insert.match(/[\.\)\w\d\*\-\+ ]/) != null
+			if (changeInsert.insert === '\n') return '\n'
+			if (changeInsert.insert.match(/[\.\)\w\d\*\-\+ ]/) != null) {
+				return true
+			}
+			return false
 		}
 		if (changeInsert?.shift < 0) {
 			return false // Not a glyph creator, still a valid edit change
@@ -263,7 +269,8 @@ export default function editorModule(editor: Editor, options: {
 				options: {
 					id,
 					targetIndent: newIndent,
-					basis: (isGlyphCreator && newList) ? 'self' : 'rebasis'
+					basis: (isGlyphCreator && newList) ? 'self' : 'rebasis',
+					normalizeUnorderedGlyphs: true
 				}
 			})
 			pushVerification({
@@ -271,7 +278,8 @@ export default function editorModule(editor: Editor, options: {
 				options: {
 					id,
 					targetIndent: oldIndent,
-					basis: 'rebasis'
+					basis: 'rebasis',
+					normalizeUnorderedGlyphs: true
 				}
 			})
 		} 
@@ -285,7 +293,8 @@ export default function editorModule(editor: Editor, options: {
 						options: {
 							id,
 							targetIndent: oldIndent,
-							basis: 'self'
+							basis: 'self',
+							normalizeUnorderedGlyphs: true
 						}
 					})
 				}
@@ -298,20 +307,24 @@ export default function editorModule(editor: Editor, options: {
 				options: {
 					id,
 					targetIndent: oldIndent,
-					basis: 'rebasis'
+					basis: 'rebasis',
+					normalizeUnorderedGlyphs: isListGlyphCreationChange(delta) !== '\n'
 				}
 			})
 		}
 		else if (newList) {
 			// Was not a list line, now it is
 			const isGlyphCreator = isListGlyphCreationChange(delta)
-			if (isGlyphCreator != null) { // Ignore non-single-key edits (probably a paste)
+			// Ignore non-single-key edits (probably a paste)
+			// Ignore new-line edits. Fixup will be handled by the other line
+			if (isGlyphCreator != null && isGlyphCreator !== '\n') { 
 				pushVerification({
 					func: verifyListContext,
 					options: {
 						id,
 						targetIndent: newIndent,
-						basis: isGlyphCreator ? 'self' : 'rebasis'
+						basis: isGlyphCreator ? 'self' : 'rebasis',
+						normalizeUnorderedGlyphs: true
 					}
 				})
 			}
@@ -447,7 +460,21 @@ export default function editorModule(editor: Editor, options: {
 		function enforceGlyphOnLine(listData: ListDefinition, lineStart: number, lineText: string) {
 			const { base, box } = splitCheckboxGlyphs(listData.glyph)
 			const targetBase = getTargetGlyph()
-			if (base !== targetBase || (!box && hasCheckbox)) {
+
+			let applyChange = false
+			if (base !== targetBase) {
+				if (options.normalizeUnorderedGlyphs) {
+					applyChange = true
+				}
+				else if (targetForm !== listData.form || !(targetForm === ListForm.Unordered || targetForm === ListForm.UnorderedLarge)) {
+					applyChange = true
+				}
+			}
+			else if (!box && hasCheckbox) {
+				applyChange = true
+			}
+
+			if (applyChange) {
 				change = change || editor.change
 
 				let finalTarget = targetBase
@@ -855,7 +882,7 @@ export default function editorModule(editor: Editor, options: {
 	function onKeyDown(event: ShortcutEvent) {
 		if (event.defaultPrevented) return
 
-		if (commandHandler(event)) return
+		if (commandHandler && commandHandler(event)) return
 
 		switch (event.modShortcut) {
 			case 'Enter':

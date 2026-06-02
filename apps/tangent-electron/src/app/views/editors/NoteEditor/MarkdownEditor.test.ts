@@ -399,6 +399,58 @@ describe('List Handling', () => {
 3. Three
 4. Four`)
 	})
+
+	it('Should not muck up an enter on a top line', async () => {
+		editor.doc = markdownToTextDocument(`
++ Some line
+- Some other line`)
+		
+		editor.select(1)
+		await wait(waitTime)
+		editor.insert('\n')
+		await wait(waitTime)
+
+		expect(editor.getText()).toEqual(`
+
++ Some line
+- Some other line`)
+	})
+
+	it('Should not normalize unordered lists from newlines', async () => {
+		editor.doc = markdownToTextDocument(`
++ Some line
+- Some other line
++ A third line`)
+		
+		editor.select(13)
+		await wait(waitTime)
+		editor.insert('\n')
+		await wait(waitTime)
+
+		expect(editor.getText()).toEqual(`
++ Some line
+
+- Some other line
++ A third line`)
+	})
+
+	it('Should allow for splitting numbered lists', async () => {
+		editor.doc = markdownToTextDocument(`
+1. Some line
+2. Some other line
+3. One more`)
+		
+		editor.select(14)
+		await wait(waitTime)
+		editor.insert('\n')
+		await wait(waitTime)
+
+		expect(editor.getText()).toEqual(`
+1. Some line
+
+1. Some other line
+2. One more`)
+	})
 	
 	describe('Checkboxes', () => {
 
