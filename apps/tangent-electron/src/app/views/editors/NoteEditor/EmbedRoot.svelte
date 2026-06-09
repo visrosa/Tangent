@@ -8,7 +8,7 @@ import type { UrlDataError, WebsiteData } from 'common/urlData'
 import PdfPreview from 'app/views/node-views/PdfPreview.svelte'
 import { timeFromContentId } from 'app/model/nodeViewStates/AudioVideoViewState'
 import { appendContextTemplate, type ContextMenuConstructorOptions } from 'app/model/menus'
-import { linkTextFromLink } from 'common/markdownModel/links'
+import { getMediaCustomizationsFromText, linkTextFromLink } from 'common/markdownModel/links'
 import { deepEqual } from 'fast-equals'
 
 type Form = {
@@ -40,25 +40,38 @@ type Form = {
 	mode: 'website'
 } & WebsiteData
 
-export let link: HrefFormedLink
-export let block: boolean
-export let workspace: Workspace
+let {
+	link, block, workspace,
+	onForm
+} : {
+	link: HrefFormedLink
+	block: boolean
+	workspace: Workspace
 
-export let onForm: (form: Form) => void
-let form: Form = null
-let mediaElement: HTMLVideoElement | HTMLAudioElement = null
+	onForm: (form: Form) => void
+} = $props()
 
-let height = -1
+export function getBlock() { return block }
+export function setBlock(isBlock: boolean) { block = isBlock }
+export function getLink() { return link }
+export function setLink(newLink: HrefFormedLink) { link = newLink }
 
-$: nodeHandle = workspace?.getHandle(link)
-$: onNodeHandleChanged(nodeHandle ? $nodeHandle : null)
-function onNodeHandleChanged(value: HandleResult) {
-	const newForm = handleToForm(value)
-	if (!deepEqual(form, newForm)) {
-		form = newForm
+let mediaElement: HTMLVideoElement | HTMLAudioElement = $state(null)
+
+let height = $state(-1)
+
+let nodeHandle = $derived(workspace?.getHandle(link))
+let nodeHandleResult = $derived(nodeHandle ? $nodeHandle : null)
+
+let form: Form = $derived(handleToForm(nodeHandleResult))
+let formCache: Form = undefined
+
+$effect(() => {
+	if (!deepEqual(form, formCache)) {
+		formCache = form
 		onForm(form)
 	}
-}
+})
 
 function handleToForm(value: HandleResult): Form {
 	if (!value) {
@@ -208,48 +221,36 @@ function getBaseStyle() {
 	return style
 }
 
-function imageStyle(customizations: string) {
+let containerStyle = $derived.by(() => {
+	let style = 'max-width: 100%;'
 
-	let style = getBaseStyle() + 'border-radius: 1px;'
-
-	if (customizations) {
-		for (let part of customizations.split(/\s+/).map(p => p.trim())) {
-			const match = part.match(/((\d+)(x(\d+))?)|((left)|(right))/i)
-			if (match) {
-				if (match[2]) {
-					const width = parseInt(match[1])
-					if (width >= 10) {
-						style += `width: ${width}px;`
-					}
-				}
-				if (match[4]) {
-					const height = parseInt(match[4])
-					if (height >= 10) {
-						style += `height: ${height}px;`
-					}
-				}
-				if (match[5]) {
-					const form = match[5].toLowerCase()
-					style += `float: ${form};`
-				}
-			}
-		}
+	let setWidth = false
+	const customizations = getMediaCustomizationsFromText(link.text)
+	if (customizations?.width >= 10) {
+		style += `width: ${customizations.width}px;`
+		setWidth = true
+	}
+	else if (form.mode === 'audio' || form.mode === 'video') {
+		style += `width: 100%;`
+		setWidth = true
 	}
 
-	return style
-}
+	if (height > 0) {
+		style += `height: ${height}px;`
+	}
+	else if (customizations?.height >= 10) {
+		style += `height: ${customizations.height}px;`
+	}
 
-function audioStyle() {
-	let style = getBaseStyle()
-	if (block) {
-		style +="width: 100%;"
+	if (customizations?.float && !setWidth && (form.mode === 'pdf' || form.mode === 'website')) {
+		style += 'width: 18em;' // I'd like this to be percentage-based, but that wasn't working…
+	}
+
+	if (block || !customizations?.float) {
+		style += 'margin: 0 auto;'
 	}
 	return style
-}
-
-function websiteStyle(form: WebsiteData) {
-	return getBaseStyle()
-}
+})
 
 function websiteImageStyle(form: WebsiteData) {
 	if (form.images?.length) {
@@ -258,18 +259,17 @@ function websiteImageStyle(form: WebsiteData) {
 	return ''
 }
 
-function avloaded(this: HTMLAudioElement | HTMLVideoElement, event: Event) {
+function onAvLoaded(this: HTMLAudioElement | HTMLVideoElement, event: Event) {
 	if ((form.mode === 'audio' || form.mode === 'video') && form.time) {
 		this.currentTime = form.time
 	}
 }
 
-$: mediaHacks(mediaElement, form)
-function mediaHacks(element: HTMLAudioElement | HTMLVideoElement, form: Form) {
-	if (element && form && (form.mode === 'audio' || form.mode === 'video')) {
-		element.currentTime = form.time
+$effect(() => {
+	if (mediaElement && form && (form.mode === 'audio' || form.mode === 'video')) {
+		mediaElement.currentTime = form.time
 	}
-}
+})
 
 function onMediaContext(event: MouseEvent) {
 	if (!mediaElement) return
@@ -298,13 +298,13 @@ function onMediaContext(event: MouseEvent) {
 {#if form.mode === 'error'}
 	<span class="error">⚠</span>
 {:else if form.mode === 'image'}
-	<!-- svelte-ignore a11y-missing-attribute -->
-	<img src={form.src} style={imageStyle(link.text)} on:error={e => error('Image not found!')} />
+	<!-- svelte-ignore a11y_missing_attribute -->
+	<img src={form.src} style={containerStyle} onerror={e => error('Image not found!')} />
 {:else if form.mode === 'audio'}
-	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
-	<media-controller style={audioStyle()} audio class="audio" on:click|preventDefault on:contextmenu={onMediaContext}>
-		<audio bind:this={mediaElement} slot="media" src={form.src} currenttime={form.time} on:loadedmetadata={avloaded}></audio>
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<media-controller style={containerStyle} audio class="audio" onclick={e => e.preventDefault()} oncontextmenu={onMediaContext}>
+		<audio bind:this={mediaElement} slot="media" src={form.src} currenttime={form.time} onloadedmetadata={onAvLoaded}></audio>
 		<media-settings-menu hidden anchor="auto">
 			<media-settings-menu-item>
 				Speed
@@ -333,11 +333,11 @@ function onMediaContext(event: MouseEvent) {
 		</media-control-bar>
 	</media-controller>
 {:else if form.mode === 'video'}
-	<!-- svelte-ignore a11y-click-events-have-key-events -->
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
-	<media-controller style={getBaseStyle()} on:click|preventDefault on:contextmenu={onMediaContext}>
-		<!-- svelte-ignore a11y-media-has-caption -->
-		<video bind:this={mediaElement} slot="media" src={form.src} currenttime={form.time} on:loadedmetadata={avloaded}></video>
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<media-controller style={containerStyle} onclick={e => e.preventDefault()} oncontextmenu={onMediaContext}>
+		<!-- svelte-ignore a11y_media_has_caption -->
+		<video bind:this={mediaElement} slot="media" src={form.src} currenttime={form.time} onloadedmetadata={onAvLoaded}></video>
 		<media-settings-menu hidden anchor="auto">
 			<media-settings-menu-item>
 				Speed
@@ -367,11 +367,11 @@ function onMediaContext(event: MouseEvent) {
 		</media-control-bar>
 	</media-controller>
 {:else if form.mode === 'pdf'}
-	<div class="pdf" style:height={height > 0 ? height + 'px' : ''}>
+	<div class="pdf" style={containerStyle}>
 		<PdfPreview path={form.src} content_id={form.content_id} bind:height />
 	</div>
 {:else if form.mode === 'website'}
-	<div class={'website-preview ' + form.mediaType} class:description={form.description} style={websiteStyle(form)}>
+	<div class={'website-preview ' + form.mediaType} class:description={form.description} style={containerStyle}>
 		<div class="info">
 			{#if form.title}
 				<h1>{form.title.trim()}</h1>
@@ -385,17 +385,18 @@ function onMediaContext(event: MouseEvent) {
 		<div class="image" style={websiteImageStyle(form)}></div>
 		{#if form.favicons.length}
 			<div class="link">
-				<!-- svelte-ignore a11y-missing-attribute -->
+				<!-- svelte-ignore a11y_missing_attribute -->
 				<img src={form.favicons[0]} width="16px" height="16px" />
 				<span>{form.url}</span>
 			</div>
 		{/if}
 	</div>
 {:else if form.mode === 'youtube'}
-	<iframe style={getBaseStyle()} title={form.title} src={form.src} width="480" height="270" frameborder="0" allow="encrypted-media; picture-in-picture;" allowFullScreen></iframe>
+	{@const customizations = getMediaCustomizationsFromText(link.text)}
+	{@const width = customizations?.width ?? 480}
+	{@const height = customizations?.height ?? width / (16/9)}
+	<iframe style={getBaseStyle()} title={form.title} src={form.src} width={width} height={height} frameborder="0" allow="encrypted-media; picture-in-picture;" allowFullScreen></iframe>
 {/if}
-
-<svelte:options accessors={true}/>
 
 <!--
 	DO NOT USE STYLES! All styles are defined in t-embed.css.

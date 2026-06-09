@@ -1,5 +1,5 @@
 import { type EmbedInfo, type HrefFormedLink, type LinkInfo, StructureType } from "../indexing/indexTypes"
-import type { AttributeMap, TextDocument } from '@typewriter/document'
+import type { AttributeMap, Op, TextDocument } from '@typewriter/document'
 import { lineToText } from '../typewriterUtils'
 import { type TreeNode, validatePath } from 'common/trees'
 import paths from '../paths'
@@ -9,49 +9,117 @@ import NoteParser from './NoteParser'
 import { ParsingContextType, type ParsingProgram } from './parsingContext'
 import { isExternalLink } from 'common/links'
 
-export const wikiLinkMatcher = /(\[\[)([^\[\]\n|#]*)(#[^\[\]\n|#]*)?(\|[^\[\]\n|#]*)?(\]\])?/
-
 interface ExtendedLinkInfo extends LinkInfo {
 	complete?: boolean
 }
 
+// A `[[` that is at the beginning of a string or has a non=`\` character in front
+const wikiLinkStartMatcher = /(?<=^|[^\\])(\[\[)/
+
+function indexOrNoneIfBeyond(index: number, limit: number) {
+	if (index > limit) return -1
+	return index
+}
+
+/**
+ * Identifies and extracts information about a [[wiki link]] in a string
+ * @param text The text to check and extract wiki link information from
+ * @param startIndex An offset to be applied to the found information (e.g. if the provided text is a slice of a larger string.)
+ * @returns Information about the matched link, or null if no link was found
+ */
 export function matchWikiLink(text: string, startIndex=0, options?: {
 	allowIncomplete?: boolean,
 	snipFormatCharacters?: boolean
 }): ExtendedLinkInfo {
-	const match = text.match(wikiLinkMatcher)
-	if (match && (options?.allowIncomplete || match[5])) {
-		const snipFormatCharacters = options?.snipFormatCharacters ?? true
-		let details: ExtendedLinkInfo = {
-			type: StructureType.Link,
-			form: 'wiki',
-			start: startIndex + match.index,
-			end: startIndex + match.index + match[0].length,
-			href: match[2]
-		}
+	const match = text.match(wikiLinkStartMatcher)
+	if (!match) return null
 
-		if (match[4]) {
-			// Optionally chop off the `|`
-			details.text = snipFormatCharacters ? match[4]?.substr(1) : match[4] 
-		}
+	const linkStart = match.index
 
-		if (match[3]) {
-			// Optionally chop off the `#`
-			details.content_id = snipFormatCharacters ? match[3].substr(1) : match[3]
+	// Move through matched `[]` pairs
+	let depth = 0
+	let index = linkStart + 2
+	for (; depth >= 0 && index < text.length; index++) {
+		let char = text[index]
+		if (char === '[') {
+			depth++
 		}
-
-		if (options?.allowIncomplete && match[5]) {
-			// No need to mark this otherwise
-			details.complete = true
+		else if (char === ']') {
+			depth--
 		}
-
-		return details
+		else if (char === '\\') {
+			// Jump the next character
+			index++
+		}
+		else if (char === '#' || char === '|' || char === '\n') {
+			break
+		}
 	}
-	return null
+
+	const hrefEnd = index + (depth <= -1 ? -1 : 0)
+
+	let contentIdStart = -1
+	let contentIdEnd = -1
+	let textStart = -1
+	let textEnd = -1
+
+	if (text[hrefEnd] === '#') {
+		contentIdStart = hrefEnd
+	}
+
+	const nextNewline = text.indexOf('\n', hrefEnd)
+	const lastIndex = nextNewline > -1 ? nextNewline : text.length
+	textStart = indexOrNoneIfBeyond(text.indexOf('|', hrefEnd), lastIndex)
+
+	if (textStart > -1) {
+		if (contentIdStart > -1) contentIdEnd = textStart
+	}
+
+	let endIndex = indexOrNoneIfBeyond(text.indexOf(']]', textStart > -1 ? textStart : hrefEnd), lastIndex)
+	let linkEnd = -1
+	if (endIndex > -1) {
+		linkEnd = endIndex + 2
+	}
+	else if (options?.allowIncomplete) {
+		endIndex = lastIndex
+		linkEnd = lastIndex
+	}
+
+	if (endIndex > -1) {
+		if (contentIdStart > -1 && contentIdEnd == -1) contentIdEnd = endIndex
+		if (textStart > -1 && textEnd == -1) textEnd = endIndex
+	}
+	else return null
+
+	const details: ExtendedLinkInfo = {
+		type: StructureType.Link,
+		form: 'wiki',
+		start: startIndex + linkStart,
+		end: startIndex + linkEnd,
+		href: text.substring(linkStart + 2, hrefEnd)
+	}
+
+	const snipFormatCharacters = options?.snipFormatCharacters ?? true
+
+	if (contentIdEnd > 0) {
+		details.content_id = text.substring(
+			snipFormatCharacters ? contentIdStart + 1 : contentIdStart,
+			contentIdEnd
+		)
+	}
+
+	if (textEnd > 0) {
+		details.text = text.substring(
+			snipFormatCharacters ? textStart + 1 : textStart,
+			textEnd
+		)
+	}
+
+	return details
 }
 
 // A `[` that is at the beginning of a string or has a non=`\` character in front
-const linkStartMatcher = /(?<=^|[^\\])(\[)/
+const markdownLinkStartMatcher = /(?<=^|[^\\])(\[)/
 
 /**
  * Identifies and extracts information about a markdown link in a string
@@ -60,7 +128,7 @@ const linkStartMatcher = /(?<=^|[^\\])(\[)/
  * @returns Information about the matched link, or null if no link was found
  */
 export function matchMarkdownLink(text: string, startIndex=0): LinkInfo {
-	const match = text.match(linkStartMatcher)
+	const match = text.match(markdownLinkStartMatcher)
 	if (!match) return null
 
 	const linkStart = match.index
@@ -312,6 +380,56 @@ export function linkTextFromLink(link: HrefFormedLink): string {
 	}
 }
 
+type MediaCustomizations = {
+	width?: number
+	height?: number
+	float?: 'left'|'right'
+}
+export function getMediaCustomizationsFromText(text: string): MediaCustomizations {
+	if (!text) return null
+	let result: MediaCustomizations = {}
+
+	for (let part of text.split(/\s+/).map(p => p.trim())) {
+		const match = part.match(/((\d+)(x(\d+))?)|((left)|(right))/i)
+		if (match) {
+			if (match[2]) {
+				const width = parseInt(match[1])
+				if (width !== undefined) {
+					result.width = width
+				}
+			}
+			if (match[4]) {
+				const height = parseInt(match[4])
+				if (height !== undefined) {
+					result.height = height
+				}
+			}
+			if (match[5]) {
+				result.float = match[5].toLowerCase() as 'left'|'right'
+			}
+		}
+	}
+
+	return result
+}
+
+function getIsAtStartOfContent(spans: Op[]) {
+	if (spans.length === 0) return true
+
+	for (let i = 0; i < spans.length; i++) {
+		const span = spans[i]
+		if (span.attributes.line_format === 'indent') continue
+		else if (span.attributes.list_format) {
+			if (i != spans.length - 2) return false
+			const next = spans[i + 1]
+			return next.retain === 1 || next.insert === ' ' // The space trailing a list glyph
+		}
+		else return false
+	}
+
+	return true
+}
+
 export function parseRawLink(char: string, parser: NoteParser): boolean {
 	if (char === ':' && parser.feed.checkFor('://', false)) {
 		const { feed, builder } = parser
@@ -326,7 +444,7 @@ export function parseRawLink(char: string, parser: NoteParser): boolean {
 		// Close old data
 		parser.commitSpan(null, firstChar - feed.index)
 
-		const isAtStartOfContent = builder.spans.length === 0 || builder.spans[0].attributes.line_format === 'indent'
+		const isAtStartOfContent = getIsAtStartOfContent(builder.spans)
 
 		feed.consumeUntil(' ')
 		const t_link: HrefFormedLink & { block?: boolean } = {
@@ -347,6 +465,7 @@ export function parseRawLink(char: string, parser: NoteParser): boolean {
 
 		if (isAtStartOfContent && !restOfLine.trim()) {
 			isEmbed = isEmbed || parser.autoEmbedRawLinks
+			parser.lineData.embedLine = true
 			t_link.block = isEmbed
 		}
 
@@ -381,6 +500,8 @@ export function parseLink(char: string, parser: NoteParser): boolean {
 		// Commit everything before the `!` in the case of an embed
 		parser.commitSpan(null, isEmbed ? -1 : 0)
 
+		const isAtStartOfContent = getIsAtStartOfContent(builder.spans)
+
 		const t_link: HrefFormedLink & { block?: boolean } = {
 			href: wikiLinkInfo.href,
 			form: 'wiki',
@@ -392,7 +513,16 @@ export function parseLink(char: string, parser: NoteParser): boolean {
 		// helps ensure sane-looking output
 		if (isEmbed) {
 			// TODO: Convert to allowing indentation for embeds
-			t_link.block = parser.lineStart === feed.index - 1
+			t_link.block = isAtStartOfContent
+			if (isAtStartOfContent) {
+				const restOfLine = feed.getLineText(wikiLinkInfo.end)
+				if (!restOfLine.trim()) {
+					const customizations = getMediaCustomizationsFromText(wikiLinkInfo.text)
+					//if (!customizations?.float) {
+						parser.lineData.embedLine = true
+					//}
+				}
+			}
 		}
 		if (parser.filepath) {
 			t_link.from = parser.filepath
@@ -530,6 +660,8 @@ export function parseLink(char: string, parser: NoteParser): boolean {
 		// Commit everything before the `!` in the case of an embed
 		parser.commitSpan(null, isEmbed ? -1 : 0)
 
+		const isAtStartOfContent = getIsAtStartOfContent(builder.spans)
+
 		const t_link: HrefFormedLink & { block?: boolean } = {
 			href: mdLinkInfo.href,
 			form: 'md',
@@ -542,7 +674,16 @@ export function parseLink(char: string, parser: NoteParser): boolean {
 		// helps ensure sane-looking output
 		if (isEmbed) {
 			// TODO: Convert to allowing indentation for embeds
-			t_link.block = parser.lineStart === feed.index - 1
+			t_link.block = isAtStartOfContent
+			if (isAtStartOfContent) {
+				const restOfLine = feed.getLineText(mdLinkInfo.end)
+				if (!restOfLine.trim()) {
+					const customizations = getMediaCustomizationsFromText(mdLinkInfo.text)
+					//if (!customizations?.float) {
+						parser.lineData.embedLine = true
+					//}
+				}
+			}
 		}
 		if (parser.filepath) {
 			t_link.from = parser.filepath

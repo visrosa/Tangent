@@ -3,12 +3,11 @@
 	white-space: normal;
 }
 
-:host-context([block="true"]:not([link-state="error"])) > span {
+:host-context(:not([link-state="error"])) > span {
 	display: flex;
 }
 
 .website-preview {
-	width: 100%;
 	display: grid;
 	grid-template-columns: auto 50%;
 	grid-template-rows: auto auto;
@@ -86,4 +85,8 @@
 
 media-control-bar {
 	--media-control-bar-display: flex;
+}
+
+img {
+	border-radius: 1px;
 }

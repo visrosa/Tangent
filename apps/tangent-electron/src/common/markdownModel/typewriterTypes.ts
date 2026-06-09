@@ -8,6 +8,8 @@ import type { TagSectionData } from './tag'
 import type { CodeData } from './code'
 import type { MathData } from './math'
 import { hasCollapsedChildren, isCollapsed } from './sections'
+import type { HrefFormedLink } from 'common/indexing/indexTypes'
+import { getMediaCustomizationsFromText } from './links'
 
 const defaultOptions = {}
 
@@ -121,6 +123,9 @@ function getCoreLineProperties(attributes, baseClass = ''): AttributeMap {
 	}
 	if (attributes.empty) {
 		props.className += ' empty'
+	}
+	if (attributes.embedLine) {
+		props.className += ' embedLine'
 	}
 
 	const indent = attributes.indent as IndentDefinition
@@ -544,6 +549,21 @@ const noteTypeset:TypesetTypes = {
 					className += ' revealed'
 				}
 
+				let link = attributes.t_link as HrefFormedLink
+
+				let embedClassname = 'output'
+				const customizations = getMediaCustomizationsFromText(link.text)
+				if (customizations) {
+					if (customizations.float === 'left') {
+						className += ' float-left'
+						embedClassname += ' float-left'
+					}
+					else if (customizations.float === 'right') {
+						className += ' float-right'
+						embedClassname += ' float-right'
+					}
+				}
+
 				let node = h(
 					'span',
 					{
@@ -551,10 +571,12 @@ const noteTypeset:TypesetTypes = {
 					},
 					children
 				) as any
-				
+
 				// forward the link information
-				node.t_embed_props = attributes.t_link
-				node.t_embed_props.className = 'output'
+				node.t_embed_props = {
+					...attributes.t_link,
+					className: embedClassname
+				}
 
 				return node
 			},

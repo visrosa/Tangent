@@ -46,6 +46,34 @@ const matches: MatcherItem[] = [
 		]
 	},
 	{
+		match: /==>/,
+		replace: [
+			'⟹',
+			'⇒',
+		]
+	},
+	{
+		match: /=>/,
+		replace: [
+			'⇒',
+			'⟹',
+		]
+	},
+	{
+		match: /<==/,
+		replace: [
+			'⟸',
+			'⇐',
+		]
+	},
+	{
+		match: /<=/,
+		replace: [
+			'⇐',
+			'⟸',
+		]
+	},
+	{
 		match: /---/,
 		replace: [
 			'—',
@@ -67,7 +95,7 @@ const matches: MatcherItem[] = [
 	}
 ]
 
-const activateChars = '-><.'
+const activateChars = '-><.='
 
 export default class UnicodeAutocompleter implements AutocompleteHandler {
 	workspace: Workspace
