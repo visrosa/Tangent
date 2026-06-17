@@ -426,6 +426,24 @@ export default class Settings extends ObjectStore {
 		defaultValue: true
 	})
 
+	defaultTodoCompleteChar = new Setting<'x' | '+'>({
+		name: 'Default Complete Todo Glyph',
+		description: 'The character applied to a checkbox when you toggled it completed.',
+		validValues: [
+			{
+				value: 'x',
+				displayName: '[x]',
+				description: 'The standard Markdown character used to indicate a completed task.'
+			},
+			{
+				value: '+',
+				displayName: '[+]',
+				description: 'An alternative that doesn\' cause issues with right-to-left (RTL) languages.'
+			}
+		],
+		defaultValue: 'x'
+	})
+
 	linkCursor: Setting<string> = new Setting<string>(linkCursorDefinition)
 
 	// Attachments
@@ -487,6 +505,24 @@ export default class Settings extends ObjectStore {
 		name: 'Case Sensitive Links',
 		description: 'Whether the casing of wiki links must match the casing of note names for a link to resolve.',
 		defaultValue: false
+	})
+
+	startupBehavior = new Setting<'restore' | 'select'>({
+		name: 'Startup Behavior',
+		description: 'What windows Tangent opens on startup.',
+		validValues: [
+			{
+				value: 'restore',
+				displayName: 'Restore',
+				description: 'Reopen the workspaces from the last session.'
+			},
+			{
+				value: 'select',
+				displayName: 'Select',
+				description: 'Show the workspace selection screen.'
+			}
+		],
+		defaultValue: 'restore'
 	})
 
 	rawLinksAutoEmbed = new Setting<boolean>({

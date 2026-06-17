@@ -57,6 +57,9 @@ export default class NodeHandle {
 
 	pushChangesIfDirty() {
 		if (this.dirty) {
+			if (this.workspace.debug.nodeHandles) {
+				console.log('Pushing dirty changes for', this.link, this.value)
+			}
 			this.set(this.value)
 			this.dirty = false
 		}
@@ -133,6 +136,12 @@ export default class NodeHandle {
 			if (change.removed) {
 				for (const filepath of change.removed) {
 					if (pathAffectsPath(filepath, path)) {
+						if (this.workspace.debug.nodeHandles) {
+							console.log('Handle Triggered', {
+								watching: path,
+								removed: filepath
+							})
+						}
 						this.dirty = true
 						return
 					}
@@ -141,7 +150,23 @@ export default class NodeHandle {
 
 			if (change.moved) {
 				for (const item of change.moved) {
-					if (pathAffectsPath(item.oldPath, path) || pathAffectsPath(item.node.path, path)) {
+					if (pathAffectsPath(item.oldPath, path)) {
+						if (this.workspace.debug.nodeHandles) {
+							console.log('Handle Triggered from move', {
+								watching: path,
+								oldPath: item.oldPath
+							})
+						}
+						this.dirty = true
+						return
+					}
+					if (pathAffectsPath(item.node.path, path)) {
+						if (this.workspace.debug.nodeHandles) {
+							console.log('Handle Triggered from move', {
+								watching: path,
+								newPath: item.node.path
+							})
+						}
 						this.dirty = true
 						return
 					}
@@ -151,6 +176,12 @@ export default class NodeHandle {
 			if (change.added) {
 				for (let newNode of change.added) {
 					if (pathAffectsPath(newNode.path, path)) {
+						if (this.workspace.debug.nodeHandles) {
+							console.log('Handle Triggered', {
+								watching: path,
+								added: newNode.path
+							})
+						}
 						this.dirty = true
 						return
 					}
@@ -160,6 +191,12 @@ export default class NodeHandle {
 			if (change.changed) {
 				for (let item of change.changed) {
 					if (pathAffectsPath(item.path, path)) {
+						if (this.workspace.debug.nodeHandles) {
+							console.log('Handle Triggered', {
+								watching: path,
+								changed: item.path
+							})
+						}
 						this.dirty = true
 						return
 					}
