@@ -509,8 +509,15 @@ const noteTypeset:TypesetTypes = {
 					: h('t-annotation', {
 						className: 'inline-annotation-output',
 						base: annotation.base,
-						description: annotation.annotation
-					})
+						description: annotation.annotation,
+						tabindex: 0,
+						role: 'button',
+						'aria-label': `${annotation.base}: ${annotation.annotation}`,
+						title: annotation.annotation
+					}, [
+						annotation.base,
+						h('sup', { className: 'inline-annotation-indicator' }, 'ⓘ')
+					])
 
 				return h('span', { className: containerClass }, [
 					h('span', { className: sourceClass }, children),

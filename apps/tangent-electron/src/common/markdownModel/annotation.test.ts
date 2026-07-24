@@ -138,8 +138,14 @@ describe('annotation rendering', () => {
 			type: 't-annotation',
 			props: {
 				base: '<term>',
-				description: 'A & B'
-			}
+				description: 'A & B',
+				tabindex: 0,
+				title: 'A & B'
+			},
+			children: [
+				'<term>',
+				{ type: 'sup', children: ['ⓘ'] }
+			]
 		})
 	})
 

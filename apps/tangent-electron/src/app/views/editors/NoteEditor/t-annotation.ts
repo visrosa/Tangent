@@ -30,6 +30,9 @@ class TangentAnnotationDescription extends HTMLElement {
 		if (!this.hasAttribute('role')) this.setAttribute('role', 'button')
 		this.updateContent()
 		this.tooltipAction = tooltip(this, this.tooltipConfig())
+		// The renderer supplies a native fallback for environments where custom
+		// elements do not upgrade. Avoid showing it alongside Tangent's tooltip.
+		this.removeAttribute('title')
 	}
 
 	disconnectedCallback() {
