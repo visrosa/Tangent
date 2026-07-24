@@ -534,6 +534,48 @@ article.note {
 		border-radius: var(--inputBorderRadius);
 	}
 
+	.inline-annotation-container {
+		&.revealed {
+			outline: 2px solid var(--textColor);
+			outline-offset: 3px;
+			border-radius: var(--inputBorderRadius);
+
+			.inline-annotation-output {
+				display: none;
+			}
+		}
+	}
+
+	.inline-annotation-source {
+		font-family: var(--codeFontFamily);
+		color: var(--accentTextColor);
+	}
+
+	ruby.inline-annotation-output {
+		ruby-position: over;
+
+		rt {
+			font-size: .58em;
+			color: var(--deemphasizedTextColor);
+		}
+	}
+
+	t-annotation.inline-annotation-output {
+		cursor: help;
+
+		.inline-annotation-indicator {
+			margin-inline-start: .18em;
+			font-size: .62em;
+			color: var(--accentTextColor);
+		}
+
+		&:focus-visible {
+			outline: 2px solid var(--accentTextColor);
+			outline-offset: 2px;
+			border-radius: .2em;
+		}
+	}
+
 	span.math-source {
 		font-family: var(--codeFontFamily);
 		color: var(--accentTextColor);

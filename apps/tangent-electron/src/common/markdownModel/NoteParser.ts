@@ -15,6 +15,7 @@ import { parseCodeBlock, parseInlineCode, readCodeLines } from './code'
 import { getLanguage } from './codeSyntax'
 import { parseHtml } from './html'
 import { parseTemplateTokens } from './templates'
+import { parseInlineAnnotation } from './annotation'
 
 const blockPrograms: ParsingProgram[] = [
 	parseHeader,
@@ -27,6 +28,7 @@ const blockPrograms: ParsingProgram[] = [
 
 const inlineObjectPrograms = [
 	parseInlineMath,
+	parseInlineAnnotation,
 	parseLink,
 	parseRawLink,
 	parseTag,

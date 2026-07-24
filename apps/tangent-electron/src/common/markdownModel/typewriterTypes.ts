@@ -10,6 +10,7 @@ import type { MathData } from './math'
 import { hasCollapsedChildren, isCollapsed } from './sections'
 import type { HrefFormedLink } from 'common/indexing/indexTypes'
 import { getMediaCustomizationsFromText } from './links'
+import type { InlineAnnotation } from './annotation'
 
 const defaultOptions = {}
 
@@ -488,6 +489,33 @@ const noteTypeset:TypesetTypes = {
 				}
 
 				return h('span', props, children)
+			}
+		},
+
+		{
+			name: 'annotation',
+			selector: 'span.inline-annotation-source',
+			render: (attributes, children) => {
+				const annotation = attributes.annotation as InlineAnnotation
+				const revealed = !!attributes.revealed
+				const containerClass = 'inline-annotation-container' + (revealed ? ' revealed' : '')
+				const sourceClass = 'inline-annotation-source hidden' + (revealed ? ' revealed' : '')
+
+				const output = annotation.kind === 'ruby'
+					? h('ruby', { className: 'inline-annotation-output' }, [
+						annotation.base,
+						h('rt', null, annotation.annotation)
+					])
+					: h('t-annotation', {
+						className: 'inline-annotation-output',
+						base: annotation.base,
+						description: annotation.annotation
+					})
+
+				return h('span', { className: containerClass }, [
+					h('span', { className: sourceClass }, children),
+					output
+				])
 			}
 		},
 
