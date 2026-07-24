@@ -563,6 +563,13 @@ article.note {
 	t-annotation.inline-annotation-output {
 		cursor: help;
 
+		.inline-annotation-base {
+			text-decoration-line: underline;
+			text-decoration-color: var(--accentTextColor);
+			text-decoration-thickness: .1em;
+			text-underline-offset: .12em;
+		}
+
 		.inline-annotation-indicator {
 			margin-inline-start: .18em;
 			font-size: .62em;

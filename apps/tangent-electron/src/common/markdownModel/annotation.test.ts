@@ -147,7 +147,11 @@ describe('annotation rendering', () => {
 				title: 'A & B'
 			},
 			children: [
-				'<term>',
+				{
+					type: 'span',
+					props: { className: 'inline-annotation-base' },
+					children: ['<term>']
+				},
 				{ type: 'sup', children: ['ⓘ'] }
 			]
 		})

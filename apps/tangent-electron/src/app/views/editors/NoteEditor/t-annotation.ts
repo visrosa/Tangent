@@ -57,8 +57,11 @@ class TangentAnnotationDescription extends HTMLElement {
 	private updateContent() {
 		const base = this.getAttribute('base') ?? ''
 		const description = this.getAttribute('description') ?? ''
+		const baseElement = document.createElement('span')
+		baseElement.className = 'inline-annotation-base'
+		baseElement.textContent = base
 		this.replaceChildren(
-			document.createTextNode(base),
+			baseElement,
 			Object.assign(document.createElement('sup'), {
 				className: 'inline-annotation-indicator',
 				textContent: 'ⓘ'

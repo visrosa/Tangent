@@ -519,7 +519,7 @@ const noteTypeset:TypesetTypes = {
 						'aria-label': `${annotation.base}: ${annotation.annotation}`,
 						title: annotation.annotation
 					}, [
-						annotation.base,
+						h('span', { className: 'inline-annotation-base' }, annotation.base),
 						h('sup', { className: 'inline-annotation-indicator' }, 'ⓘ')
 					])
 
