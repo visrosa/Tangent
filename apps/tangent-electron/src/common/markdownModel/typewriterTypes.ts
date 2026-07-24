@@ -502,12 +502,16 @@ const noteTypeset:TypesetTypes = {
 				const sourceClass = 'inline-annotation-source hidden' + (revealed ? ' revealed' : '')
 
 				const output = annotation.kind === 'ruby'
-					? h('ruby', { className: 'inline-annotation-output' }, [
+					? h('ruby', {
+						className: 'inline-annotation-output',
+						contentEditable: 'false'
+					}, [
 						annotation.base,
 						h('rt', null, annotation.annotation)
 					])
 					: h('t-annotation', {
 						className: 'inline-annotation-output',
+						contentEditable: 'false',
 						base: annotation.base,
 						description: annotation.annotation,
 						tabindex: 0,

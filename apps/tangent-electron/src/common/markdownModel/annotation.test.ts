@@ -122,6 +122,9 @@ describe('annotation rendering', () => {
 
 		expect(rendered.children[1]).toMatchObject({
 			type: 'ruby',
+			props: {
+				contentEditable: 'false'
+			},
 			children: [
 				'漢字',
 				{ type: 'rt', children: ['かんじ'] }
@@ -139,6 +142,7 @@ describe('annotation rendering', () => {
 			props: {
 				base: '<term>',
 				description: 'A & B',
+				contentEditable: 'false',
 				tabindex: 0,
 				title: 'A & B'
 			},
