@@ -39,13 +39,19 @@ jobs:
       - name: Add upstream remote
         run: git remote add upstream https://github.com/suchnsuch/Tangent.git
 
-      - name: Fetch upstream tags
-        # Fetched into a separate refs/tags/upstream/ namespace, not
+      - name: Fetch upstream
+        # Tags fetched into a separate refs/tags/upstream/ namespace, not
         # refs/tags/ directly — origin already carries our own
         # tangent-v<version> tags (pushed on our merge commits) under the
         # exact same names upstream uses for its own commits, and a plain
-        # `fetch --tags` would refuse to clobber those.
-        run: git fetch upstream 'refs/tags/tangent-v*:refs/tags/upstream/tangent-v*'
+        # `fetch --tags` would refuse to clobber those. main is fetched too:
+        # some old tags aren't ancestors of upstream/main at all (upstream
+        # has rewritten history in its past), so is-ancestor(linux_packaging)
+        # alone can't tell "genuinely unmerged" apart from "no longer part
+        # of current history" — see find-tag below.
+        run: |
+          git fetch upstream main
+          git fetch upstream 'refs/tags/tangent-v*:refs/tags/upstream/tangent-v*'
 
       - name: Find next upstream tag to merge
         id: find-tag
@@ -59,7 +65,8 @@ jobs:
 
           next_tag=""
           for tag in "${versions[@]}"; do
-            if ! git merge-base --is-ancestor "refs/tags/upstream/$tag" linux_packaging 2>/dev/null; then
+            if git merge-base --is-ancestor "refs/tags/upstream/$tag" upstream/main 2>/dev/null \
+                && ! git merge-base --is-ancestor "refs/tags/upstream/$tag" linux_packaging 2>/dev/null; then
               next_tag="$tag"
               break
             fi
