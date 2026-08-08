@@ -48,9 +48,13 @@ jobs:
         # some old tags aren't ancestors of upstream/main at all (upstream
         # has rewritten history in its past), so is-ancestor(linux_packaging)
         # alone can't tell "genuinely unmerged" apart from "no longer part
-        # of current history" — see find-tag below.
+        # of current history" — see find-tag below. --no-tags on the main
+        # fetch matters: git auto-follows any tag whose target commit just
+        # became reachable, which would silently recreate the exact
+        # unnamespaced refs/tags/tangent-v* collision the second fetch below
+        # is designed to avoid.
         run: |
-          git fetch upstream main
+          git fetch upstream main --no-tags
           git fetch upstream 'refs/tags/tangent-v*:refs/tags/upstream/tangent-v*'
 
       - name: Find next upstream tag to merge
