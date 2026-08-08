@@ -24,6 +24,7 @@ import { TangentLink } from './t-link'
 import TangentCheckbox from './t-checkbox'
 import TangentCodePreview from './t-code-preview' // No deletey
 import TangentMath from './t-math' // No deletey
+import TangentAnnotationDescription from './t-annotation' // No deletey
 import { indentMatcher } from 'common/markdownModel/matches'
 import { checkboxMatcher, getAutoChild, getDelimiterForGlyph, getGlyphForNumber, ListDefinition, ListForm, listMatcher, splitCheckboxGlyphs } from 'common/markdownModel/list'
 import type { Workspace } from 'app/model'
@@ -64,6 +65,9 @@ interface VerifyListOptions {
 // Force the inclusion of elements so it is included in the module
 if (!TangentMath) {
 	console.error('I don\'t have math!')
+}
+if (!TangentAnnotationDescription) {
+	console.error('I don\'t have annotations!')
 }
 if (!TangentCodePreview) {
 	console.error('I don\'t have code preview!')
