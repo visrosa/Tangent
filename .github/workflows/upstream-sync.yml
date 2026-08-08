@@ -1,0 +1,134 @@
+name: Upstream sync
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Thrice weekly — upstream release cadence is on the order of one to a
+    # few weeks, so a same-day vs. ~2-day worst-case pickup delay is
+    # immaterial, and this cuts CI-minutes on no-op runs by more than half
+    # compared to a daily cron.
+    - cron: "0 6 * * 1,3,5"
+
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  sync:
+    name: Sync upstream release
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out linux_packaging
+        uses: actions/checkout@v4
+        with:
+          ref: linux_packaging
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: git remote add upstream https://github.com/suchnsuch/Tangent.git
+
+      - name: Fetch upstream tags
+        # Fetched into a separate refs/tags/upstream/ namespace, not
+        # refs/tags/ directly — origin already carries our own
+        # tangent-v<version> tags (pushed on our merge commits) under the
+        # exact same names upstream uses for its own commits, and a plain
+        # `fetch --tags` would refuse to clobber those.
+        run: git fetch upstream 'refs/tags/tangent-v*:refs/tags/upstream/tangent-v*'
+
+      - name: Find next upstream tag to merge
+        id: find-tag
+        run: |
+          mapfile -t versions < <(
+            git for-each-ref --format='%(refname:short)' 'refs/tags/upstream/tangent-v*' \
+              | sed 's#^upstream/##' \
+              | grep -E '^tangent-v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$' \
+              | sort -V
+          )
+
+          next_tag=""
+          for tag in "${versions[@]}"; do
+            if ! git merge-base --is-ancestor "refs/tags/upstream/$tag" linux_packaging 2>/dev/null; then
+              next_tag="$tag"
+              break
+            fi
+          done
+
+          echo "tag=$next_tag" >> "$GITHUB_OUTPUT"
+
+      - name: Nothing to do
+        if: steps.find-tag.outputs.tag == ''
+        run: echo "No unmerged upstream tags found."
+
+      - name: Merge upstream tag
+        if: steps.find-tag.outputs.tag != ''
+        run: |
+          tag="${{ steps.find-tag.outputs.tag }}"
+          if git merge --no-ff --no-edit "refs/tags/upstream/$tag"; then
+            exit 0
+          fi
+
+          git merge --abort
+
+          # Idempotent: the same still-blocked oldest tag is re-derived on
+          # every scheduled run until it's resolved by hand, so this must
+          # not open a duplicate issue each time.
+          issue_title="Upstream merge conflict: $tag"
+          existing=$(gh issue list --search "in:title \"$issue_title\"" --state open --json number --jq '.[0].number // empty')
+          if [[ -z "$existing" ]]; then
+            gh issue create --title "$issue_title" --body "Automatic merge of upstream tag \`$tag\` into \`linux_packaging\` produced a conflict and was aborted. Resolve by hand per CLAUDE.md §Releasing a new version, then close this issue — the next scheduled run will pick up from there."
+          fi
+          exit 1
+
+      - name: Bump version if needed
+        if: steps.find-tag.outputs.tag != ''
+        run: |
+          tag="${{ steps.find-tag.outputs.tag }}"
+          tag_version="${tag#tangent-v}"
+          current_version=$(node -p "require('./apps/tangent-electron/package.json').version")
+          if [[ "$current_version" != "$tag_version" ]]; then
+            npm version "$tag_version" --no-git-tag-version -w apps/tangent-electron
+            git add apps/tangent-electron/package.json package-lock.json
+            git commit -m "Bump version to $tag_version"
+          fi
+
+      - name: Push linux_packaging
+        if: steps.find-tag.outputs.tag != ''
+        # Plain push, never force — a rejection here means something else
+        # moved linux_packaging concurrently; fail loudly (default Actions
+        # failure email) rather than retry with force.
+        run: git push origin linux_packaging
+
+      - name: Push archival branch and release tag
+        if: steps.find-tag.outputs.tag != ''
+        run: |
+          tag="${{ steps.find-tag.outputs.tag }}"
+          tag_version="${tag#tangent-v}"
+          archival_branch="versions/tangent-v$tag_version"
+
+          if git ls-remote --exit-code --heads origin "$archival_branch" >/dev/null 2>&1; then
+            echo "Archival branch $archival_branch already exists on origin, skipping (partial prior run?)."
+          else
+            git branch "$archival_branch"
+            git push origin "$archival_branch"
+          fi
+
+          # Never tag the upstream-fetched commit object directly — always a
+          # fresh local tag on our own linux_packaging HEAD (merge commit).
+          if git ls-remote --exit-code --tags origin "$tag" >/dev/null 2>&1; then
+            echo "Tag $tag already exists on origin, skipping (partial prior run?)."
+          else
+            git tag "$tag" HEAD
+            git push origin "$tag"
+          fi

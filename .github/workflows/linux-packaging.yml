@@ -3,10 +3,9 @@ name: Linux packaging
 on:
   workflow_dispatch:
   push:
-    branches:
-      - versions/tangent-v*
     tags:
       - "tangent-v*"
+      - "tangent-dev"
 
 jobs:
   linux-packages:
@@ -39,6 +38,16 @@ jobs:
       - name: Prepare Gentoo source assets
         run: npm run package:gentoo-source
 
+      - name: Rename dev channel Gentoo assets
+        # prepare-gentoo-source.cjs names outputs from package.json's version
+        # field, which stays fixed while dev accrues unrelated commits — not
+        # a stable/meaningful name for the rolling dev channel. Fixed here,
+        # not in the script, since versioned tags still want the real name.
+        if: github.ref_name == 'tangent-dev'
+        run: |
+          mv dist/gentoo-source/tangent-*-gentoo-source.tar.gz dist/gentoo-source/tangent-dev-gentoo-source.tar.gz
+          mv dist/gentoo-source/tangent-*-gentoo-vendor.tar.zst dist/gentoo-source/tangent-dev-gentoo-vendor.tar.zst
+
       - name: Upload Linux package artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -56,11 +65,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           RELEASE_FLAGS=""
-          if [[ "$GITHUB_REF_NAME" == *"alpha"* || "$GITHUB_REF_NAME" == *"beta"* || "$GITHUB_REF_NAME" == *"rc"* ]]; then
+          RELEASE_NOTES=$'Linux packages from this fork are provided as-is and not supported by the upstream project.\nUpstream: https://github.com/suchnsuch/Tangent\nRPM packages are currently untested. If you use an RPM-based distribution, please report results or issues.'
+
+          if [[ "$GITHUB_REF_NAME" == "tangent-dev" ]]; then
+            RELEASE_FLAGS="--prerelease"
+            RELEASE_NOTES=$'Rolling, unstable build of the `dev` integration branch — republished on every dev sync, not a tagged release.\n'"$RELEASE_NOTES"
+          elif [[ "$GITHUB_REF_NAME" == *"alpha"* || "$GITHUB_REF_NAME" == *"beta"* || "$GITHUB_REF_NAME" == *"rc"* ]]; then
             RELEASE_FLAGS="--prerelease"
           fi
-
-          RELEASE_NOTES=$'Linux packages from this fork are provided as-is and not supported by the upstream project.\nUpstream: https://github.com/suchnsuch/Tangent\nRPM packages are currently untested. If you use an RPM-based distribution, please report results or issues.'
 
           if ! gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
             gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "$RELEASE_NOTES" $RELEASE_FLAGS
@@ -68,48 +80,3 @@ jobs:
             gh release edit "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "$RELEASE_NOTES"
           fi
           gh release upload "$GITHUB_REF_NAME" apps/tangent-electron/dist/*-linux.tar.gz apps/tangent-electron/dist/*.deb apps/tangent-electron/dist/*.rpm dist/gentoo-source/*-gentoo-source.tar.gz dist/gentoo-source/*-gentoo-vendor.tar.zst --clobber
-
-  ppa-source:
-    name: Prepare PPA source (${{ matrix.series }})
-    runs-on: ubuntu-24.04
-    strategy:
-      fail-fast: false
-      matrix:
-        series: [noble, resolute]
-
-    steps:
-      - name: Check out source
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-
-      - name: Install Debian packaging tools
-        run: sudo apt-get update && sudo apt-get install -y debhelper devscripts dpkg-dev lintian
-
-      - name: Install npm dependencies
-        run: npm ci --workspaces --include-workspace-root
-
-      - name: Prepare Launchpad source package
-        run: npm run package:ppa-source
-        env:
-          UBUNTU_SERIES: ${{ matrix.series }}
-          DEBFULLNAME: visrosa (https://github.com/visrosa/Tangent)
-          DEBEMAIL: maintainer@ubuntu.com
-
-      - name: Lint source package
-        run: lintian dist/ppa-source/${{ matrix.series }}/*.changes
-
-      - name: Upload source package
-        uses: actions/upload-artifact@v4
-        with:
-          name: ppa-source-${{ matrix.series }}
-          path: |
-            dist/ppa-source/${{ matrix.series }}/*.dsc
-            dist/ppa-source/${{ matrix.series }}/*.changes
-            dist/ppa-source/${{ matrix.series }}/*.tar.*
