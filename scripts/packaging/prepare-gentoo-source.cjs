@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 
-const { spawnSync } = require('child_process')
 const fs = require('fs')
 const path = require('path')
+const { repoRoot, run, copySourceTree } = require('./lib.cjs')
 
-const repoRoot = path.resolve(__dirname, '..', '..')
 const appDir = path.join(repoRoot, 'apps', 'tangent-electron')
 const appPackagePath = path.join(appDir, 'package.json')
 const appPackage = JSON.parse(fs.readFileSync(appPackagePath, 'utf8'))
@@ -15,64 +14,9 @@ const sourceRoot = path.join(distRoot, sourceRootName)
 const sourceTarball = path.join(distRoot, `${sourceRootName}-gentoo-source.tar.gz`)
 const vendorTarball = path.join(distRoot, `${sourceRootName}-gentoo-vendor.tar.zst`)
 
-function run(command, args, options = {}) {
-	console.log(`\n> ${command} ${args.join(' ')}`)
-	const result = spawnSync(command, args, {
-		cwd: options.cwd || repoRoot,
-		stdio: 'inherit',
-		shell: process.platform === 'win32',
-		...options
-	})
-
-	if (result.status !== 0) {
-		process.exit(result.status || 1)
-	}
-}
-
-function shouldCopy(source) {
-	const rel = path.relative(repoRoot, source)
-	if (!rel) return true
-	const parts = rel.split(path.sep)
-	if (parts.includes('.tangent')) {
-		const tangentIndex = parts.indexOf('.tangent')
-		const tangentChild = parts[tangentIndex + 1]
-		if (['generated', 'Generated', 'Temp', 'tangents', 'workspaces'].includes(tangentChild)) {
-			return false
-		}
-	}
-	return ![
-		'.git',
-		'.github',
-		'node_modules',
-		'dist',
-		'__build',
-		'.svelte-kit'
-	].some(excluded => parts.includes(excluded))
-}
-
-function copyTree(from, to) {
-	if (!shouldCopy(from)) return
-
-	const stats = fs.lstatSync(from)
-	if (stats.isSymbolicLink()) {
-		fs.symlinkSync(fs.readlinkSync(from), to)
-		return
-	}
-
-	if (stats.isDirectory()) {
-		fs.mkdirSync(to, { recursive: true })
-		for (const entry of fs.readdirSync(from)) {
-			copyTree(path.join(from, entry), path.join(to, entry))
-		}
-		return
-	}
-
-	fs.copyFileSync(from, to)
-}
-
 fs.rmSync(distRoot, { recursive: true, force: true })
 fs.mkdirSync(distRoot, { recursive: true })
-copyTree(repoRoot, sourceRoot)
+copySourceTree(sourceRoot)
 run('tar', ['-czf', sourceTarball, '-C', distRoot, sourceRootName])
 
 const npmCache = process.env.npm_config_cache || path.join(process.env.HOME || '', '.npm')

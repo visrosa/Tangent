@@ -3,8 +3,8 @@
 const { spawnSync } = require('child_process')
 const fs = require('fs')
 const path = require('path')
+const { repoRoot, run, copySourceTree, deriveChannel } = require('./lib.cjs')
 
-const repoRoot = path.resolve(__dirname, '..', '..')
 const appDir = path.join(repoRoot, 'apps', 'tangent-electron')
 const appPackage = JSON.parse(fs.readFileSync(path.join(appDir, 'package.json'), 'utf8'))
 
@@ -17,7 +17,7 @@ const maintainer = process.env.DEBEMAIL
 	? `${process.env.DEBFULLNAME || defaultMaintainerName} <${process.env.DEBEMAIL}>`
 	: `${defaultMaintainerName} <maintainers@example.invalid>`
 
-const channel = appPackage.version.includes('-') ? 'beta' : 'stable'
+const channel = deriveChannel(appPackage.version)
 const sourcePackage = channel === 'beta' ? 'tangent-beta' : 'tangent'
 const debianPackage = sourcePackage
 const upstreamVersion = toDebianUpstreamVersion(appPackage.version)
@@ -31,20 +31,6 @@ function toDebianUpstreamVersion(version) {
 	return prerelease ? `${base}~${prerelease}` : base
 }
 
-function run(command, args, options = {}) {
-	console.log(`\n> ${command} ${args.join(' ')}`)
-	const result = spawnSync(command, args, {
-		cwd: options.cwd || repoRoot,
-		stdio: 'inherit',
-		shell: process.platform === 'win32',
-		...options
-	})
-
-	if (result.status !== 0) {
-		process.exit(result.status || 1)
-	}
-}
-
 function hasCommand(command) {
 	const result = spawnSync('sh', ['-c', `command -v ${command}`], {
 		cwd: repoRoot,
@@ -52,47 +38,6 @@ function hasCommand(command) {
 		shell: process.platform === 'win32'
 	})
 	return result.status === 0
-}
-
-function shouldCopy(source) {
-	const rel = path.relative(repoRoot, source)
-	if (!rel) return true
-	const parts = rel.split(path.sep)
-	if (parts.includes('.tangent')) {
-		const tangentIndex = parts.indexOf('.tangent')
-		const tangentChild = parts[tangentIndex + 1]
-		if (['generated', 'Generated', 'Temp', 'tangents', 'workspaces'].includes(tangentChild)) {
-			return false
-		}
-	}
-	return ![
-		'.git',
-		'.github',
-		'node_modules',
-		'dist',
-		'__build',
-		'.svelte-kit'
-	].some(excluded => parts.includes(excluded))
-}
-
-function copyTree(from, to) {
-	if (!shouldCopy(from)) return
-
-	const stats = fs.lstatSync(from)
-	if (stats.isSymbolicLink()) {
-		fs.symlinkSync(fs.readlinkSync(from), to)
-		return
-	}
-
-	if (stats.isDirectory()) {
-		fs.mkdirSync(to, { recursive: true })
-		for (const entry of fs.readdirSync(from)) {
-			copyTree(path.join(from, entry), path.join(to, entry))
-		}
-		return
-	}
-
-	fs.copyFileSync(from, to)
 }
 
 function writeFile(filePath, contents, mode) {
@@ -103,7 +48,7 @@ function writeFile(filePath, contents, mode) {
 
 fs.rmSync(outputRoot, { recursive: true, force: true })
 fs.mkdirSync(outputRoot, { recursive: true })
-copyTree(repoRoot, sourceDir)
+copySourceTree(sourceDir)
 
 const debianDir = path.join(sourceDir, 'debian')
 fs.mkdirSync(debianDir, { recursive: true })

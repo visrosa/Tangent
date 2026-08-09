@@ -26,16 +26,16 @@ jobs:
           node-version: "22"
           cache: npm
 
-      - name: Install Linux packaging tools
-        if: github.ref_name != 'tangent-dev'
-        run: sudo apt-get update && sudo apt-get install -y debhelper devscripts dpkg-dev lintian rpm zstd
-
       - name: Install zstd
-        # tangent-dev only vendors tangent-9999's offline build cache — no
-        # .deb/.rpm/.tar.gz, so only prepare-gentoo-source.cjs's `tar --zstd`
-        # needs a system package here.
-        if: github.ref_name == 'tangent-dev'
+        # Needed on every channel: prepare-gentoo-source.cjs always runs
+        # `tar --zstd`.
         run: sudo apt-get update && sudo apt-get install -y zstd
+
+      - name: Install Debian/RPM packaging tools
+        # tangent-dev only vendors tangent-9999's offline build cache — no
+        # .deb/.rpm/.tar.gz, so this tooling is unneeded there.
+        if: github.ref_name != 'tangent-dev'
+        run: sudo apt-get install -y debhelper devscripts dpkg-dev lintian rpm
 
       - name: Install npm dependencies
         run: npm ci --workspaces --include-workspace-root
@@ -45,17 +45,12 @@ jobs:
         run: npm run package:linux:packages
 
       - name: Build tangent-9999 offline cache
-        # Mirrors tangent-9999.ebuild's src_compile exactly (same workspace
-        # builds, same `electron-builder --linux dir` invocation) so the
-        # npm/Electron/electron-builder caches this run populates are
+        # --target=dir mirrors tangent-9999.ebuild's src_compile exactly (same
+        # workspace builds, same `electron-builder --linux dir` invocation) so
+        # the npm/Electron/electron-builder caches this run populates are
         # exactly what that ebuild's offline build needs — nothing more.
         if: github.ref_name == 'tangent-dev'
-        run: |
-          npm run build --workspace packages/tangent-query-parser
-          npm run build --workspace packages/tangent-html-to-markdown
-          npm run build --workspace lib/typewriter
-          npm run build --workspace apps/tangent-electron
-          npm exec --workspace apps/tangent-electron -- electron-builder --linux dir --x64 --publish never -c.linux.executableName=tangent
+        run: node scripts/packaging/build-linux-deb.cjs --target=dir
 
       - name: Prepare Gentoo source assets
         run: npm run package:gentoo-source
@@ -98,7 +93,7 @@ jobs:
             # cache" above.
             RELEASE_NOTES=$'Rolling, unstable build of the `dev` integration branch, published only for the `tangent-9999` Gentoo ebuild — republished on every dev sync, not a tagged release.\nUpstream: https://github.com/suchnsuch/Tangent'
             ASSETS="dist/gentoo-source/*-gentoo-source.tar.gz dist/gentoo-source/*-gentoo-vendor.tar.zst"
-          elif [[ "$GITHUB_REF_NAME" == *"alpha"* || "$GITHUB_REF_NAME" == *"beta"* || "$GITHUB_REF_NAME" == *"rc"* ]]; then
+          elif [[ "$GITHUB_REF_NAME" =~ (alpha|beta|rc) ]]; then
             RELEASE_FLAGS="--prerelease"
           fi
 
