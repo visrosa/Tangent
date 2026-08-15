@@ -94,24 +94,21 @@ describe('furigana rendering', () => {
 		throw new Error('Furigana format is not registered')
 	}
 
-	test('renders a native ruby/rt element', () => {
+	test('renders a t-furigana element carrying base/reading', () => {
 		const rendered = furiganaFormat.render({
 			furigana: { base: '漢字', reading: 'かんじ' }
 		}, ['source'], null, null) as any
 
 		expect(rendered.children[1]).toMatchObject({
-			type: 'ruby',
+			type: 't-furigana',
 			props: {
-				contentEditable: 'false'
-			},
-			children: [
-				'漢字',
-				{ type: 'rt', children: ['かんじ'] }
-			]
+				base: '漢字',
+				reading: 'かんじ'
+			}
 		})
 	})
 
-	test('marks source revealed and output hideable while editing', () => {
+	test('marks source revealed while editing, output unaffected', () => {
 		const rendered = furiganaFormat.render({
 			furigana: { base: '字', reading: 'じ' },
 			revealed: true
@@ -119,6 +116,12 @@ describe('furigana rendering', () => {
 
 		expect(rendered.props.className).toContain('revealed')
 		expect(rendered.children[0].props.className).toContain('revealed')
-		expect(rendered.children[1].props.className).toBe('furigana-output')
+		expect(rendered.children[1].type).toBe('t-furigana')
+
+		const unrevealed = furiganaFormat.render({
+			furigana: { base: '字', reading: 'じ' }
+		}, ['source'], null, null) as any
+
+		expect(unrevealed.children[1].type).toBe('t-furigana')
 	})
 })

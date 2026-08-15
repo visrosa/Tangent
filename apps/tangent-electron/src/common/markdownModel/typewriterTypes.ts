@@ -8,6 +8,7 @@ import type { TagSectionData } from './tag'
 import type { CodeData } from './code'
 import type { MathData } from './math'
 import type { FuriganaData } from './furigana'
+import { hiddenGroupEmbedFormat } from './hiddenGroupEmbed'
 import { hasCollapsedChildren, isCollapsed } from './sections'
 import type { HrefFormedLink } from 'common/indexing/indexTypes'
 import { getMediaCustomizationsFromText } from './links'
@@ -731,64 +732,41 @@ const noteTypeset:TypesetTypes = {
 			}
 		},
 
-		{
+		hiddenGroupEmbedFormat({
 			name: 'math',
 			selector: 'span.math-source',
-			render: (attributes, children) => {
+			sourceClass: 'math-source',
+			containerClass: 'inline-math-container',
+			renderOutput: (attributes, revealed) => {
+				const math = attributes.math as MathData
 
-				let containerAttr = {
-					className: 'inline-math-container'
-				}
-
-				let sourceAttr = {
-					className: 'math-source hidden'
-				}
-				
 				let tMathAttr = {
-					'math-source': attributes.math.source,
+					'math-source': math.source,
 				} as any
 
-				if (attributes.revealed) {
-					containerAttr.className += ' revealed'
-					sourceAttr.className += ' revealed'
+				if (revealed) {
 					tMathAttr.className = 'revealed'
 				}
 
-				if (attributes.math.isBlock) {
+				if (math.isBlock) {
 					tMathAttr.block = ''
 				}
 
-				return h('span', containerAttr, [
-					h('span', sourceAttr, children),
-					h('t-math', tMathAttr, [])
-				])
+				return h('t-math', tMathAttr, [])
 			}
-		},
+		}),
 
-		{
+		hiddenGroupEmbedFormat({
 			name: 'furigana',
 			selector: 'span.furigana-source',
-			render: (attributes, children) => {
+			sourceClass: 'furigana-source',
+			containerClass: 'inline-furigana-container',
+			renderOutput: (attributes) => {
 				const furigana = attributes.furigana as FuriganaData
-				const revealed = attributes.revealed ? ' revealed' : ''
 
-				const containerAttr = {
-					className: 'inline-furigana-container' + revealed
-				}
-
-				const sourceAttr = {
-					className: 'furigana-source hidden' + revealed
-				}
-
-				return h('span', containerAttr, [
-					h('span', sourceAttr, children),
-					h('ruby', { className: 'furigana-output', contentEditable: 'false' }, [
-						furigana.base,
-						h('rt', null, furigana.reading)
-					])
-				])
+				return h('t-furigana', { base: furigana.base, reading: furigana.reading }, [])
 			}
-		},
+		}),
 
 		{
 			name: 'templateToken',

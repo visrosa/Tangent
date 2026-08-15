@@ -6,6 +6,7 @@ import { type ParsingContext, ParsingContextType } from './parsingContext'
 
 export type MathData = {
 	source?: string
+	isBlock?: boolean
 }
 
 type MathBlockContext = CodeParsingContext & {

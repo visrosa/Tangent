@@ -24,6 +24,7 @@ import { TangentLink } from './t-link'
 import TangentCheckbox from './t-checkbox'
 import TangentCodePreview from './t-code-preview' // No deletey
 import TangentMath from './t-math' // No deletey
+import TangentFurigana from './t-furigana' // No deletey
 import { indentMatcher } from 'common/markdownModel/matches'
 import { checkboxMatcher, getAutoChild, getDelimiterForGlyph, getGlyphForNumber, ListDefinition, ListForm, listMatcher, splitCheckboxGlyphs } from 'common/markdownModel/list'
 import type { Workspace } from 'app/model'
