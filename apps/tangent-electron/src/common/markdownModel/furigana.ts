@@ -100,8 +100,6 @@ function isUnescapedWhitespace(text: string, index: number): boolean {
 	return /\s/.test(text[index]) && !isEscaped(text, index)
 }
 
-const escapedFuriganaCharPattern = /\\([{}|])/g
-
 function unescapeFuriganaText(text: string): string {
-	return text.replace(escapedFuriganaCharPattern, '$1')
+	return text.replace(/\\(.)/g, '$1')
 }

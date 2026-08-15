@@ -51,7 +51,14 @@ describe('parseFuriganaSpan', () => {
 	test('does not let trim consume half of a trailing escape pair', () => {
 		expect(parseFuriganaSpan('{ base | reading\\ }')?.furigana).toEqual({
 			base: 'base',
-			reading: 'reading\\ '
+			reading: 'reading '
+		})
+	})
+
+	test('unescapes any escaped character, collapsing a doubled backslash to one', () => {
+		expect(parseFuriganaSpan('{ back\\\\slash | \\a }')?.furigana).toEqual({
+			base: 'back\\slash',
+			reading: 'a'
 		})
 	})
 })
