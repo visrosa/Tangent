@@ -1,5 +1,16 @@
 import { markAsSelectionRequest } from 'app/events'
 
+const furiganaStyleSheet = new CSSStyleSheet()
+furiganaStyleSheet.replaceSync(`
+	ruby {
+		ruby-position: over;
+	}
+	rt {
+		font-size: .58em;
+		color: var(--deemphasizedTextColor);
+	}
+`)
+
 class TangentFurigana extends HTMLElement {
 
 	private baseNode: Text
@@ -14,18 +25,7 @@ class TangentFurigana extends HTMLElement {
 		this.addEventListener('contextmenu', this.onClick)
 
 		const shadow = this.attachShadow({ mode: 'open' })
-
-		const style = document.createElement('style')
-		style.textContent = `
-			ruby {
-				ruby-position: over;
-			}
-			rt {
-				font-size: .58em;
-				color: var(--deemphasizedTextColor);
-			}
-		`
-		shadow.appendChild(style)
+		shadow.adoptedStyleSheets = [furiganaStyleSheet]
 
 		const ruby = document.createElement('ruby')
 		const base = document.createTextNode('')
@@ -51,17 +51,6 @@ class TangentFurigana extends HTMLElement {
 		else if (name === 'reading') {
 			this.readingNode.textContent = newValue ?? ''
 		}
-	}
-
-	connectedCallback() {
-		if (this.isConnected) {
-			this.updateContent()
-		}
-	}
-
-	updateContent() {
-		this.baseNode.textContent = this.getAttribute('base') ?? ''
-		this.readingNode.textContent = this.getAttribute('reading') ?? ''
 	}
 
 	onClick(event: MouseEvent) {
