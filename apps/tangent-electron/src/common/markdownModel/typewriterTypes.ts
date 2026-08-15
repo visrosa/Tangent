@@ -7,6 +7,7 @@ import { isLargeList, type ListDefinition } from './list'
 import type { TagSectionData } from './tag'
 import type { CodeData } from './code'
 import type { MathData } from './math'
+import type { FuriganaData } from './furigana'
 import { hasCollapsedChildren, isCollapsed } from './sections'
 import type { HrefFormedLink } from 'common/indexing/indexTypes'
 import { getMediaCustomizationsFromText } from './links'
@@ -760,6 +761,35 @@ const noteTypeset:TypesetTypes = {
 				return h('span', containerAttr, [
 					h('span', sourceAttr, children),
 					h('t-math', tMathAttr, [])
+				])
+			}
+		},
+
+		{
+			name: 'furigana',
+			selector: 'span.furigana-source',
+			render: (attributes, children) => {
+				const furigana = attributes.furigana as FuriganaData
+
+				let containerAttr = {
+					className: 'inline-furigana-container'
+				}
+
+				let sourceAttr = {
+					className: 'furigana-source hidden'
+				}
+
+				if (attributes.revealed) {
+					containerAttr.className += ' revealed'
+					sourceAttr.className += ' revealed'
+				}
+
+				return h('span', containerAttr, [
+					h('span', sourceAttr, children),
+					h('ruby', { className: 'furigana-output', contentEditable: 'false' }, [
+						furigana.base,
+						h('rt', null, furigana.reading)
+					])
 				])
 			}
 		},

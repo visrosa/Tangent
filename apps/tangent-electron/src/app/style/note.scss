@@ -543,6 +543,30 @@ article.note {
 		}
 	}
 
+	.inline-furigana-container.revealed {
+		outline: 2px solid var(--textColor);
+		outline-offset: 3px;
+		border-radius: var(--inputBorderRadius);
+
+		.furigana-output {
+			display: none;
+		}
+	}
+
+	span.furigana-source {
+		font-family: var(--codeFontFamily);
+		color: var(--accentTextColor);
+	}
+
+	ruby.furigana-output {
+		ruby-position: over;
+
+		rt {
+			font-size: .58em;
+			color: var(--deemphasizedTextColor);
+		}
+	}
+
 	.mathLine {
 		color: var(--codeColor);
 	}
