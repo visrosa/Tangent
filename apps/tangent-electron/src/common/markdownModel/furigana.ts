@@ -13,8 +13,8 @@ export type FuriganaSpan = {
 /**
  * Scans a complete `{base|reading}` furigana span starting at `start`.
  *
- * Nested spans are intentionally inactive in V1: the first unescaped `{`
- * after the opener invalidates the span rather than being balanced against it.
+ * Nested spans are intentionally inactive: the first unescaped `{` after
+ * the opener invalidates the span rather than being balanced against it.
  */
 export function parseFuriganaSpan(text: string, start = 0): FuriganaSpan | null {
 	if (text[start] !== '{' || isEscaped(text, start)) return null
@@ -41,8 +41,8 @@ export function parseFuriganaSpan(text: string, start = 0): FuriganaSpan | null 
 		if (char === '}') {
 			if (separatorIndex < 0) return null
 
-			const base = unescapeFuriganaText(text.slice(start + 1, separatorIndex).trim())
-			const reading = unescapeFuriganaText(text.slice(separatorIndex + 1, index).trim())
+			const base = unescapeFuriganaText(trimFuriganaText(text.slice(start + 1, separatorIndex)))
+			const reading = unescapeFuriganaText(trimFuriganaText(text.slice(separatorIndex + 1, index)))
 			if (!base || !reading) return null
 
 			return { end: index, furigana: { base, reading } }
@@ -78,6 +78,26 @@ function isEscaped(text: string, index: number): boolean {
 		backslashes++
 	}
 	return backslashes % 2 === 1
+}
+
+/**
+ * Trims plain whitespace from both ends, but stops at a whitespace character
+ * that is itself escaped (e.g. the trailing `\ ` in `reading\ `) so an
+ * escape pair is never split — that would strand its backslash unmatched
+ * once unescapeFuriganaText runs.
+ */
+function trimFuriganaText(text: string): string {
+	let start = 0
+	while (start < text.length && isUnescapedWhitespace(text, start)) start++
+
+	let end = text.length
+	while (end > start && isUnescapedWhitespace(text, end - 1)) end--
+
+	return text.slice(start, end)
+}
+
+function isUnescapedWhitespace(text: string, index: number): boolean {
+	return /\s/.test(text[index]) && !isEscaped(text, index)
 }
 
 const escapedFuriganaCharPattern = /\\([{}|])/g

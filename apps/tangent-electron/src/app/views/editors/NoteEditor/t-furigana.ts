@@ -1,3 +1,5 @@
+import { markAsSelectionRequest } from 'app/events'
+
 class TangentFurigana extends HTMLElement {
 
 	private baseNode: Text
@@ -5,6 +7,11 @@ class TangentFurigana extends HTMLElement {
 
 	constructor() {
 		super()
+
+		this.addEventListener('click', this.onClick)
+		this.addEventListener('dblclick', this.onClick)
+		this.addEventListener('mousedown', this.onClick)
+		this.addEventListener('contextmenu', this.onClick)
 
 		const shadow = this.attachShadow({ mode: 'open' })
 
@@ -55,6 +62,17 @@ class TangentFurigana extends HTMLElement {
 	updateContent() {
 		this.baseNode.textContent = this.getAttribute('base') ?? ''
 		this.readingNode.textContent = this.getAttribute('reading') ?? ''
+	}
+
+	onClick(event: MouseEvent) {
+		const base = this.getAttribute('base')
+		const reading = this.getAttribute('reading')
+
+		markAsSelectionRequest(event, {
+			inline: attr => {
+				return attr?.furigana?.base === base && attr?.furigana?.reading === reading
+			}
+		})
 	}
 }
 

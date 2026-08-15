@@ -47,6 +47,13 @@ describe('parseFuriganaSpan', () => {
 			reading: 'reading'
 		})
 	})
+
+	test('does not let trim consume half of a trailing escape pair', () => {
+		expect(parseFuriganaSpan('{ base | reading\\ }')?.furigana).toEqual({
+			base: 'base',
+			reading: 'reading\\ '
+		})
+	})
 })
 
 describe('furigana markdown parsing', () => {
