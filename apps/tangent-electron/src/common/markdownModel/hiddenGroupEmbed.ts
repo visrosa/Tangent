@@ -8,20 +8,24 @@ import type { AttributeMap } from '@typewriter/document'
  * (e.g. inline math's `<t-math>`, furigana's `<ruby>`). Reveal state only ever
  * toggles the source span's `hidden`/`revealed` classes; the output is never
  * hidden, so there's no CSS side-channel for a consumer to reach around.
+ *
+ * `name` also doubles as the attribute key holding the format's data
+ * (`attributes[name]`) and derives the conventional selector/class names.
  */
-export function hiddenGroupEmbedFormat(options: {
+export function hiddenGroupEmbedFormat<Data>(options: {
 	name: string
-	selector: string
-	sourceClass: string
-	containerClass: string
-	renderOutput: (attributes: AttributeMap, revealed: boolean) => VChild
+	renderOutput: (data: Data, revealed: boolean) => VChild
 }): FormatType {
-	const { name, selector, sourceClass, containerClass, renderOutput } = options
+	const { name, renderOutput } = options
+
+	const sourceClass = `${name}-source`
+	const hiddenSourceClass = `${sourceClass} hidden`
+	const containerClass = `inline-${name}-container`
 
 	return {
 		name,
-		selector,
-		render: (attributes, children) => {
+		selector: `span.${sourceClass}`,
+		render: (attributes: AttributeMap, children) => {
 			const revealed = !!attributes.revealed
 			const revealedSuffix = revealed ? ' revealed' : ''
 
@@ -30,12 +34,12 @@ export function hiddenGroupEmbedFormat(options: {
 			}
 
 			const sourceAttr = {
-				className: sourceClass + ' hidden' + revealedSuffix
+				className: hiddenSourceClass + revealedSuffix
 			}
 
 			return h('span', containerAttr, [
 				h('span', sourceAttr, children),
-				renderOutput(attributes, revealed)
+				renderOutput(attributes[name] as Data, revealed)
 			])
 		}
 	}

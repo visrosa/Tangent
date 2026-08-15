@@ -36,8 +36,13 @@ class TangentFurigana extends HTMLElement {
 	}
 
 	attributeChangedCallback(name: string, oldValue: string, newValue: string) {
-		if (name === 'base' || name === 'reading') {
-			this.updateContent()
+		if (newValue === oldValue) return
+
+		if (name === 'base') {
+			this.baseNode.textContent = newValue ?? ''
+		}
+		else if (name === 'reading') {
+			this.readingNode.textContent = newValue ?? ''
 		}
 	}
 

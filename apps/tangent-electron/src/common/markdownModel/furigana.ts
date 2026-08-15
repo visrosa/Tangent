@@ -80,6 +80,8 @@ function isEscaped(text: string, index: number): boolean {
 	return backslashes % 2 === 1
 }
 
+const escapedFuriganaCharPattern = /\\([{}|])/g
+
 function unescapeFuriganaText(text: string): string {
-	return text.replace(/\\([{}|])/g, '$1')
+	return text.replace(escapedFuriganaCharPattern, '$1')
 }

@@ -732,14 +732,9 @@ const noteTypeset:TypesetTypes = {
 			}
 		},
 
-		hiddenGroupEmbedFormat({
+		hiddenGroupEmbedFormat<MathData>({
 			name: 'math',
-			selector: 'span.math-source',
-			sourceClass: 'math-source',
-			containerClass: 'inline-math-container',
-			renderOutput: (attributes, revealed) => {
-				const math = attributes.math as MathData
-
+			renderOutput: (math, revealed) => {
 				let tMathAttr = {
 					'math-source': math.source,
 				} as any
@@ -756,14 +751,9 @@ const noteTypeset:TypesetTypes = {
 			}
 		}),
 
-		hiddenGroupEmbedFormat({
+		hiddenGroupEmbedFormat<FuriganaData>({
 			name: 'furigana',
-			selector: 'span.furigana-source',
-			sourceClass: 'furigana-source',
-			containerClass: 'inline-furigana-container',
-			renderOutput: (attributes) => {
-				const furigana = attributes.furigana as FuriganaData
-
+			renderOutput: (furigana) => {
 				return h('t-furigana', { base: furigana.base, reading: furigana.reading }, [])
 			}
 		}),
