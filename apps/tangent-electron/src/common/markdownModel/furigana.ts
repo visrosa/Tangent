@@ -13,31 +13,32 @@ export type FuriganaSpan = {
 /**
  * Scans a complete `{base|reading}` furigana span starting at `start`.
  *
- * Nested braces are balanced so their boundaries cannot be mistaken for the
- * outer boundary, but nested spans remain intentionally inactive in V1.
+ * Nested spans are intentionally inactive in V1: the first unescaped `{`
+ * after the opener invalidates the span rather than being balanced against it.
  */
 export function parseFuriganaSpan(text: string, start = 0): FuriganaSpan | null {
 	if (text[start] !== '{' || isEscaped(text, start)) return null
 
-	let depth = 1
-	let hasNestedBraces = false
 	let separatorIndex = -1
+	let escaped = false
 
 	for (let index = start + 1; index < text.length; index++) {
 		const char = text[index]
 
 		if (char === '\n' || char === '\r') return null
-		if (isEscaped(text, index)) continue
 
-		if (char === '{') {
-			depth++
-			hasNestedBraces = true
+		if (escaped) {
+			escaped = false
 			continue
 		}
+		if (char === '\\') {
+			escaped = true
+			continue
+		}
+
+		if (char === '{') return null // nesting not supported
+
 		if (char === '}') {
-			depth--
-			if (depth > 0) continue
-			if (depth < 0 || hasNestedBraces) return null
 			if (separatorIndex < 0) return null
 
 			const base = unescapeFuriganaText(text.slice(start + 1, separatorIndex).trim())
@@ -47,7 +48,7 @@ export function parseFuriganaSpan(text: string, start = 0): FuriganaSpan | null 
 			return { end: index, furigana: { base, reading } }
 		}
 
-		if (depth === 1 && separatorIndex < 0 && char === '|') {
+		if (separatorIndex < 0 && char === '|') {
 			separatorIndex = index
 		}
 	}
@@ -80,5 +81,5 @@ function isEscaped(text: string, index: number): boolean {
 }
 
 function unescapeFuriganaText(text: string): string {
-	return text.replace(/\\(\{|\}|\|)/g, '$1')
+	return text.replace(/\\([{}|])/g, '$1')
 }

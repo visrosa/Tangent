@@ -770,18 +770,14 @@ const noteTypeset:TypesetTypes = {
 			selector: 'span.furigana-source',
 			render: (attributes, children) => {
 				const furigana = attributes.furigana as FuriganaData
+				const revealed = attributes.revealed ? ' revealed' : ''
 
-				let containerAttr = {
-					className: 'inline-furigana-container'
+				const containerAttr = {
+					className: 'inline-furigana-container' + revealed
 				}
 
-				let sourceAttr = {
-					className: 'furigana-source hidden'
-				}
-
-				if (attributes.revealed) {
-					containerAttr.className += ' revealed'
-					sourceAttr.className += ' revealed'
+				const sourceAttr = {
+					className: 'furigana-source hidden' + revealed
 				}
 
 				return h('span', containerAttr, [
