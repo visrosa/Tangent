@@ -11,8 +11,6 @@ export type FuriganaSpan = {
 }
 
 /**
- * Scans a complete `{base|reading}` furigana span starting at `start`.
- *
  * Nested spans are intentionally inactive: the first unescaped `{` after
  * the opener invalidates the span rather than being balanced against it.
  */

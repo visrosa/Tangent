@@ -28,7 +28,7 @@ import TangentFurigana from './t-furigana' // No deletey
 import { indentMatcher } from 'common/markdownModel/matches'
 import { checkboxMatcher, getAutoChild, getDelimiterForGlyph, getGlyphForNumber, ListDefinition, ListForm, listMatcher, splitCheckboxGlyphs } from 'common/markdownModel/list'
 import type { Workspace } from 'app/model'
-import { deltaHasTextChanges, getEditInfo, getLineRangeWhile, getOperationRange, getRangeWhile, getRangesIntersecting, getSelectedLines, intersectRanges, lineToText } from 'common/typewriterUtils'
+import { deltaHasTextChanges, getEditInfo, getLineRangeWhile, getOperationRange, getRangesIntersecting, getSelectedLines, intersectRanges, lineToText } from 'common/typewriterUtils'
 import { isLeftClick, startDrag } from 'app/utils'
 import { subscribeUntil } from 'common/stores'
 import { handleIsNode } from 'app/model/NodeHandle'
@@ -60,6 +60,9 @@ if (!TangentMath) {
 }
 if (!TangentCodePreview) {
 	console.error('I don\'t have code preview!')
+}
+if (!TangentFurigana) {
+	console.error('I don\'t have furigana!')
 }
 
 export function revealContentAroundRange(doc: TextDocument, range: EditorRange, change: TextChange) {
@@ -714,9 +717,12 @@ export default function editorModule(editor: Editor, options: {
 				let range: EditorRange = null
 
 				if (selectionRequest.inline) {
-					range = selectionRequest.operationBounded
-						? getOperationRange(editor.doc, index - 1, selectionRequest.inline)
-						: getRangeWhile(editor.doc, index - 1, selectionRequest.inline)
+					// Click-selection predicates match by value (e.g. the same
+					// furigana base/reading, the same math source, the same
+					// href), which two distinct adjacent ops can share — so
+					// this always resolves just the clicked op, never merges
+					// into a neighbor that happens to satisfy the predicate too.
+					range = getOperationRange(editor.doc, index - 1, selectionRequest.inline)
 				}
 				else if (selectionRequest.line) {
 					range = getLineRangeWhile(editor.doc, index - 1, selectionRequest.line)

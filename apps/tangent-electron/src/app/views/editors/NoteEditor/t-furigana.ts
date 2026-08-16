@@ -1,4 +1,5 @@
 import { markAsSelectionRequest } from 'app/events'
+import { bindInlineSelectionListeners } from './hiddenGroupInlineElement'
 
 const furiganaStyleSheet = new CSSStyleSheet()
 furiganaStyleSheet.replaceSync(`
@@ -19,10 +20,7 @@ class TangentFurigana extends HTMLElement {
 	constructor() {
 		super()
 
-		this.addEventListener('click', this.onClick)
-		this.addEventListener('dblclick', this.onClick)
-		this.addEventListener('mousedown', this.onClick)
-		this.addEventListener('contextmenu', this.onClick)
+		bindInlineSelectionListeners(this, this.onClick)
 
 		const shadow = this.attachShadow({ mode: 'open' })
 		shadow.adoptedStyleSheets = [furiganaStyleSheet]
@@ -60,8 +58,7 @@ class TangentFurigana extends HTMLElement {
 		markAsSelectionRequest(event, {
 			inline: attr => {
 				return attr?.furigana?.base === base && attr?.furigana?.reading === reading
-			},
-			operationBounded: true
+			}
 		})
 	}
 }

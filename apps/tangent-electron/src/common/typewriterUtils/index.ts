@@ -224,6 +224,19 @@ export function getEditInfo(delta: Delta): EditInfo {
 export type AttributePredicate = (attributes: AttributeMap) => boolean
 
 /**
+ * Resolves the op containing `index` and validates it against `predicate`,
+ * the shared prologue of `getOperationRange` and `getRangeWhile`.
+ */
+function resolveMatchingOp(doc: TextDocument, index: number, predicate: AttributePredicate) {
+	const delta = doc.toDelta()
+	const details = getOpDetailsForTextPosition(delta, index)
+	if (!details || !predicate(details.op.attributes)) {
+		return null
+	}
+	return { delta, details }
+}
+
+/**
  * Resolves the single op containing `index`, without walking into neighbors —
  * unlike `getRangeWhile`, two adjacent ops that both satisfy `predicate`
  * (e.g. identical furigana spans) do not get merged into one range.
@@ -233,11 +246,7 @@ export function getOperationRange(
 	index: number,
 	predicate: AttributePredicate
 ): EditorRange {
-	const details = getOpDetailsForTextPosition(doc.toDelta(), index)
-	if (!details || !predicate(details.op.attributes)) {
-		return null
-	}
-	return details.range
+	return resolveMatchingOp(doc, index, predicate)?.details.range ?? null
 }
 
 export function getRangeWhile(
@@ -249,12 +258,11 @@ export function getRangeWhile(
 	let [start, end] = typeof startingRange === 'number' ? [startingRange, startingRange] : startingRange
 
 	// TODO: parse through the lines directly
-	const delta = doc.toDelta()
-
-	const startDetails = getOpDetailsForTextPosition(delta, initalCheck === 'start' ? start : end)
-	if (!startDetails || !predicate(startDetails.op.attributes)) {
+	const resolved = resolveMatchingOp(doc, initalCheck === 'start' ? start : end, predicate)
+	if (!resolved) {
 		return null
 	}
+	const { delta, details: startDetails } = resolved
 
 	let index = startDetails.index
 	start = startDetails.range[0]

@@ -1,18 +1,16 @@
 import { requestCallbackOnIdle } from '@such-n-such/core'
 import { markAsSelectionRequest } from 'app/events'
 import katex from 'katex'
+import { bindInlineSelectionListeners } from './hiddenGroupInlineElement'
 
 class TangentMath extends HTMLElement {
-	
+
 	private content: HTMLElement
 
 	constructor() {
 		super()
 
-		this.addEventListener('click', this.onClick)
-		this.addEventListener('dblclick', this.onClick)
-		this.addEventListener('mousedown', this.onClick)
-		this.addEventListener('contextmenu', this.onClick)
+		bindInlineSelectionListeners(this, this.onClick)
 
 		const shadow = this.attachShadow({ mode: 'open' })
 

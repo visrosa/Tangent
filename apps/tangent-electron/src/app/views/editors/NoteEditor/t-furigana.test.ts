@@ -36,7 +36,7 @@ describe('t-furigana', () => {
 		el.remove()
 	})
 
-	test('click requests operation-bounded selection, not a contiguous walk', () => {
+	test('click requests selection matching only this span\'s base/reading', () => {
 		const el = document.createElement('t-furigana')
 		el.setAttribute('base', '漢字')
 		el.setAttribute('reading', 'かんじ')
@@ -48,7 +48,6 @@ describe('t-furigana', () => {
 		})
 		el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
-		expect(captured.operationBounded).toBe(true)
 		expect(captured.inline({ furigana: { base: '漢字', reading: 'かんじ' } })).toBe(true)
 		expect(captured.inline({ furigana: { base: '字', reading: 'じ' } })).toBe(false)
 
