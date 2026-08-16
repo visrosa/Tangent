@@ -79,6 +79,7 @@ describe('furigana markdown parsing', () => {
 		'**bold { 字 | じ } text**',
 		'`{ code | inactive }`',
 		'```\n{ fenced | inactive }\n```',
+		'\\{ escaped | opener }',
 	])('round-trips %s', source => {
 		const document = markdownToTextDocument(source)
 		expect(typewriterToText(document)).toBe(source)
@@ -98,6 +99,15 @@ describe('furigana markdown parsing', () => {
 				},
 				hiddenGroup: true
 			}
+		})
+	})
+
+	test('escaped opener hides its backslash without activating furigana', () => {
+		const line = parseMarkdown('\\{ base | reading }').lines[0]
+		expect(line.content.ops.some(op => op.attributes?.furigana)).toBe(false)
+		expect(line.content.ops[0]).toEqual({
+			insert: '\\',
+			attributes: { link_internal: true, hidden: true }
 		})
 	})
 
