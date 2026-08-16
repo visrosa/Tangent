@@ -11,11 +11,11 @@ function getEditor() {
 	return editor
 }
 
-function containerCount(html: string) {
-	return (html.match(/inline-math-container/g) ?? []).length
+function containerCount(html: string, name = 'math') {
+	return (html.match(new RegExp(`inline-${name}-container`, 'g')) ?? []).length
 }
 
-describe('renderInline: adjacent inline math', () => {
+describe('renderInline: adjacent hidden-group embeds', () => {
 	test('Distinct instances with the same source render as two containers', () => {
 		const editor = getEditor()
 		const delta = new Delta([
@@ -24,6 +24,16 @@ describe('renderInline: adjacent inline math', () => {
 		])
 
 		expect(containerCount(inlineToHTML(editor, delta))).toBe(2)
+	})
+
+	test('Distinct furigana instances with the same content render as two containers', () => {
+		const editor = getEditor()
+		const delta = new Delta([
+			{ insert: '{a|b}', attributes: { furigana: { base: 'a', reading: 'b', instance: '0-5' }, hiddenGroup: true } },
+			{ insert: '{a|b}', attributes: { furigana: { base: 'a', reading: 'b', instance: '5-10' }, hiddenGroup: true } }
+		])
+
+		expect(containerCount(inlineToHTML(editor, delta), 'furigana')).toBe(2)
 	})
 })
 
