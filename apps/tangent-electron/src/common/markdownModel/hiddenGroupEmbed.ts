@@ -22,9 +22,6 @@ export function hiddenGroupEmbedFormat<Data>(options: {
 	const hiddenSourceClass = `${sourceClass} hidden`
 	const containerClass = `inline-${name}-container`
 
-	const containerClassByRevealed = [containerClass, `${containerClass} revealed`]
-	const sourceClassByRevealed = [hiddenSourceClass, `${hiddenSourceClass} revealed`]
-
 	return {
 		name,
 		selector: `span.${sourceClass}`,
@@ -32,11 +29,11 @@ export function hiddenGroupEmbedFormat<Data>(options: {
 			const revealed = !!attributes.revealed
 
 			const containerAttr = {
-				className: containerClassByRevealed[+revealed]
+				className: containerClass + (revealed ? ' revealed' : '')
 			}
 
 			const sourceAttr = {
-				className: sourceClassByRevealed[+revealed]
+				className: hiddenSourceClass + (revealed ? ' revealed' : '')
 			}
 
 			return h('span', containerAttr, [

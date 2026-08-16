@@ -81,10 +81,9 @@ function isEscaped(text: string, index: number): boolean {
 }
 
 /**
- * Trims plain whitespace from both ends, but stops at a whitespace character
- * that is itself escaped (e.g. the trailing `\ ` in `reading\ `) so an
- * escape pair is never split — that would strand its backslash unmatched
- * once unescapeFuriganaText runs.
+ * Stops at an escaped whitespace character (e.g. the trailing `\ ` in
+ * `reading\ `) so an escape pair is never split — that would strand its
+ * backslash unmatched once unescapeFuriganaText runs.
  */
 function trimFuriganaText(text: string): string {
 	let start = 0
