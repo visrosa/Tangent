@@ -32,6 +32,9 @@ export class PasteTextEvent extends Event implements PasteTextEventData {
 type SelectionRequestArgs = {
 	inline?: AttributePredicate
 	line?: AttributePredicate
+	// When true, `inline` resolves to just the clicked operation instead of
+	// walking into adjacent operations that also satisfy the predicate.
+	operationBounded?: boolean
 	postProcessSelection?: (span: [number, number]) => [number, number]
 }
 

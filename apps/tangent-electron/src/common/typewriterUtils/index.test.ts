@@ -1,7 +1,8 @@
 import { describe, test, expect } from 'vitest'
 
-import { getEditInfo } from '.'
+import { getEditInfo, getOperationRange } from '.'
 import { Delta } from '@typewriter/delta'
+import { Line, TextDocument } from '@typewriter/document'
 
 describe('Edit Info', () => {
 	test('Raw Delta insert', () => {
@@ -52,5 +53,27 @@ describe('Edit Info', () => {
 			{ retain: 3 },
 			{ retain: 16 }
 		]))).toEqual({ offset: 18, shift: -1 })
+	})
+})
+
+describe('getOperationRange', () => {
+	const doc = new TextDocument([Line.create(new Delta([
+		{ insert: 'a', attributes: { furigana: { base: 'x' } } },
+		{ insert: 'b', attributes: { furigana: { base: 'x' } } },
+		{ insert: 'c' }
+	]))])
+	const isMatch = (attr: any) => attr?.furigana?.base === 'x'
+
+	test('resolves only the containing op, not adjacent matching ops', () => {
+		expect(getOperationRange(doc, 0, isMatch)).toEqual([0, 1])
+		expect(getOperationRange(doc, 1, isMatch)).toEqual([1, 2])
+	})
+
+	test('returns null when the containing op fails the predicate', () => {
+		expect(getOperationRange(doc, 2, isMatch)).toBeNull()
+	})
+
+	test('returns null past the end of the document', () => {
+		expect(getOperationRange(doc, 100, isMatch)).toBeNull()
 	})
 })

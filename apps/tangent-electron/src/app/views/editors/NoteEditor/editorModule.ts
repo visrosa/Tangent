@@ -28,7 +28,7 @@ import TangentFurigana from './t-furigana' // No deletey
 import { indentMatcher } from 'common/markdownModel/matches'
 import { checkboxMatcher, getAutoChild, getDelimiterForGlyph, getGlyphForNumber, ListDefinition, ListForm, listMatcher, splitCheckboxGlyphs } from 'common/markdownModel/list'
 import type { Workspace } from 'app/model'
-import { deltaHasTextChanges, getEditInfo, getLineRangeWhile, getRangeWhile, getRangesIntersecting, getSelectedLines, intersectRanges, lineToText } from 'common/typewriterUtils'
+import { deltaHasTextChanges, getEditInfo, getLineRangeWhile, getOperationRange, getRangeWhile, getRangesIntersecting, getSelectedLines, intersectRanges, lineToText } from 'common/typewriterUtils'
 import { isLeftClick, startDrag } from 'app/utils'
 import { subscribeUntil } from 'common/stores'
 import { handleIsNode } from 'app/model/NodeHandle'
@@ -714,7 +714,9 @@ export default function editorModule(editor: Editor, options: {
 				let range: EditorRange = null
 
 				if (selectionRequest.inline) {
-					range = getRangeWhile(editor.doc, index - 1, selectionRequest.inline)
+					range = selectionRequest.operationBounded
+						? getOperationRange(editor.doc, index - 1, selectionRequest.inline)
+						: getRangeWhile(editor.doc, index - 1, selectionRequest.inline)
 				}
 				else if (selectionRequest.line) {
 					range = getLineRangeWhile(editor.doc, index - 1, selectionRequest.line)

@@ -222,6 +222,24 @@ export function getEditInfo(delta: Delta): EditInfo {
 }
 
 export type AttributePredicate = (attributes: AttributeMap) => boolean
+
+/**
+ * Resolves the single op containing `index`, without walking into neighbors —
+ * unlike `getRangeWhile`, two adjacent ops that both satisfy `predicate`
+ * (e.g. identical furigana spans) do not get merged into one range.
+ */
+export function getOperationRange(
+	doc: TextDocument,
+	index: number,
+	predicate: AttributePredicate
+): EditorRange {
+	const details = getOpDetailsForTextPosition(doc.toDelta(), index)
+	if (!details || !predicate(details.op.attributes)) {
+		return null
+	}
+	return details.range
+}
+
 export function getRangeWhile(
 	doc: TextDocument,
 	startingRange: number | EditorRange,

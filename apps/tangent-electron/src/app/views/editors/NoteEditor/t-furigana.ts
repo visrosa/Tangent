@@ -60,7 +60,8 @@ class TangentFurigana extends HTMLElement {
 		markAsSelectionRequest(event, {
 			inline: attr => {
 				return attr?.furigana?.base === base && attr?.furigana?.reading === reading
-			}
+			},
+			operationBounded: true
 		})
 	}
 }
