@@ -1,4 +1,5 @@
 import NoteParser from './NoteParser'
+import { isAnyWhitespace } from './matches'
 
 export type FuriganaData = {
 	base: string
@@ -39,8 +40,8 @@ export function parseFuriganaSpan(text: string, start = 0): FuriganaSpan | null 
 		if (char === '}') {
 			if (separatorIndex < 0) return null
 
-			const base = unescapeFuriganaText(trimFuriganaText(text.slice(start + 1, separatorIndex)))
-			const reading = unescapeFuriganaText(trimFuriganaText(text.slice(separatorIndex + 1, index)))
+			const base = unescapeFuriganaText(trimUnescapedWhitespace(text.slice(start + 1, separatorIndex)))
+			const reading = unescapeFuriganaText(trimUnescapedWhitespace(text.slice(separatorIndex + 1, index)))
 			if (!base || !reading) return null
 
 			return { end: index, furigana: { base, reading } }
@@ -83,7 +84,7 @@ function isEscaped(text: string, index: number): boolean {
  * `reading\ `) so an escape pair is never split — that would strand its
  * backslash unmatched once unescapeFuriganaText runs.
  */
-function trimFuriganaText(text: string): string {
+function trimUnescapedWhitespace(text: string): string {
 	let start = 0
 	while (start < text.length && isUnescapedWhitespace(text, start)) start++
 
@@ -94,7 +95,7 @@ function trimFuriganaText(text: string): string {
 }
 
 function isUnescapedWhitespace(text: string, index: number): boolean {
-	return /\s/.test(text[index]) && !isEscaped(text, index)
+	return isAnyWhitespace(text[index]) && !isEscaped(text, index)
 }
 
 function unescapeFuriganaText(text: string): string {

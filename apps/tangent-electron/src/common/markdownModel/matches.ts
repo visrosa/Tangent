@@ -5,7 +5,8 @@ export const horizontalRuleText = /^((- *){3,}|(\* *){3,}|(_ *){3,})$/
 
 export const indentMatcher = /^\s*/
 
-export function isWhitespace(char: string) {
+// '' counts as whitespace so a peek() past a text boundary reads as touching whitespace.
+export function isStrictWhitespace(char: string) {
 	switch(char) {
 		case '':
 			return true
@@ -16,4 +17,8 @@ export function isWhitespace(char: string) {
 		case '\t':
 			return true
 	}
+}
+
+export function isAnyWhitespace(char: string) {
+	return /\s/.test(char)
 }

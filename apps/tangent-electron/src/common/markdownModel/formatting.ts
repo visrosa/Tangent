@@ -1,6 +1,6 @@
 import { AttributeMap } from '@typewriter/document'
 import NoteParser from './NoteParser'
-import { isWhitespace } from './matches'
+import { isStrictWhitespace } from './matches'
 
 const italic_formatting = { italic: true, hiddenGroup: true }
 const bold_formatting = { bold: true, hiddenGroup: true }
@@ -27,10 +27,10 @@ export function parseEmphasis(char: string, parser: NoteParser): boolean {
 
 	const start = feed.index
 	const last = feed.peek(-1)
-	const leftTouchingText = !isWhitespace(last)
+	const leftTouchingText = !isStrictWhitespace(last)
 	const count = feed.consumeSequentialCharacters(char, 3)
 	const next = feed.peek()
-	const rightTouchingText = !isWhitespace(next)
+	const rightTouchingText = !isStrictWhitespace(next)
 
 	if (!leftTouchingText && !rightTouchingText) return false
 
@@ -62,9 +62,9 @@ export function parseEmphasis(char: string, parser: NoteParser): boolean {
 function openOrCloseFormatting(formatting: string, attributes: AttributeMap, parser: NoteParser): boolean {
 	const { feed, builder } = parser
 
-	const leftTouchingText = !isWhitespace(feed.peek(-formatting.length))
+	const leftTouchingText = !isStrictWhitespace(feed.peek(-formatting.length))
 	const rightChar = feed.peek()
-	const rightTouchingText = !isWhitespace(rightChar) && !formatting.includes(rightChar)
+	const rightTouchingText = !isStrictWhitespace(rightChar) && !formatting.includes(rightChar)
 
 	if (leftTouchingText || rightTouchingText) {
 		if (!parser.isStartOfContent) parser.commitSpan(null, parser.feed.currentStepLength - formatting.length)

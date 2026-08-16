@@ -1,6 +1,6 @@
 import { applyCodeFormat, type CodeParsingContext, parseCodeLine } from './code'
 import DocumentFeeder from './DocumentFeeder'
-import { isWhitespace } from './matches'
+import { isStrictWhitespace } from './matches'
 import NoteParser from './NoteParser'
 import { type ParsingContext, ParsingContextType } from './parsingContext'
 
@@ -20,13 +20,13 @@ export function parseInlineMath(char: string, parser: NoteParser): boolean {
 
 	const isBlock = feed.checkFor('$$', false)
 	const token = isBlock ? '$$' : char
-	let rightTouchingText = !isWhitespace(feed.peek(token.length))
+	let rightTouchingText = !isStrictWhitespace(feed.peek(token.length))
 
 	if (rightTouchingText) {
 		const postTokenIndex = feed.index + token.length + 1
 		const findResult = feed.findNext(token, postTokenIndex)
 		if (findResult.foundMatch) {
-			if (!isWhitespace(feed.peek(token.length + findResult.contentCount))) {
+			if (!isStrictWhitespace(feed.peek(token.length + findResult.contentCount))) {
 				// We've got it!
 				// Close old stuff
 				parser.commitSpan(null, 0)
