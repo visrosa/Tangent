@@ -8,6 +8,7 @@ furiganaStyleSheet.replaceSync(`
 	}
 	rt {
 		font-size: .58em;
+		padding-bottom: .2em;
 		color: var(--deemphasizedTextColor);
 	}
 `)
