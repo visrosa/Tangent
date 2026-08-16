@@ -19,19 +19,14 @@ export function parseFuriganaSpan(text: string, start = 0): FuriganaSpan | null 
 	if (text[start] !== '{' || isEscaped(text, start)) return null
 
 	let separatorIndex = -1
-	let escaped = false
 
 	for (let index = start + 1; index < text.length; index++) {
 		const char = text[index]
 
 		if (char === '\n' || char === '\r') return null
 
-		if (escaped) {
-			escaped = false
-			continue
-		}
-		if (char === '\\') {
-			escaped = true
+		if (char === '\\' && text[index + 1] !== '\\') {
+			index++ // skip the escaped character
 			continue
 		}
 
@@ -71,12 +66,11 @@ export function parseInlineFurigana(char: string, parser: NoteParser): boolean {
 	return true
 }
 
+// A backslash can escape any character except another backslash, so a run of
+// backslashes never needs counting - escaping only ever depends on the
+// single character immediately before `index`.
 function isEscaped(text: string, index: number): boolean {
-	let backslashes = 0
-	for (let cursor = index - 1; cursor >= 0 && text[cursor] === '\\'; cursor--) {
-		backslashes++
-	}
-	return backslashes % 2 === 1
+	return text[index - 1] === '\\' && text[index] !== '\\'
 }
 
 /**
@@ -99,5 +93,5 @@ function isUnescapedWhitespace(text: string, index: number): boolean {
 }
 
 function unescapeFuriganaText(text: string): string {
-	return text.replace(/\\(.)/g, '$1')
+	return text.replace(/\\([^\\])/g, '$1')
 }

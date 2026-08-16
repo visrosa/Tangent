@@ -55,10 +55,20 @@ describe('parseFuriganaSpan', () => {
 		})
 	})
 
-	test('unescapes any escaped character, collapsing a doubled backslash to one', () => {
+	test('unescapes any escaped character except another backslash', () => {
 		expect(parseFuriganaSpan('{ back\\\\slash | \\a }')?.furigana).toEqual({
 			base: 'back\\slash',
 			reading: 'a'
+		})
+	})
+
+	test('a backslash cannot escape another backslash', () => {
+		// The rightmost of the pair still escapes whatever follows it (here,
+		// the trailing space that would otherwise be trimmed) - a run of
+		// backslashes resolves left to right, never by parity of the whole run.
+		expect(parseFuriganaSpan('{ base | x\\\\ }')?.furigana).toEqual({
+			base: 'base',
+			reading: 'x\\ '
 		})
 	})
 })
