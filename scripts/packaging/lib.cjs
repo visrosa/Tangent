@@ -40,11 +40,19 @@ function shouldCopy(source) {
 }
 
 function copySourceTree(to) {
-	fs.cpSync(repoRoot, to, {
-		recursive: true,
-		verbatimSymlinks: true,
-		filter: shouldCopy
-	})
+	// Copy per top-level entry: `to` lives under dist/, and newer Node versions
+	// reject copying a directory into its own subtree before `filter` ever
+	// gets to exclude dist/.
+	fs.mkdirSync(to, { recursive: true })
+	for (const entry of fs.readdirSync(repoRoot)) {
+		const source = path.join(repoRoot, entry)
+		if (!shouldCopy(source)) continue
+		fs.cpSync(source, path.join(to, entry), {
+			recursive: true,
+			verbatimSymlinks: true,
+			filter: shouldCopy
+		})
+	}
 }
 
 function deriveChannel(version) {
