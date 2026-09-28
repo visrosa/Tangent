@@ -1,7 +1,7 @@
 import { StructureType, type TodoState } from 'common/indexing/indexTypes'
 import NoteParser from './NoteParser'
 import { escapeRegExp } from '@such-n-such/core'
-import { findParentDlTermIndent, matchDlSeparator, type DlLineData } from './dl'
+import { findParentDlTerm, matchDlSeparator, type DlLineData } from './dl'
 import DocumentFeeder from './DocumentFeeder'
 
 // Unordered glyphs are split by visual weight because large glyphs get extra
@@ -283,15 +283,19 @@ export function parseListItem(char: string, parser: NoteParser): boolean {
 	}
 
 	const dlSeparator = matchDlSeparator(line, listDetail)
+	const currentIndent = parser.getCurrentIndent().indent
+	const parentDlTerm = findParentDlTerm(parser, currentIndent)
 	if (dlSeparator) {
 		setDlLineData(parser, {
 			role: 'term',
 			glyph: listDetail,
-			hasDef: dlSeparator.hasDef
+			hasDef: dlSeparator.hasDef,
+			rootIndent: parentDlTerm?.rootIndent ?? currentIndent,
+			termIndent: parentDlTerm?.termIndent
 		})
 
 		if (!dlSeparator.hasDef && feed instanceof DocumentFeeder) {
-			const termIndent = parser.getCurrentIndent().indent
+			const termIndent = currentIndent
 			feed.injectAdjacentLinesWhile(nextLine => {
 				const nextIndent = nextLine.attributes.indent?.indent ?? ''
 				return nextIndent.length > termIndent.length
@@ -300,12 +304,12 @@ export function parseListItem(char: string, parser: NoteParser): boolean {
 		}
 	}
 	else {
-		const termIndent = findParentDlTermIndent(parser, parser.getCurrentIndent().indent)
-		if (termIndent !== null) {
+		if (parentDlTerm) {
 			setDlLineData(parser, {
 				role: 'value',
 				glyph: listDetail,
-				termIndent
+				rootIndent: parentDlTerm.rootIndent,
+				termIndent: parentDlTerm.termIndent
 			})
 		}
 		else {

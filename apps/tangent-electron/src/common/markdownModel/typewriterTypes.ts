@@ -197,6 +197,28 @@ function fillTooltip(source: string|object, props: AttributeMap) {
 	}
 }
 
+function isDlSeparatorNode(child): boolean {
+	if (typeof child !== 'object' || !child) return false
+	const className = child.props?.className ?? child.props?.class
+	return typeof className === 'string'
+		&& className.split(/\s+/).includes('inline-dl_sep-container')
+}
+
+const collapsedDlDescriptions = new WeakMap<object, Set<string>>()
+
+function getCollapsedDlDescriptions(editor: object): Set<string> {
+	let collapsed = collapsedDlDescriptions.get(editor)
+	if (!collapsed) {
+		collapsed = new Set()
+		collapsedDlDescriptions.set(editor, collapsed)
+	}
+	return collapsed
+}
+
+function getDlIndent(attributes: AttributeMap): number {
+	return attributes.indent?.indentSize ?? attributes.indent?.indent?.length ?? 0
+}
+
 const noteTypeset:TypesetTypes = {
 	lines: [
 		{
@@ -231,6 +253,9 @@ const noteTypeset:TypesetTypes = {
 				const termIndent = node.getAttribute('data-dl-term-indent')
 				if (termIndent !== null) dl.termIndent = termIndent
 
+				const rootIndent = node.getAttribute('data-dl-root-indent')
+				if (rootIndent !== null) dl.rootIndent = rootIndent
+
 				const attributes: AttributeMap = { dl }
 				extractCoreLineProperties(node, attributes)
 				return attributes
@@ -240,16 +265,18 @@ const noteTypeset:TypesetTypes = {
 				const nextDl = next.dl as DlLineData
 				if (!firstDl || !nextDl) return false
 
-				const firstRootIndent = firstDl.role === 'value'
-					? firstDl.termIndent
-					: first.indent?.indent ?? ''
-				const nextRootIndent = nextDl.role === 'value'
-					? nextDl.termIndent
-					: next.indent?.indent ?? ''
+				const firstRootIndent = firstDl.rootIndent
+					?? firstDl.termIndent
+					?? first.indent?.indent
+					?? ''
+				const nextRootIndent = nextDl.rootIndent
+					?? nextDl.termIndent
+					?? next.indent?.indent
+					?? ''
 				return firstRootIndent === nextRootIndent
 					&& first.blockquote === next.blockquote
 			},
-			renderMultiple: (lineData, _editor, forHTML) => {
+			renderMultiple: (lineData, editor, forHTML) => {
 				let revealed = false
 				const wrap = content => {
 					const depth = lineData[0][0].blockquote
@@ -261,26 +288,78 @@ const noteTypeset:TypesetTypes = {
 				}
 
 				if (!forHTML) {
-					const lines = lineData.map(([attributes, children, id]) => {
+					const collapsed = getCollapsedDlDescriptions(editor)
+					const collapsedAncestorIndents: number[] = []
+					const states = lineData.map(([attributes, _children, id], index) => {
 						const dl = attributes.dl as DlLineData
+						const indent = getDlIndent(attributes)
+						while (collapsedAncestorIndents.length
+							&& collapsedAncestorIndents.at(-1) >= indent) {
+							collapsedAncestorIndents.pop()
+						}
+
+						const nextAttributes = lineData[index + 1]?.[0]
+						const hasNestedDescription = dl.role === 'term'
+							&& dl.hasDef === false
+							&& nextAttributes
+							&& getDlIndent(nextAttributes) > indent
+						const collapsible = dl.role === 'term'
+							&& (dl.hasDef === true || hasNestedDescription)
+						const isCollapsed = collapsible && collapsed.has(id)
+						const hiddenByAncestor = collapsedAncestorIndents.length > 0
+
+						if (isCollapsed && hasNestedDescription) {
+							collapsedAncestorIndents.push(indent)
+						}
+
+						return { collapsible, hiddenByAncestor, isCollapsed }
+					})
+
+					const lines = lineData.map(([attributes, children, id], index) => {
+						const dl = attributes.dl as DlLineData
+						const state = states[index]
 						if (attributes.revealed) revealed = true
 
 						let className = `dl-line dl-${dl.role}`
+						if (dl.termIndent !== undefined) className += ' dl-nested'
+						if (state.isCollapsed) className += ' dl-description-collapsed'
+						if (state.hiddenByAncestor) className += ' dl-collapsed-child'
+
+						let toggle
+						if (state.collapsible) {
+							const onToggle = event => {
+								if (!editor.enabled) return
+								event.preventDefault()
+								event.stopPropagation()
+								if (collapsed.has(id)) collapsed.delete(id)
+								else collapsed.add(id)
+								editor.render()
+							}
+							toggle = h('button', {
+								className: 'dl-description-toggle',
+								contentEditable: false,
+								'aria-label': state.isCollapsed ? 'Expand description' : 'Collapse description',
+								'aria-expanded': String(!state.isCollapsed),
+								onmousedown: onToggle,
+								ontouchstart: onToggle
+							})
+						}
+
 						let lineChildren = children
 						if (dl.role === 'term' && dl.hasDef) {
 							className += ' dl-inline'
-							const separator = children.findIndex(child => {
-								if (typeof child !== 'object' || !child) return false
-								const className = child.props?.className ?? child.props?.class
-								return typeof className === 'string' && className.split(/\s+/).includes('dl_sep')
-							})
+							const separator = children.findIndex(isDlSeparatorNode)
 							if (separator >= 0) {
 								lineChildren = [
+									toggle,
 									h('span', { className: 'dl-term-content' }, children.slice(0, separator)),
 									children[separator],
 									h('span', { className: 'dl-definition-content' }, children.slice(separator + 1))
-								]
+								].filter(Boolean)
 							}
+						}
+						else if (toggle) {
+							lineChildren = [toggle, ...children]
 						}
 
 						const props = getCoreLineProperties(attributes, className)
@@ -288,6 +367,7 @@ const noteTypeset:TypesetTypes = {
 						props['data-dl-role'] = dl.role
 						if (dl.hasDef !== undefined) props['data-dl-has-def'] = String(dl.hasDef)
 						if (dl.termIndent !== undefined) props['data-dl-term-indent'] = dl.termIndent
+						if (dl.rootIndent !== undefined) props['data-dl-root-indent'] = dl.rootIndent
 						return h('div', props, lineChildren)
 					})
 
@@ -310,6 +390,7 @@ const noteTypeset:TypesetTypes = {
 						props['data-dl-role'] = role
 						if (dl.hasDef !== undefined) props['data-dl-has-def'] = String(dl.hasDef)
 						if (dl.termIndent !== undefined) props['data-dl-term-indent'] = dl.termIndent
+						if (dl.rootIndent !== undefined) props['data-dl-root-indent'] = dl.rootIndent
 						return props
 					}
 
@@ -323,16 +404,12 @@ const noteTypeset:TypesetTypes = {
 						continue
 					}
 
-					const separator = children.findIndex(child => {
-						if (typeof child !== 'object' || !child) return false
-						const className = child.props?.className ?? child.props?.class
-						return typeof className === 'string' && className.split(/\s+/).includes('dl_sep')
-					})
+					const separator = children.findIndex(isDlSeparatorNode)
 					const termChildren = separator < 0 ? children : children.slice(0, separator)
 					const definitionChildren = separator < 0 ? [] : children.slice(separator + 1)
 
 					items.push(h('dt', getProps('term', `${id}-term`), termChildren))
-					items.push(h('dd', getProps('term', `${id}-definition`), definitionChildren))
+					items.push(h('dd', getProps('value', `${id}-definition`), definitionChildren))
 				}
 
 				return wrap(h('dl', {
@@ -648,10 +725,13 @@ const noteTypeset:TypesetTypes = {
 			}
 		},
 
-		{
-			...hideableFormat('dl_sep'),
-			selector: 'span.dl_sep'
-		},
+		hiddenGroupEmbedFormat<Record<string, never>>({
+			name: 'dl_sep',
+			renderOutput: () => h('span', {
+				className: 'dl-separator-output',
+				'aria-hidden': 'true'
+			})
+		}),
 
 		{
 			name: 'list_format',

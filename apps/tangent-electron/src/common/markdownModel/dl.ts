@@ -5,7 +5,13 @@ export type DlLineData = {
 	role: 'term' | 'value'
 	glyph: ListDefinition
 	hasDef?: boolean
+	rootIndent?: string
 	termIndent?: string
+}
+
+export type ParentDlTerm = {
+	rootIndent: string
+	termIndent: string
 }
 
 type DlSeparatorMatch = {
@@ -107,7 +113,7 @@ export function matchDlSeparator(line: string, listDetail: ListDefinition | null
 	}
 }
 
-export function findParentDlTermIndent(parser: NoteParser, currentIndent: string): string | null {
+export function findParentDlTerm(parser: NoteParser, currentIndent: string): ParentDlTerm | null {
 	for (let index = parser.builder.lines.length - 1; index >= 0; index--) {
 		const previous = parser.builder.lines[index]
 		if (previous.attributes.empty || previous.attributes.whitespace) return null
@@ -116,7 +122,12 @@ export function findParentDlTermIndent(parser: NoteParser, currentIndent: string
 		if (previousIndent.length >= currentIndent.length) continue
 
 		const dl = previous.attributes.dl as DlLineData | undefined
-		if (dl?.role === 'term' && dl.hasDef === false) return previousIndent
+		if (dl?.role === 'term' && dl.hasDef === false) {
+			return {
+				rootIndent: dl.rootIndent ?? previousIndent,
+				termIndent: previousIndent
+			}
+		}
 		return null
 	}
 
@@ -142,8 +153,8 @@ export function parseDlSeparator(char: string, parser: NoteParser): boolean {
 	// but never consume the newline ending a bare term.
 	feed.nextByLength(following === ' ' || following === '\t' ? 3 : 2)
 	parser.commitSpan({
-		dl_sep: true,
-		hidden: true
+		dl_sep: {},
+		hiddenGroup: true
 	})
 
 	return true

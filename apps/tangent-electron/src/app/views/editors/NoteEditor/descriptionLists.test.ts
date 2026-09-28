@@ -23,16 +23,17 @@ describe('description-list HTML', () => {
 	test('renders one semantic list for mixed inline and nested definitions', () => {
 		const container = render(`- alpha :: one
 - beta ::
-  - first
+  - first ::
+    - third level item
   - second
 - gamma :: three`)
 		const lists = container.querySelectorAll('dl.description-list')
 
 		expect(lists).toHaveLength(1)
-		expect(lists[0].querySelectorAll(':scope > dt')).toHaveLength(3)
+		expect(lists[0].querySelectorAll(':scope > dt')).toHaveLength(4)
 		expect(lists[0].querySelectorAll(':scope > dd')).toHaveLength(4)
 		expect(Array.from(lists[0].children, child => child.tagName)).toEqual([
-			'DT', 'DD', 'DT', 'DD', 'DD', 'DT', 'DD'
+			'DT', 'DD', 'DT', 'DT', 'DD', 'DD', 'DT', 'DD'
 		])
 	})
 
@@ -55,7 +56,8 @@ describe('description-list HTML', () => {
 	test('keeps one keyed editable element per Markdown line', () => {
 		const source = `- alpha :: one
 - beta ::
-  - first
+  - first ::
+    - third level item
   - second
 - gamma :: three`
 		const { documentModel, root } = createEditor(source)
@@ -64,5 +66,31 @@ describe('description-list HTML', () => {
 		expect(lines).toHaveLength(documentModel.lines.length)
 		expect(lines.map(line => line.key)).toEqual(documentModel.lines.map(line => line.id))
 		expect(root.querySelector('dl')).toBeNull()
+	})
+
+	test('collapses inline and nested descriptions without hiding their terms', () => {
+		const source = `- alpha :: one
+- beta ::
+  - first ::
+    - third level item
+  - second
+- gamma :: three`
+		const { root } = createEditor(source)
+		let lines = Array.from(root.querySelectorAll('.editor-description-list > .dl-line'))
+
+		expect(root.querySelectorAll('.dl-description-toggle')).toHaveLength(4)
+
+		const alphaToggle = lines[0].querySelector('.dl-description-toggle') as HTMLElement
+		alphaToggle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+		lines = Array.from(root.querySelectorAll('.editor-description-list > .dl-line'))
+		expect(lines[0].classList.contains('dl-description-collapsed')).toBe(true)
+		expect(lines[0].classList.contains('dl-collapsed-child')).toBe(false)
+
+		const betaToggle = lines[1].querySelector('.dl-description-toggle') as HTMLElement
+		betaToggle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+		lines = Array.from(root.querySelectorAll('.editor-description-list > .dl-line'))
+		expect(lines[1].classList.contains('dl-description-collapsed')).toBe(true)
+		expect(lines.slice(2, 5).every(line => line.classList.contains('dl-collapsed-child'))).toBe(true)
+		expect(lines[5].classList.contains('dl-collapsed-child')).toBe(false)
 	})
 })
