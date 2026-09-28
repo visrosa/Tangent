@@ -216,7 +216,7 @@ const noteTypeset:TypesetTypes = {
 		},
 		{
 			name: 'dl',
-			selector: 'dl.description-list > dt, dl.description-list > dd',
+			selector: 'dl.description-list > dt, dl.description-list > dd, div.editor-description-list > div.dl-line',
 			defaultFollows: true,
 			fromDom(node: HTMLElement) {
 				const role = node.getAttribute('data-dl-role') === 'value' ? 'value' : 'term'
@@ -247,9 +247,57 @@ const noteTypeset:TypesetTypes = {
 					? nextDl.termIndent
 					: next.indent?.indent ?? ''
 				return firstRootIndent === nextRootIndent
+					&& first.blockquote === next.blockquote
 			},
-			renderMultiple: lineData => {
+			renderMultiple: (lineData, _editor, forHTML) => {
 				let revealed = false
+				const wrap = content => {
+					const depth = lineData[0][0].blockquote
+					if (!depth) return content
+
+					return h('blockquote', {
+						className: `depth-${depth}${revealed ? ' revealed' : ''}`
+					}, content)
+				}
+
+				if (!forHTML) {
+					const lines = lineData.map(([attributes, children, id]) => {
+						const dl = attributes.dl as DlLineData
+						if (attributes.revealed) revealed = true
+
+						let className = `dl-line dl-${dl.role}`
+						let lineChildren = children
+						if (dl.role === 'term' && dl.hasDef) {
+							className += ' dl-inline'
+							const separator = children.findIndex(child => {
+								if (typeof child !== 'object' || !child) return false
+								const className = child.props?.className ?? child.props?.class
+								return typeof className === 'string' && className.split(/\s+/).includes('dl_sep')
+							})
+							if (separator >= 0) {
+								lineChildren = [
+									h('span', { className: 'dl-term-content' }, children.slice(0, separator)),
+									children[separator],
+									h('span', { className: 'dl-definition-content' }, children.slice(separator + 1))
+								]
+							}
+						}
+
+						const props = getCoreLineProperties(attributes, className)
+						props.key = id
+						props['data-dl-role'] = dl.role
+						if (dl.hasDef !== undefined) props['data-dl-has-def'] = String(dl.hasDef)
+						if (dl.termIndent !== undefined) props['data-dl-term-indent'] = dl.termIndent
+						return h('div', props, lineChildren)
+					})
+
+					return wrap(h('div', {
+						className: revealed
+							? 'description-list editor-description-list revealed'
+							: 'description-list editor-description-list'
+					}, lines))
+				}
+
 				const items = []
 
 				for (const [attributes, children, id] of lineData) {
@@ -287,9 +335,9 @@ const noteTypeset:TypesetTypes = {
 					items.push(h('dd', getProps('term', `${id}-definition`), definitionChildren))
 				}
 
-				return h('dl', {
+				return wrap(h('dl', {
 					className: revealed ? 'description-list revealed' : 'description-list'
-				}, items)
+				}, items))
 			}
 		},
 		{

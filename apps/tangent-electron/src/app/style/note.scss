@@ -247,6 +247,37 @@ article.note {
 		}
 	}
 
+	.editor-description-list {
+		margin: 0;
+
+		.dl-line {
+			min-height: rhythmUnit(1);
+			line-height: rhythmUnit(1);
+		}
+
+		.dl-term {
+			font-weight: 600;
+		}
+
+		.dl-value {
+			margin-inline-start: 2em;
+		}
+
+		.dl-definition-content {
+			font-weight: 400;
+		}
+
+		.dl-inline:not(.revealed) {
+			display: grid;
+			grid-template-columns: max-content minmax(0, 1fr);
+			column-gap: 1em;
+
+			.dl_sep {
+				position: absolute;
+			}
+		}
+	}
+
 	// We want large lists to have extra space around them, but we don't want extra space when adjacent to blank lines.
 	// We also don't want extra space between a large list item and a child normal list item.
 	// Technically a large followed by a small sibling also doesn't have space, but I'm okay with that slight glitch.
