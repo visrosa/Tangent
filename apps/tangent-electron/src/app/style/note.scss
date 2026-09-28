@@ -559,6 +559,17 @@ article.note {
 		}
 	}
 
+	.inline-gloss-container.revealed {
+		outline: 2px solid var(--textColor);
+		border-radius: var(--inputBorderRadius);
+		outline-offset: 3px;
+	}
+
+	span.gloss-source {
+		font-family: var(--codeFontFamily);
+		color: var(--accentTextColor);
+	}
+
 	.mathLine {
 		color: var(--codeColor);
 	}

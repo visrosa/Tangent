@@ -7,6 +7,7 @@ import type { TagSectionData } from './tag'
 import type { CodeData } from './code'
 import type { MathData } from './math'
 import type { FuriganaData } from './furigana'
+import type { GlossData } from './gloss'
 import { hiddenGroupEmbedFormat } from './hiddenGroupEmbed'
 import { getHiddenGroupAttributes } from './inline'
 import { hasCollapsedChildren, isCollapsed } from './sections'
@@ -758,6 +759,20 @@ const noteTypeset:TypesetTypes = {
 				}
 
 				return h('t-math', tMathAttr, [])
+			}
+		}),
+
+		hiddenGroupEmbedFormat<GlossData>({
+			name: 'gloss',
+			renderOutput: (gloss, revealed, attributes) => {
+				const tGlossAttr = { base: gloss.base, description: gloss.description, instance: gloss.instance } as any
+
+				if (attributes.decoration?.focus) {
+					// Inject the focus decoration onto the shadow root, as math does.
+					tGlossAttr.className = attributes.decoration.focus.class
+				}
+
+				return h('t-gloss', tGlossAttr, [])
 			}
 		}),
 
