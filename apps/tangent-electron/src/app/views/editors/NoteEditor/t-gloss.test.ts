@@ -82,7 +82,8 @@ describe('gloss format', () => {
 	)
 
 	function render(attributes: AttributeMap) {
-		return glossFormat.render(attributes, ['source'], null, null) as any
+		const rendered = glossFormat.render(attributes, ['source'], null, null) as any
+		return glossFormat.postProcess?.(rendered) ?? rendered
 	}
 
 	test('renders a t-gloss element carrying base/description/instance', () => {
@@ -114,5 +115,25 @@ describe('gloss format', () => {
 
 		const html = inlineToHTML(editor, delta)
 		expect((html.match(/inline-gloss-container/g) ?? []).length).toBe(2)
+	})
+
+	test('decorations splitting one gloss instance do not duplicate its output', () => {
+		const editor = new Editor({ types: noteTypeset })
+		editor.setRoot(document.createElement('div'))
+		const gloss = { base: 'SGR', description: 'Select Graphic Rendition', instance: '0-31' }
+		const delta = new Delta([
+			{
+				insert: '{SGR',
+				attributes: { gloss, hiddenGroup: true, decoration: { focus: { class: 'unfocused' } } }
+			},
+			{
+				insert: '::Select Graphic Rendition}',
+				attributes: { gloss, hiddenGroup: true, decoration: { focus: { class: 'focused' } } }
+			}
+		])
+
+		const html = inlineToHTML(editor, delta)
+		expect((html.match(/inline-gloss-container/g) ?? []).length).toBe(1)
+		expect((html.match(/<t-gloss/g) ?? []).length).toBe(1)
 	})
 })
