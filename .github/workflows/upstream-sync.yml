@@ -16,6 +16,7 @@ concurrency:
 permissions:
   contents: write
   issues: write
+  actions: write
 
 jobs:
   sync:
@@ -147,4 +148,9 @@ jobs:
             # Pushed by explicit refspec, not via a local `git tag`: a local
             # refs/tags/$tag may already exist pointing at upstream's commit.
             git push origin "HEAD:refs/tags/$tag"
+            # Pushes made with GITHUB_TOKEN never trigger other workflows, so
+            # the tag push above can't start linux-packaging.yml on its own;
+            # workflow_dispatch is the exception. Dispatching on the tag ref
+            # still publishes (its publish step checks refs/tags/).
+            gh workflow run linux-packaging.yml --ref "$tag"
           fi
