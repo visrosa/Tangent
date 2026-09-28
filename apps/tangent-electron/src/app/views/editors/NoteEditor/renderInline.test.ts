@@ -15,6 +15,10 @@ function containerCount(html: string, name = 'math') {
 	return (html.match(new RegExp(`inline-${name}-container`, 'g')) ?? []).length
 }
 
+function elementCount(html: string, name: string) {
+	return (html.match(new RegExp(`<${name}`, 'g')) ?? []).length
+}
+
 describe('renderInline: adjacent hidden-group embeds', () => {
 	test('Distinct instances with the same source render as two containers', () => {
 		const editor = getEditor()
@@ -34,6 +38,25 @@ describe('renderInline: adjacent hidden-group embeds', () => {
 		])
 
 		expect(containerCount(inlineToHTML(editor, delta), 'furigana')).toBe(2)
+	})
+
+	test('Decorations splitting one furigana instance do not duplicate its output', () => {
+		const editor = getEditor()
+		const furigana = { base: 'Mr. Smith', reading: 'ミスター・スミス', instance: '0-20' }
+		const delta = new Delta([
+			{
+				insert: '{Mr.',
+				attributes: { furigana, hiddenGroup: true, decoration: { focus: { class: 'unfocused' } } }
+			},
+			{
+				insert: ' Smith|ミスター・スミス}',
+				attributes: { furigana, hiddenGroup: true, decoration: { focus: { class: 'focused' } } }
+			}
+		])
+		const html = inlineToHTML(editor, delta)
+
+		expect(containerCount(html, 'furigana')).toBe(1)
+		expect(elementCount(html, 't-furigana')).toBe(1)
 	})
 })
 
