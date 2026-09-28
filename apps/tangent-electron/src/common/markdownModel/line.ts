@@ -23,14 +23,15 @@ export function getLineFormatData(line: Line) {
 }
 
 export function lineHasMultiLineContext(line: Line) {
-	return line.attributes.list
+	return line.attributes.list || line.attributes.dl
 }
 
 export function lineIsMultiLineFormat(line: Line) {
 	if ('code' in line.attributes ||
 		'front_matter' in line.attributes ||
 		'math' in line.attributes ||
-		'html' in line.attributes
+		'html' in line.attributes ||
+		'dl' in line.attributes
 	) {
 		return true
 	}
@@ -61,7 +62,7 @@ export function getLineFormattingPrefix(line: Line, forNextLine = false): string
 			return result
 		}
 	}
-	else if (attr.list) {
+	else if (attr.list || attr.dl) {
 		const match = matchList(lineString)
 		if (match) {
 			let nextGlyph = match.glyph
@@ -157,7 +158,7 @@ export function lineFormatEscapeMode(line: Line) {
 	if (attr.blockquote) {
 		return 'double'
 	}
-	else if (attr.list) {
+	else if (attr.list || attr.dl) {
 		return 'single'
 	}
 	return 'none'

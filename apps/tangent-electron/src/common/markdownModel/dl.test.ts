@@ -5,6 +5,7 @@ import { matchList } from './list'
 import { markdownToTextDocument, parseMarkdown } from './parser'
 import noteTypeset from './typewriterTypes'
 import type { FormatType, LineType } from 'typewriter-editor/typesetting'
+import { getLineFormattingPrefix, lineFormatEscapeMode, lineHasMultiLineContext } from './line'
 
 describe('matchDlSeparator', () => {
 	test.each([
@@ -101,6 +102,18 @@ describe('description-list parsing', () => {
 		})
 		expect(rootIndents).toEqual(['', '', '', '', ''])
 	})
+
+	test('participates in list continuation behavior', () => {
+		const [line] = parseMarkdown('- term :: definition').lines
+		expect(lineHasMultiLineContext(line)).toBeTruthy()
+		expect(getLineFormattingPrefix(line, true)).toBe('- ')
+		expect(lineFormatEscapeMode(line)).toBe('single')
+	})
+
+	test.each(['*', '‣'])('accepts the supported %s list glyph', glyph => {
+		const [line] = parseMarkdown(`${glyph} term :: definition`).lines
+		expect(line.attributes.dl).toMatchObject({ role: 'term', hasDef: true })
+	})
 })
 
 describe('description-list rendering', () => {
@@ -137,7 +150,7 @@ describe('description-list rendering', () => {
 			[{ dl: { role: 'value', glyph, termIndent: '' }, indent: indent('  ') }, ['first'], 'v1'],
 			[{ dl: { role: 'value', glyph, termIndent: '' }, indent: indent('  ') }, ['second'], 'v2'],
 			[{ dl: { role: 'term', glyph, hasDef: true }, indent: indent('') }, ['gamma', separator, 'three'], 'c'],
-		], null) as any
+		], null, true) as any
 
 		expect(rendered.type).toBe('dl')
 		expect(rendered.props.className).toBe('description-list')

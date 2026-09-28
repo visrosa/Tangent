@@ -85,6 +85,35 @@ describe('Document-based parsing', () => {
 			expect(line.attributes.list).toBeTruthy()
 			expect(line.attributes.dl).toBeUndefined()
 		})
+
+		test('upgrading a bare term reparses its child values', () => {
+			const document = parser.markdownToTextDocument('- term\n  - value')
+			const [, end] = document.getLineRange(document.lines[0])
+			const edited = document.apply(document.change.insert(end - 1, ' ::'))
+			const result = parser.parseMarkdown(edited, {
+				documentStartLine: 0,
+				documentEndLine: 0
+			})
+
+			expect(result.lines).toHaveLength(2)
+			expect(result.lines[0].attributes.dl).toMatchObject({ role: 'term', hasDef: false })
+			expect(result.lines[1].attributes.dl).toMatchObject({ role: 'value', termIndent: '' })
+		})
+
+		test('downgrading a bare term reparses its child values', () => {
+			const source = '- term ::\n  - value'
+			const document = parser.markdownToTextDocument(source)
+			const edited = document.apply(document.change.delete([6, 9]))
+			const result = parser.parseMarkdown(edited, {
+				documentStartLine: 0,
+				documentEndLine: 0
+			})
+
+			expect(result.lines).toHaveLength(2)
+			expect(result.lines[0].attributes.list).toBeTruthy()
+			expect(result.lines[1].attributes.list).toBeTruthy()
+			expect(result.lines[1].attributes.dl).toBeUndefined()
+		})
 	})
 
 	test('Inserting code characters on blank line', () => {
