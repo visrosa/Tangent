@@ -23,6 +23,10 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       GH_TOKEN: ${{ github.token }}
+      # The job adds a remote named `upstream`, which gh prefers over
+      # `origin` when resolving the repo — without this, issue commands
+      # target suchnsuch/Tangent instead of this fork.
+      GH_REPO: ${{ github.repository }}
     steps:
       - name: Check out linux_packaging
         uses: actions/checkout@v4
