@@ -6,6 +6,7 @@ import { type ParsingContext, ParsingContextType } from './parsingContext'
 
 export type MathData = {
 	source?: string
+	isBlock?: boolean
 	/** Distinguishes adjacent inline math that shares a source. */
 	instance?: string
 }
