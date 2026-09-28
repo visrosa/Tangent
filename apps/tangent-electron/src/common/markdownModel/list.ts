@@ -1,6 +1,7 @@
 import { StructureType, type TodoState } from 'common/indexing/indexTypes'
 import NoteParser from './NoteParser'
 import { escapeRegExp } from '@such-n-such/core'
+import { findParentDlTermIndent, matchDlSeparator } from './dl'
 
 // Unordered glyphs are split by visual weight because large glyphs get extra
 // vertical spacing via ListForm.UnorderedLarge / .largeList styling.
@@ -278,16 +279,44 @@ export function parseListItem(char: string, parser: NoteParser): boolean {
 		})
 	}
 
-	// Encode the list
-	parser.lineData.list = listDetail
+	const dlSeparator = matchDlSeparator(line, listDetail)
+	if (dlSeparator) {
+		parser.lineData.dl = {
+			role: 'term',
+			glyph: listDetail,
+			hasDef: dlSeparator.hasDef
+		}
+	}
+	else {
+		const termIndent = findParentDlTermIndent(parser, parser.getCurrentIndent().indent)
+		if (termIndent !== null) {
+			parser.lineData.dl = {
+				role: 'value',
+				glyph: listDetail,
+				termIndent
+			}
+		}
+		else {
+			// Encode the list
+			parser.lineData.list = listDetail
+		}
+	}
 
 	// Consume the line glyph
 	feed.nextByLength(listDetail.glyph.length - 1)
-	parser.commitSpan({
-		line_format: 'list',
-		hiddenGroup: true,
-		list_format: listDetail
-	})
+	if (parser.lineData.dl) {
+		parser.commitSpan({
+			line_format: 'dl',
+			hidden: true
+		})
+	}
+	else {
+		parser.commitSpan({
+			line_format: 'list',
+			hiddenGroup: true,
+			list_format: listDetail
+		})
+	}
 
 	return true
 }

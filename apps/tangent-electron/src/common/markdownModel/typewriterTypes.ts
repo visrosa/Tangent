@@ -8,6 +8,7 @@ import type { CodeData } from './code'
 import type { MathData } from './math'
 import type { FuriganaData } from './furigana'
 import type { GlossData } from './gloss'
+import type { DlLineData } from './dl'
 import { hiddenGroupEmbedFormat } from './hiddenGroupEmbed'
 import { hasCollapsedChildren, isCollapsed } from './sections'
 import { getMediaCustomizationsFromText, type LinkAttribute } from './links'
@@ -212,6 +213,84 @@ const noteTypeset:TypesetTypes = {
 			defaultFollows: true,
 			render: (attributes, children) => h(`h${attributes.header}`, getCoreLineProperties(attributes), children),
 			fromDom: defaultLineFromDom('header') // Technically incorrect, but will be re-parsed anyhow
+		},
+		{
+			name: 'dl',
+			selector: 'dl.description-list > dt, dl.description-list > dd',
+			defaultFollows: true,
+			fromDom(node: HTMLElement) {
+				const role = node.getAttribute('data-dl-role') === 'value' ? 'value' : 'term'
+				const dl: DlLineData = {
+					role,
+					glyph: undefined
+				}
+
+				const hasDef = node.getAttribute('data-dl-has-def')
+				if (hasDef !== null) dl.hasDef = hasDef === 'true'
+
+				const termIndent = node.getAttribute('data-dl-term-indent')
+				if (termIndent !== null) dl.termIndent = termIndent
+
+				const attributes: AttributeMap = { dl }
+				extractCoreLineProperties(node, attributes)
+				return attributes
+			},
+			shouldCombine: (first, next) => {
+				const firstDl = first.dl as DlLineData
+				const nextDl = next.dl as DlLineData
+				if (!firstDl || !nextDl) return false
+
+				const firstRootIndent = firstDl.role === 'value'
+					? firstDl.termIndent
+					: first.indent?.indent ?? ''
+				const nextRootIndent = nextDl.role === 'value'
+					? nextDl.termIndent
+					: next.indent?.indent ?? ''
+				return firstRootIndent === nextRootIndent
+			},
+			renderMultiple: lineData => {
+				let revealed = false
+				const items = []
+
+				for (const [attributes, children, id] of lineData) {
+					const dl = attributes.dl as DlLineData
+					if (attributes.revealed) revealed = true
+
+					const getProps = (role: DlLineData['role'], key: string) => {
+						const props = getCoreLineProperties(attributes, `dl-${role}`)
+						props.key = key
+						props['data-dl-role'] = role
+						if (dl.hasDef !== undefined) props['data-dl-has-def'] = String(dl.hasDef)
+						if (dl.termIndent !== undefined) props['data-dl-term-indent'] = dl.termIndent
+						return props
+					}
+
+					if (dl.role === 'value') {
+						items.push(h('dd', getProps('value', id), children))
+						continue
+					}
+
+					if (!dl.hasDef) {
+						items.push(h('dt', getProps('term', id), children))
+						continue
+					}
+
+					const separator = children.findIndex(child => {
+						if (typeof child !== 'object' || !child) return false
+						const className = child.props?.className ?? child.props?.class
+						return typeof className === 'string' && className.split(/\s+/).includes('dl_sep')
+					})
+					const termChildren = separator < 0 ? children : children.slice(0, separator)
+					const definitionChildren = separator < 0 ? [] : children.slice(separator + 1)
+
+					items.push(h('dt', getProps('term', `${id}-term`), termChildren))
+					items.push(h('dd', getProps('term', `${id}-definition`), definitionChildren))
+				}
+
+				return h('dl', {
+					className: revealed ? 'description-list revealed' : 'description-list'
+				}, items)
+			}
 		},
 		{
 			name: 'list',
@@ -519,6 +598,11 @@ const noteTypeset:TypesetTypes = {
 				}
 				return h('span', { className }, children)
 			}
+		},
+
+		{
+			...hideableFormat('dl_sep'),
+			selector: 'span.dl_sep'
 		},
 
 		{
