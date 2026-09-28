@@ -36,7 +36,7 @@ describe('description-list parsing', () => {
 		expect(line.attributes.list).toBeUndefined()
 		expect(line.content.ops.find(op => op.attributes?.dl_sep)).toMatchObject({
 			insert: ' :: ',
-			attributes: { dl_sep: true, hidden: true }
+			attributes: { dl_sep: {}, hiddenGroup: true }
 		})
 	})
 
@@ -93,14 +93,15 @@ describe('description-list parsing', () => {
 	test('keeps mixed terms and values in the same root group', () => {
 		const lines = parseMarkdown(`- a :: 1
 - b ::
-  - v1
-  - v2
+  - nested ::
+    - nested value
+  - sibling value
 - c :: 3`).lines
-		const rootIndents = lines.map(line => {
-			const dl = line.attributes.dl as DlLineData
-			return dl.role === 'term' ? line.attributes.indent.indent : dl.termIndent
-		})
-		expect(rootIndents).toEqual(['', '', '', '', ''])
+		const dlLines = lines.filter(line => line.attributes.dl)
+		expect(dlLines.map(line => (line.attributes.dl as DlLineData).rootIndent))
+			.toEqual(['', '', '', '', '', ''])
+		expect((dlLines[2].attributes.dl as DlLineData).termIndent).toBe('')
+		expect((dlLines[3].attributes.dl as DlLineData).termIndent).toBe('  ')
 	})
 
 	test('participates in list continuation behavior', () => {
@@ -130,26 +131,27 @@ describe('description-list rendering', () => {
 
 	const indent = (value: string) => ({ indent: value, indentSize: value.length })
 	const glyph = matchList('- item')
-	const separator = separatorFormat.render({ dl_sep: true, hidden: true }, [' :: '], null, null)
+	const separator = separatorFormat.render({ dl_sep: {}, hiddenGroup: true }, [' :: '], null, null) as any
+	separatorFormat.postProcess?.(separator)
 
 	test('combines terms and direct values sharing a root indent', () => {
-		const root = { dl: { role: 'term', glyph, hasDef: true }, indent: indent('') }
-		const bare = { dl: { role: 'term', glyph, hasDef: false }, indent: indent('') }
-		const value = { dl: { role: 'value', glyph, termIndent: '' }, indent: indent('  ') }
-		const nestedTerm = { dl: { role: 'term', glyph, hasDef: true }, indent: indent('  ') }
+		const root = { dl: { role: 'term', glyph, hasDef: true, rootIndent: '' }, indent: indent('') }
+		const bare = { dl: { role: 'term', glyph, hasDef: false, rootIndent: '' }, indent: indent('') }
+		const value = { dl: { role: 'value', glyph, termIndent: '', rootIndent: '' }, indent: indent('  ') }
+		const nestedTerm = { dl: { role: 'term', glyph, hasDef: true, rootIndent: '' }, indent: indent('  ') }
 
 		expect(lineType.shouldCombine(root, bare)).toBe(true)
 		expect(lineType.shouldCombine(root, value)).toBe(true)
-		expect(lineType.shouldCombine(root, nestedTerm)).toBe(false)
+		expect(lineType.shouldCombine(root, nestedTerm)).toBe(true)
 	})
 
 	test('renders semantic term and definition elements', () => {
 		const rendered = lineType.renderMultiple([
-			[{ dl: { role: 'term', glyph, hasDef: true }, indent: indent('') }, ['alpha', separator, 'one'], 'a'],
-			[{ dl: { role: 'term', glyph, hasDef: false }, indent: indent('') }, ['beta'], 'b'],
-			[{ dl: { role: 'value', glyph, termIndent: '' }, indent: indent('  ') }, ['first'], 'v1'],
-			[{ dl: { role: 'value', glyph, termIndent: '' }, indent: indent('  ') }, ['second'], 'v2'],
-			[{ dl: { role: 'term', glyph, hasDef: true }, indent: indent('') }, ['gamma', separator, 'three'], 'c'],
+			[{ dl: { role: 'term', glyph, hasDef: true, rootIndent: '' }, indent: indent('') }, ['alpha', separator, 'one'], 'a'],
+			[{ dl: { role: 'term', glyph, hasDef: false, rootIndent: '' }, indent: indent('') }, ['beta'], 'b'],
+			[{ dl: { role: 'value', glyph, termIndent: '', rootIndent: '' }, indent: indent('  ') }, ['first'], 'v1'],
+			[{ dl: { role: 'value', glyph, termIndent: '', rootIndent: '' }, indent: indent('  ') }, ['second'], 'v2'],
+			[{ dl: { role: 'term', glyph, hasDef: true, rootIndent: '' }, indent: indent('') }, ['gamma', separator, 'three'], 'c'],
 		], null, true) as any
 
 		expect(rendered.type).toBe('dl')
@@ -168,7 +170,18 @@ describe('description-list rendering', () => {
 	test('renders the separator as hidden source syntax', () => {
 		expect(separator).toMatchObject({
 			type: 'span',
-			props: { class: 'dl_sep hidden' }
+			props: { className: 'inline-dl_sep-container' },
+			children: [
+				{
+					type: 'span',
+					props: { className: 'dl_sep-source hidden' },
+					children: [' :: ']
+				},
+				{
+					type: 'span',
+					props: { className: 'dl-separator-output' }
+				}
+			]
 		})
 	})
 })

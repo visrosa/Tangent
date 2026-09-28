@@ -249,32 +249,130 @@ article.note {
 
 	.editor-description-list {
 		margin: 0;
+		display: grid;
+		grid-template-columns: max-content max-content minmax(0, 1fr);
+		column-gap: .65em;
 
 		.dl-line {
+			grid-column: 1 / -1;
 			min-height: rhythmUnit(1);
 			line-height: rhythmUnit(1);
+			position: relative;
+
+			&.dl-collapsed-child {
+				display: none;
+			}
 		}
 
 		.dl-term {
 			font-weight: 600;
 		}
 
-		.dl-value {
-			margin-inline-start: 2em;
+		.dl-line:not(.dl-inline):not(.revealed) {
+			margin-inline-start: calc(var(--spaceWidth) * var(--lineIndent));
+		}
+
+		.dl-line.dl-nested:not(.dl-inline):not(.revealed) {
+			margin-inline-start: calc((var(--spaceWidth) * var(--lineIndent)) + var(--indentWidth));
 		}
 
 		.dl-definition-content {
 			font-weight: 400;
 		}
 
-		.dl-inline:not(.revealed) {
+		.dl-inline {
 			display: grid;
-			grid-template-columns: max-content minmax(0, 1fr);
-			column-gap: 1em;
+			grid-template-columns: subgrid;
 
-			.dl_sep {
-				position: absolute;
+			.dl-term-content {
+				grid-column: 1;
 			}
+
+			.inline-dl_sep-container {
+				grid-column: 2;
+			}
+
+			.dl-definition-content {
+				grid-column: 3;
+			}
+
+			&:not(.revealed) .dl-term-content {
+				padding-inline-start: calc(var(--spaceWidth) * var(--lineIndent));
+			}
+
+			&.dl-nested:not(.revealed) .dl-term-content {
+				padding-inline-start: calc((var(--spaceWidth) * var(--lineIndent)) + var(--indentWidth));
+			}
+
+			.dl-description-toggle {
+				inset-inline-start: calc((var(--spaceWidth) * var(--lineIndent)) - 1.15em);
+			}
+
+			&.dl-nested .dl-description-toggle {
+				inset-inline-start: calc((var(--spaceWidth) * var(--lineIndent)) + var(--indentWidth) - 1.15em);
+			}
+
+			&.dl-description-collapsed {
+				.inline-dl_sep-container,
+				.dl-definition-content {
+					display: none;
+				}
+			}
+		}
+
+		.dl-line:not(.dl-inline) .dl-description-toggle {
+			inset-inline-start: -1.15em;
+		}
+
+		.dl-description-toggle {
+			appearance: none;
+			background: none;
+			border: 0;
+			color: var(--deemphasizedTextColor);
+			cursor: pointer;
+			font: inherit;
+			height: rhythmUnit(1);
+			padding: 0;
+			position: absolute;
+			top: 0;
+			width: 1em;
+
+			&::before {
+				content: "▸";
+				display: inline-block;
+				transition: transform .12s ease;
+			}
+
+			&[aria-expanded="true"]::before {
+				transform: rotate(90deg);
+			}
+
+			&:hover {
+				color: var(--accentTextColor);
+			}
+		}
+
+		.inline-dl_sep-container {
+			display: inline-flex;
+			align-items: baseline;
+
+			.dl-separator-output::before {
+				content: "—";
+				color: var(--deemphasizedTextColor);
+			}
+
+			&.revealed .dl-separator-output {
+				display: none;
+			}
+		}
+
+		.dl-term:not(.dl-inline) .dl-separator-output {
+			display: none;
+		}
+
+		span.dl_sep-source {
+			font-family: var(--codeFontFamily);
+			color: var(--accentTextColor);
 		}
 	}
 
