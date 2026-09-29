@@ -9,6 +9,11 @@ export type DlLineData = {
 	termIndent?: string
 }
 
+export type DlSeparatorData = {
+	/** Keeps decoration-split separator spans from merging with one another. */
+	instance?: string
+}
+
 export type ParentDlTerm = {
 	rootIndent: string
 	termIndent: string
@@ -148,12 +153,15 @@ export function parseDlSeparator(char: string, parser: NoteParser): boolean {
 	if (following !== undefined && following !== '\n' && following !== ' ' && following !== '\t') return false
 
 	parser.commitSpan(null, 0)
+	const start = feed.index
 
 	// Include one separating space in the hidden span when a definition follows,
 	// but never consume the newline ending a bare term.
 	feed.nextByLength(following === ' ' || following === '\t' ? 3 : 2)
 	parser.commitSpan({
-		dl_sep: {},
+		dl_sep: {
+			instance: parser.getInstanceId(start, feed.index + feed.currentStepLength)
+		},
 		hiddenGroup: true
 	})
 

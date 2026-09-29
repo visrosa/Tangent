@@ -1,9 +1,11 @@
 import { describe, expect, test } from 'vitest'
+import { wait } from '@such-n-such/core'
 import { Editor, docToHTML } from 'typewriter-editor'
 import { markdownToTextDocument } from 'common/markdownModel/parser'
 import noteTypeset from 'common/markdownModel/typewriterTypes'
 import './t-embed'
 import MarkdownEditor from './MarkdownEditor'
+import 'app/style/note.scss'
 
 function render(source: string) {
 	const editor = new Editor({ types: noteTypeset })
@@ -122,7 +124,18 @@ describe('description-list HTML', () => {
 		expect(container.classList.contains('revealed')).toBe(false)
 	})
 
-	test('section collapse does not reveal every description separator', () => {
+	test('reveals only the separator containing the caret', () => {
+		const source = '- alpha :: one\n- beta :: two\n- gamma :: three\nplain'
+		const { editor, root } = createMarkdownEditor(source)
+
+		editor.select(source.indexOf('::') + 1)
+		expect(root.querySelectorAll('.dl_sep-source.revealed')).toHaveLength(1)
+
+		editor.select(editor.getText().length)
+		expect(root.querySelectorAll('.dl_sep-source.revealed')).toHaveLength(0)
+	})
+
+	test('section collapse does not reveal description separators', async () => {
 		const source = `- alpha :: first inline description
 - beta ::
   - first nested description ::
@@ -134,7 +147,53 @@ describe('description-list HTML', () => {
 
 		editor.select(nestedLine[0])
 		editor.collapsingSections.toggleLineCollapsed(1)
+		await wait()
+		expect(root.querySelectorAll('.dl_sep-source.revealed')).toHaveLength(0)
+
+		editor.collapsingSections.toggleLineCollapsed(1)
+		await wait()
+		expect(root.querySelectorAll('.dl_sep-source.revealed')).toHaveLength(0)
+	})
+
+	test('hides separators after typing a description list and leaving it', async () => {
+		const { editor, root } = createMarkdownEditor('')
+		editor.select(0)
+
+		for (const char of '- term :: definition\nplain') {
+			editor.insert(char)
+			await wait()
+		}
+		editor.select(editor.getText().length)
 
 		expect(root.querySelectorAll('.dl_sep-source.revealed')).toHaveLength(0)
+		expect(root.querySelector('.inline-dl_sep-container.revealed')).toBeNull()
+	})
+
+	test('separates a nested inline definition from term styling', async () => {
+		const source = `- formatting ::
+  - Furigana :: readings above kanji
+plain`
+		const { editor, root } = createMarkdownEditor('')
+		editor.select(0)
+		for (const char of source) {
+			editor.insert(char)
+			await wait()
+		}
+		editor.select(editor.getText().length)
+		const article = document.createElement('article')
+		article.classList.add('note')
+		article.appendChild(root)
+		document.body.appendChild(article)
+		const nested = root.querySelectorAll('.dl-line')[1]
+		const term = nested.querySelector('.dl-term-content') as HTMLElement
+		const definition = nested.querySelector('.dl-definition-content') as HTMLElement
+
+		expect(nested.classList.contains('dl-inline')).toBe(true)
+		expect(term.textContent.endsWith('Furigana')).toBe(true)
+		expect(definition.textContent).toBe('readings above kanji')
+		expect(getComputedStyle(term).fontWeight).toBe('600')
+		expect(getComputedStyle(definition).fontWeight).toBe('400')
+
+		article.remove()
 	})
 })

@@ -8,7 +8,7 @@ import type { CodeData } from './code'
 import type { MathData } from './math'
 import type { FuriganaData } from './furigana'
 import type { GlossData } from './gloss'
-import type { DlLineData } from './dl'
+import type { DlLineData, DlSeparatorData } from './dl'
 import { hiddenGroupEmbedFormat } from './hiddenGroupEmbed'
 import { hasCollapsedChildren, isCollapsed } from './sections'
 import { getMediaCustomizationsFromText, type LinkAttribute } from './links'
@@ -731,7 +731,7 @@ const noteTypeset:TypesetTypes = {
 			}
 		},
 
-		hiddenGroupEmbedFormat<Record<string, never>>({
+		hiddenGroupEmbedFormat<DlSeparatorData>({
 			name: 'dl_sep',
 			renderOutput: () => h('span', {
 				className: 'dl-separator-output',

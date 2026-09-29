@@ -60,6 +60,10 @@ export function collapsingSections(editor: Editor) {
 			}
 		}
 
+		// Section controls can move the selection next to hidden trailing syntax.
+		// Treat that as an administrative selection change, not an editing intent.
+		editor.modules.tangent?.preventSelectionReveal()
+		editor.modules.decorations?.removeDecorations('format-reveal')
 		change.apply()
 		preventUncollapseOnEdit--
 		
