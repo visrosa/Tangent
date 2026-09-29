@@ -36,7 +36,7 @@ describe('description-list parsing', () => {
 		expect(line.attributes.list).toBeUndefined()
 		expect(line.content.ops.find(op => op.attributes?.dl_sep)).toMatchObject({
 			insert: ' :: ',
-			attributes: { dl_sep: {}, hiddenGroup: true }
+			attributes: { dl_sep: { instance: '6-10' }, hiddenGroup: true }
 		})
 	})
 
