@@ -121,4 +121,20 @@ describe('description-list HTML', () => {
 		const container = root.querySelector('.inline-dl_sep-container') as HTMLElement
 		expect(container.classList.contains('revealed')).toBe(false)
 	})
+
+	test('section collapse does not reveal every description separator', () => {
+		const source = `- alpha :: first inline description
+- beta ::
+  - first nested description ::
+    - third level item
+  - second nested description
+- gamma :: final inline description`
+		const { editor, root } = createMarkdownEditor(source)
+		const nestedLine = editor.doc.getLineRange(editor.doc.lines[3])
+
+		editor.select(nestedLine[0])
+		editor.collapsingSections.toggleLineCollapsed(1)
+
+		expect(root.querySelectorAll('.dl_sep-source.revealed')).toHaveLength(0)
+	})
 })
