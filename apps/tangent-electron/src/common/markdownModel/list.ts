@@ -284,8 +284,8 @@ export function parseListItem(char: string, parser: NoteParser): boolean {
 
 	const dlSeparator = matchDlSeparator(line, listDetail)
 	const currentIndent = parser.getCurrentIndent().indent
-	const parentDlTerm = findParentDlTerm(parser, currentIndent)
 	if (dlSeparator) {
+		const parentDlTerm = findParentDlTerm(parser, currentIndent, false)
 		setDlLineData(parser, {
 			role: 'term',
 			glyph: listDetail,
@@ -294,7 +294,7 @@ export function parseListItem(char: string, parser: NoteParser): boolean {
 			termIndent: parentDlTerm?.termIndent
 		})
 
-		if (!dlSeparator.hasDef && feed instanceof DocumentFeeder) {
+		if (feed instanceof DocumentFeeder) {
 			const termIndent = currentIndent
 			feed.injectAdjacentLinesWhile(nextLine => {
 				const nextIndent = nextLine.attributes.indent?.indent ?? ''
@@ -304,6 +304,7 @@ export function parseListItem(char: string, parser: NoteParser): boolean {
 		}
 	}
 	else {
+		const parentDlTerm = findParentDlTerm(parser, currentIndent)
 		if (parentDlTerm) {
 			setDlLineData(parser, {
 				role: 'value',
