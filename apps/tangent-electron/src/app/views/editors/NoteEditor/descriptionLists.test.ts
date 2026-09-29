@@ -78,8 +78,8 @@ describe('description-list HTML', () => {
 		expect(lines.map(line => line.key)).toEqual(documentModel.lines.map(line => line.id))
 		expect(root.querySelector('dl')).toBeNull()
 		const controls = lines[0].querySelector('.dl-separator-controls') as HTMLElement
-		expect(controls.firstElementChild.classList.contains('dl-description-toggle')).toBe(true)
-		expect(controls.lastElementChild.classList.contains('inline-dl_sep-container')).toBe(true)
+		expect(controls.firstElementChild.classList.contains('inline-dl_sep-container')).toBe(true)
+		expect(controls.lastElementChild.classList.contains('dl-description-toggle')).toBe(true)
 		expect(controls.querySelector('.dl-separator-output').textContent).toBe('')
 	})
 

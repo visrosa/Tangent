@@ -351,8 +351,8 @@ const noteTypeset:TypesetTypes = {
 							const separator = children.findIndex(isDlSeparatorNode)
 							if (separator >= 0) {
 								const controls = h('span', { className: 'dl-separator-controls' }, [
-									toggle,
-									children[separator]
+									children[separator],
+									toggle
 								].filter(Boolean))
 
 								if (dl.hasDef) {
