@@ -2,6 +2,8 @@ import { describe, expect, test } from 'vitest'
 import { Editor, docToHTML } from 'typewriter-editor'
 import { markdownToTextDocument } from 'common/markdownModel/parser'
 import noteTypeset from 'common/markdownModel/typewriterTypes'
+import './t-embed'
+import MarkdownEditor from './MarkdownEditor'
 
 function render(source: string) {
 	const editor = new Editor({ types: noteTypeset })
@@ -17,6 +19,15 @@ function createEditor(source: string) {
 	const root = document.createElement('div')
 	const editor = new Editor({ types: noteTypeset, doc: documentModel, root })
 	return { documentModel, editor, root }
+}
+
+function createMarkdownEditor(source: string) {
+	const root = document.createElement('div')
+	const editor = new MarkdownEditor(null, {
+		doc: markdownToTextDocument(source),
+		root
+	})
+	return { editor, root }
 }
 
 describe('description-list HTML', () => {
@@ -66,6 +77,10 @@ describe('description-list HTML', () => {
 		expect(lines).toHaveLength(documentModel.lines.length)
 		expect(lines.map(line => line.key)).toEqual(documentModel.lines.map(line => line.id))
 		expect(root.querySelector('dl')).toBeNull()
+		const controls = lines[0].querySelector('.dl-separator-controls') as HTMLElement
+		expect(controls.firstElementChild.classList.contains('dl-description-toggle')).toBe(true)
+		expect(controls.lastElementChild.classList.contains('inline-dl_sep-container')).toBe(true)
+		expect(controls.querySelector('.dl-separator-output').textContent).toBe('')
 	})
 
 	test('collapses inline and nested descriptions without hiding their terms', () => {
@@ -92,5 +107,18 @@ describe('description-list HTML', () => {
 		expect(lines[1].classList.contains('dl-description-collapsed')).toBe(true)
 		expect(lines.slice(2, 5).every(line => line.classList.contains('dl-collapsed-child'))).toBe(true)
 		expect(lines[5].classList.contains('dl-collapsed-child')).toBe(false)
+	})
+
+	test('hides separator source again after the caret leaves it', () => {
+		const { editor, root } = createMarkdownEditor('- term :: definition\nplain')
+		const source = () => root.querySelector('.dl_sep-source') as HTMLElement
+
+		editor.select(8)
+		expect(source().classList.contains('revealed')).toBe(true)
+
+		editor.select(editor.getText().length)
+		expect(source().classList.contains('revealed')).toBe(false)
+		const container = root.querySelector('.inline-dl_sep-container') as HTMLElement
+		expect(container.classList.contains('revealed')).toBe(false)
 	})
 })

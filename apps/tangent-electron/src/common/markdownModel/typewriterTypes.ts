@@ -347,20 +347,26 @@ const noteTypeset:TypesetTypes = {
 						}
 
 						let lineChildren = children
-						if (dl.role === 'term' && dl.hasDef) {
-							className += ' dl-inline'
+						if (dl.role === 'term') {
 							const separator = children.findIndex(isDlSeparatorNode)
 							if (separator >= 0) {
-								lineChildren = [
+								const controls = h('span', { className: 'dl-separator-controls' }, [
 									toggle,
-									h('span', { className: 'dl-term-content' }, children.slice(0, separator)),
-									children[separator],
-									h('span', { className: 'dl-definition-content' }, children.slice(separator + 1))
-								].filter(Boolean)
+									children[separator]
+								].filter(Boolean))
+
+								if (dl.hasDef) {
+									className += ' dl-inline'
+									lineChildren = [
+										h('span', { className: 'dl-term-content' }, children.slice(0, separator)),
+										controls,
+										h('span', { className: 'dl-definition-content' }, children.slice(separator + 1))
+									]
+								}
+								else {
+									lineChildren = [...children.slice(0, separator), controls]
+								}
 							}
-						}
-						else if (toggle) {
-							lineChildren = [toggle, ...children]
 						}
 
 						const props = getCoreLineProperties(attributes, className)

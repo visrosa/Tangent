@@ -257,7 +257,6 @@ article.note {
 			grid-column: 1 / -1;
 			min-height: rhythmUnit(1);
 			line-height: rhythmUnit(1);
-			position: relative;
 
 			&.dl-collapsed-child {
 				display: none;
@@ -288,7 +287,7 @@ article.note {
 				grid-column: 1;
 			}
 
-			.inline-dl_sep-container {
+			.dl-separator-controls {
 				grid-column: 2;
 			}
 
@@ -304,24 +303,21 @@ article.note {
 				padding-inline-start: calc((var(--spaceWidth) * var(--lineIndent)) + var(--indentWidth));
 			}
 
-			.dl-description-toggle {
-				inset-inline-start: calc((var(--spaceWidth) * var(--lineIndent)) - 1.15em);
-			}
-
-			&.dl-nested .dl-description-toggle {
-				inset-inline-start: calc((var(--spaceWidth) * var(--lineIndent)) + var(--indentWidth) - 1.15em);
-			}
-
 			&.dl-description-collapsed {
-				.inline-dl_sep-container,
 				.dl-definition-content {
 					display: none;
 				}
 			}
 		}
 
-		.dl-line:not(.dl-inline) .dl-description-toggle {
-			inset-inline-start: -1.15em;
+		.dl-separator-controls {
+			display: inline-flex;
+			align-items: baseline;
+			gap: .2em;
+		}
+
+		.dl-line:not(.dl-inline) .dl-separator-controls {
+			margin-inline-start: .45em;
 		}
 
 		.dl-description-toggle {
@@ -331,10 +327,12 @@ article.note {
 			color: var(--deemphasizedTextColor);
 			cursor: pointer;
 			font: inherit;
-			height: rhythmUnit(1);
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			height: 1em;
+			line-height: 1;
 			padding: 0;
-			position: absolute;
-			top: 0;
 			width: 1em;
 
 			&::before {
@@ -356,18 +354,17 @@ article.note {
 			display: inline-flex;
 			align-items: baseline;
 
-			.dl-separator-output::before {
-				content: "—";
-				color: var(--deemphasizedTextColor);
+			.dl_sep-source {
+				font-size: 0 !important;
+				line-height: 0 !important;
+				tab-size: 0 !important;
 			}
 
-			&.revealed .dl-separator-output {
-				display: none;
+			&.revealed .dl_sep-source {
+				font-size: unset !important;
+				line-height: unset !important;
+				tab-size: unset !important;
 			}
-		}
-
-		.dl-term:not(.dl-inline) .dl-separator-output {
-			display: none;
 		}
 
 		span.dl_sep-source {
