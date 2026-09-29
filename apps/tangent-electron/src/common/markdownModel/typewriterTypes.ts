@@ -205,6 +205,45 @@ function isDlSeparatorNode(child): boolean {
 		&& className.split(/\s+/).includes('inline-dl_sep-container')
 }
 
+function splitDlChildren(children: any[]) {
+	const separators: any[] = []
+	const segments: any[][] = [[]]
+
+	for (const child of children) {
+		if (isDlSeparatorNode(child)) {
+			separators.push(child)
+			segments.push([])
+		}
+		else {
+			segments.at(-1).push(child)
+		}
+	}
+
+	return {
+		term: segments[0],
+		separators,
+		definitions: segments.slice(1)
+	}
+}
+
+function withoutDlSourceFormatting(children: any[]) {
+	const visible = children.filter(child => {
+		if (typeof child !== 'object' || !child) return true
+		const className = child.props?.className ?? child.props?.class
+		return typeof className !== 'string'
+			|| !className.split(/\s+/).includes('line_format')
+	})
+
+	const firstText = visible.findIndex(child => typeof child === 'string')
+	if (firstText >= 0) visible[firstText] = visible[firstText].trimStart()
+	return visible
+}
+
+function appendStyle(props: AttributeMap, declaration: string) {
+	const style = props.style as string ?? ''
+	props.style = `${style}${style && !style.endsWith(';') ? ';' : ''}${declaration}`
+}
+
 const collapsedDlDescriptions = new WeakMap<object, Set<string>>()
 
 function getCollapsedDlDescriptions(editor: object): Set<string> {
@@ -301,7 +340,6 @@ const noteTypeset:TypesetTypes = {
 
 						const nextAttributes = lineData[index + 1]?.[0]
 						const hasNestedDescription = dl.role === 'term'
-							&& dl.hasDef === false
 							&& nextAttributes
 							&& getDlIndent(nextAttributes) > indent
 						const collapsible = dl.role === 'term'
@@ -315,6 +353,38 @@ const noteTypeset:TypesetTypes = {
 
 						return { collapsible, hiddenByAncestor, isCollapsed }
 					})
+					const layouts: Array<{ row: number, span: number }> = []
+					let nextRow = 1
+					for (let index = 0; index < lineData.length; index++) {
+						if (layouts[index]) continue
+						if (states[index].hiddenByAncestor) {
+							layouts[index] = { row: nextRow, span: 1 }
+							continue
+						}
+
+						const [attributes] = lineData[index]
+						const dl = attributes.dl as DlLineData
+						if (dl.role === 'term' && dl.hasDef === false && !states[index].isCollapsed) {
+							const termIndent = attributes.indent?.indent ?? ''
+							let valueCount = 0
+							for (let valueIndex = index + 1; valueIndex < lineData.length; valueIndex++) {
+								const [valueAttributes] = lineData[valueIndex]
+								const valueDl = valueAttributes.dl as DlLineData
+								if (valueDl.role !== 'value' || valueDl.termIndent !== termIndent) break
+								if (states[valueIndex].hiddenByAncestor) continue
+								layouts[valueIndex] = { row: nextRow + valueCount, span: 1 }
+								valueCount++
+							}
+
+							const span = Math.max(1, valueCount)
+							layouts[index] = { row: nextRow, span }
+							nextRow += span
+							continue
+						}
+
+						layouts[index] = { row: nextRow, span: 1 }
+						nextRow++
+					}
 
 					const lines = lineData.map(([attributes, children, id], index) => {
 						const dl = attributes.dl as DlLineData
@@ -348,28 +418,41 @@ const noteTypeset:TypesetTypes = {
 
 						let lineChildren = children
 						if (dl.role === 'term') {
-							const separator = children.findIndex(isDlSeparatorNode)
-							if (separator >= 0) {
+							const split = splitDlChildren(children)
+							if (split.separators.length) {
 								const controls = h('span', { className: 'dl-separator-controls' }, [
-									children[separator],
+									split.separators[0],
 									toggle
 								].filter(Boolean))
 
 								if (dl.hasDef) {
 									className += ' dl-inline'
+									const definitionRows = split.definitions.map((definition, definitionIndex) => {
+										const rowChildren = definitionIndex === 0
+											? definition
+											: [split.separators[definitionIndex], ...definition]
+										return h('span', { className: 'dl-definition-row dl-definition-content' }, rowChildren)
+									})
 									lineChildren = [
-										h('span', { className: 'dl-term-content' }, children.slice(0, separator)),
+										h('span', { className: 'dl-term-content' }, split.term),
 										controls,
-										h('span', { className: 'dl-definition-content' }, children.slice(separator + 1))
+										h('span', { className: 'dl-definition-stack' }, definitionRows)
 									]
 								}
 								else {
-									lineChildren = [...children.slice(0, separator), controls]
+									lineChildren = [
+										h('span', { className: 'dl-term-content' }, split.term),
+										controls
+									]
 								}
 							}
 						}
 
 						const props = getCoreLineProperties(attributes, className)
+						const layout = layouts[index]
+						appendStyle(props, layout.span > 1
+							? `grid-row:${layout.row} / span ${layout.span};`
+							: `grid-row:${layout.row};`)
 						props.key = id
 						props['data-dl-role'] = dl.role
 						if (dl.hasDef !== undefined) props['data-dl-has-def'] = String(dl.hasDef)
@@ -402,21 +485,21 @@ const noteTypeset:TypesetTypes = {
 					}
 
 					if (dl.role === 'value') {
-						items.push(h('dd', getProps('value', id), children))
+						items.push(h('dd', getProps('value', id), withoutDlSourceFormatting(children)))
 						continue
 					}
 
 					if (!dl.hasDef) {
-						items.push(h('dt', getProps('term', id), children))
+						const split = splitDlChildren(children)
+						items.push(h('dt', getProps('term', id), withoutDlSourceFormatting(split.term)))
 						continue
 					}
 
-					const separator = children.findIndex(isDlSeparatorNode)
-					const termChildren = separator < 0 ? children : children.slice(0, separator)
-					const definitionChildren = separator < 0 ? [] : children.slice(separator + 1)
-
-					items.push(h('dt', getProps('term', `${id}-term`), termChildren))
-					items.push(h('dd', getProps('value', `${id}-definition`), definitionChildren))
+					const split = splitDlChildren(children)
+					items.push(h('dt', getProps('term', `${id}-term`), withoutDlSourceFormatting(split.term)))
+					for (const [definitionIndex, definition] of split.definitions.entries()) {
+						items.push(h('dd', getProps('value', `${id}-definition-${definitionIndex}`), definition))
+					}
 				}
 
 				return wrap(h('dl', {

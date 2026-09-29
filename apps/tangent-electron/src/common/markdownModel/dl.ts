@@ -61,6 +61,18 @@ function findDlSeparator(content: string) {
 			continue
 		}
 
+		if (char === '$') {
+			const marker = content[index + 1] === '$' ? '$$' : '$'
+			const contentStart = index + marker.length
+			if (contentStart < content.length && !/\s/.test(content[contentStart])) {
+				const end = findUnescaped(content, marker, contentStart)
+				if (end >= 0 && end > contentStart && !/\s/.test(content[end - 1])) {
+					index = end + marker.length - 1
+					continue
+				}
+			}
+		}
+
 		if (content.startsWith('[[', index)) {
 			index = findClosingRun(content, index, ']]') - 1
 			continue
@@ -96,7 +108,7 @@ function findDlSeparator(content: string) {
 			}
 		}
 
-		if (char === ' '
+		if ((char === ' ' || char === '\t')
 			&& content[index + 1] === ':'
 			&& content[index + 2] === ':'
 			&& (content[index + 3] === undefined || /[ \t]/.test(content[index + 3]))) {
@@ -118,7 +130,11 @@ export function matchDlSeparator(line: string, listDetail: ListDefinition | null
 	}
 }
 
-export function findParentDlTerm(parser: NoteParser, currentIndent: string): ParentDlTerm | null {
+export function findParentDlTerm(
+	parser: NoteParser,
+	currentIndent: string,
+	requireBare = true
+): ParentDlTerm | null {
 	for (let index = parser.builder.lines.length - 1; index >= 0; index--) {
 		const previous = parser.builder.lines[index]
 		if (previous.attributes.empty || previous.attributes.whitespace) return null
@@ -127,7 +143,7 @@ export function findParentDlTerm(parser: NoteParser, currentIndent: string): Par
 		if (previousIndent.length >= currentIndent.length) continue
 
 		const dl = previous.attributes.dl as DlLineData | undefined
-		if (dl?.role === 'term' && dl.hasDef === false) {
+		if (dl?.role === 'term' && (!requireBare || dl.hasDef === false)) {
 			return {
 				rootIndent: dl.rootIndent ?? previousIndent,
 				termIndent: previousIndent
@@ -140,11 +156,10 @@ export function findParentDlTerm(parser: NoteParser, currentIndent: string): Par
 }
 
 export function parseDlSeparator(char: string, parser: NoteParser): boolean {
-	if (char !== ' ') return false
+	if (char !== ' ' && char !== '\t') return false
 
 	const dl = parser.lineData.dl as DlLineData | undefined
 	if (dl?.role !== 'term') return false
-	if (parser.builder.spans.some(span => span.attributes?.dl_sep)) return false
 
 	const { feed } = parser
 	if (feed.text[feed.index + 1] !== ':' || feed.text[feed.index + 2] !== ':') return false

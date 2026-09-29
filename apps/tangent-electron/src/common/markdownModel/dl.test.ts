@@ -10,6 +10,7 @@ import { getLineFormattingPrefix, lineFormatEscapeMode, lineHasMultiLineContext 
 describe('matchDlSeparator', () => {
 	test.each([
 		['- term :: definition', { hasDef: true }],
+		['- term\t::\tdefinition', { hasDef: true }],
 		['- term ::', { hasDef: false }],
 		['- term ::   ', { hasDef: false }],
 	])('matches %j', (source, expected) => {
@@ -40,9 +41,15 @@ describe('description-list parsing', () => {
 		})
 	})
 
-	test('uses only the first separator on a term line', () => {
-		const [line] = parseMarkdown('- term :: definition :: literal').lines
-		expect(line.content.ops.filter(op => op.attributes?.dl_sep)).toHaveLength(1)
+	test('marks every top-level separator on a term line', () => {
+		const [line] = parseMarkdown('- term :: first :: second').lines
+		const separators = line.content.ops.filter(op => op.attributes?.dl_sep)
+
+		expect(separators).toHaveLength(2)
+		expect(separators.map(op => op.attributes.dl_sep.instance)).toEqual([
+			'6-10',
+			'15-19'
+		])
 	})
 
 	test('marks only direct children of a bare term as values', () => {
@@ -71,6 +78,8 @@ describe('description-list parsing', () => {
 	test('ignores separators consumed by other inline objects', () => {
 		for (const source of [
 			'- `term :: code`',
+			'- $term :: math$',
+			'- $$term :: math$$',
 			'- [[Page :: detail]]',
 			'- {term :: gloss}',
 		]) {
@@ -81,8 +90,17 @@ describe('description-list parsing', () => {
 		}
 	})
 
+	test('marks repeated separators around protected inline objects', () => {
+		const [line] = parseMarkdown('- term :: `code :: literal` :: $math :: literal$ :: final').lines
+		const separators = line.content.ops.filter(op => op.attributes?.dl_sep)
+
+		expect(separators).toHaveLength(3)
+		expect(separators.map(op => op.insert)).toEqual([' :: ', ' :: ', ' :: '])
+	})
+
 	test.each([
 		'- **bold** :: *italic definition*',
+		'- term :: first :: second',
 		'- term :: [linked definition](https://example.com)',
 		'- term :: `http://example.com/a::b`',
 		'- [[Page :: detail]] :: definition',
@@ -102,6 +120,17 @@ describe('description-list parsing', () => {
 			.toEqual(['', '', '', '', '', ''])
 		expect((dlLines[2].attributes.dl as DlLineData).termIndent).toBe('')
 		expect((dlLines[3].attributes.dl as DlLineData).termIndent).toBe('  ')
+	})
+
+	test('keeps arbitrarily nested terms under an inline root', () => {
+		const lines = parseMarkdown(`- root :: description
+  - child :: description
+    - grandchild ::
+      - value`).lines
+		const dlLines = lines.map(line => line.attributes.dl as DlLineData)
+
+		expect(dlLines.map(dl => dl.rootIndent)).toEqual(['', '', '', ''])
+		expect(dlLines.map(dl => dl.termIndent)).toEqual([undefined, '', '  ', '    '])
 	})
 
 	test('participates in list continuation behavior', () => {
@@ -131,8 +160,12 @@ describe('description-list rendering', () => {
 
 	const indent = (value: string) => ({ indent: value, indentSize: value.length })
 	const glyph = matchList('- item')
-	const separator = separatorFormat.render({ dl_sep: {}, hiddenGroup: true }, [' :: '], null, null) as any
-	separatorFormat.postProcess?.(separator)
+	const makeSeparator = (instance = 'separator') => {
+		const separator = separatorFormat.render({ dl_sep: { instance }, hiddenGroup: true }, [' :: '], null, null) as any
+		separatorFormat.postProcess?.(separator)
+		return separator
+	}
+	const separator = makeSeparator()
 
 	test('combines terms and direct values sharing a root indent', () => {
 		const root = { dl: { role: 'term', glyph, hasDef: true, rootIndent: '' }, indent: indent('') }
@@ -165,6 +198,22 @@ describe('description-list rendering', () => {
 			'data-dl-role': 'value',
 			'data-dl-term-indent': ''
 		})
+	})
+
+	test('renders each inline definition as its own semantic element', () => {
+		const rendered = lineType.renderMultiple([
+			[{
+				dl: { role: 'term', glyph, hasDef: true, rootIndent: '' },
+				indent: indent('')
+			}, ['symbol', makeSeparator('first'), 'earth', makeSeparator('second'), 'antimony'], 'a']
+		], null, true) as any
+
+		expect(rendered.children.map(child => child.type)).toEqual(['dt', 'dd', 'dd'])
+		expect(rendered.children.map(child => child.children)).toEqual([
+			['symbol'],
+			['earth'],
+			['antimony']
+		])
 	})
 
 	test('renders the separator as hidden source syntax', () => {

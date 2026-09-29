@@ -33,6 +33,46 @@ function createMarkdownEditor(source: string) {
 }
 
 describe('description-list HTML', () => {
+	test('renders compact repeated descriptions as separate definitions', () => {
+		const container = render('- 🜨 :: Terra or Earth :: Alchemical symbol for antimony')
+		const list = container.querySelector('dl.description-list')
+
+		expect(Array.from(list.children, child => child.tagName)).toEqual(['DT', 'DD', 'DD'])
+		expect(Array.from(list.children, child => child.textContent)).toEqual([
+			'🜨',
+			'Terra or Earth',
+			'Alchemical symbol for antimony'
+		])
+	})
+
+	test('gives compact and expanded plain descriptions equivalent semantic HTML', () => {
+		const compact = render('- 🜨 :: Terra or Earth :: Alchemical symbol for antimony')
+		const expanded = render(`- 🜨 ::
+  - Terra or Earth
+  - Alchemical symbol for antimony`)
+		const signature = (container: HTMLElement) => Array.from(
+			container.querySelector('dl.description-list').children,
+			child => [child.tagName, child.textContent]
+		)
+
+		expect(signature(compact)).toEqual(signature(expanded))
+	})
+
+	test('does not flatten nested term-description pairs into inline definitions', () => {
+		const inlineParent = render(`- A :: 1
+  - B :: 2
+  - C :: 3`)
+		const bareParent = render(`- A ::
+  - 1
+  - B :: 2
+  - C :: 3`)
+
+		expect(inlineParent.querySelectorAll('dl.description-list')).toHaveLength(1)
+		expect(bareParent.querySelectorAll('dl.description-list')).toHaveLength(1)
+		expect(inlineParent.querySelector('dd').hasAttribute('data-dl-term-indent')).toBe(false)
+		expect(bareParent.querySelector('dd').getAttribute('data-dl-term-indent')).toBe('')
+	})
+
 	test('renders one semantic list for mixed inline and nested definitions', () => {
 		const container = render(`- alpha :: one
 - beta ::
@@ -111,6 +151,83 @@ describe('description-list HTML', () => {
 		expect(lines[5].classList.contains('dl-collapsed-child')).toBe(false)
 	})
 
+	test('collapses description subtrees independently at arbitrary depth', () => {
+		const { root } = createEditor(`- term :: description
+  - term2 ::
+    - descA
+    - descB
+    - term3 ::
+      - descC`)
+		let lines = Array.from(root.querySelectorAll('.editor-description-list > .dl-line'))
+		expect(lines).toHaveLength(6)
+		expect(root.querySelectorAll('.dl-description-toggle')).toHaveLength(3)
+
+		const deepestToggle = lines[4].querySelector('.dl-description-toggle') as HTMLElement
+		deepestToggle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+		lines = Array.from(root.querySelectorAll('.editor-description-list > .dl-line'))
+		expect(lines[5].classList.contains('dl-collapsed-child')).toBe(true)
+		expect(lines[4].classList.contains('dl-collapsed-child')).toBe(false)
+
+		const rootToggle = lines[0].querySelector('.dl-description-toggle') as HTMLElement
+		rootToggle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+		lines = Array.from(root.querySelectorAll('.editor-description-list > .dl-line'))
+		expect(lines.slice(1).every(line => line.classList.contains('dl-collapsed-child'))).toBe(true)
+		expect(lines[0].classList.contains('dl-collapsed-child')).toBe(false)
+	})
+
+	test('aligns expanded values with compact definitions and shrinks the term when collapsed', () => {
+		const { root } = createEditor(`- 🜨 ::
+  - Terra or Earth
+  - Alchemical symbol for antimony
+- next :: value`)
+		const article = document.createElement('article')
+		article.classList.add('note')
+		article.appendChild(root)
+		document.body.appendChild(article)
+		let lines = Array.from(root.querySelectorAll('.editor-description-list > .dl-line')) as HTMLElement[]
+
+		expect(lines[0].style.gridRow).toBe('1 / span 2')
+		expect(lines[1].style.gridRow).toBe('1')
+		expect(lines[2].style.gridRow).toBe('2')
+		expect(lines[3].style.gridRow).toBe('3')
+		expect(lines[1].getBoundingClientRect().left).toBe(lines[2].getBoundingClientRect().left)
+		const expandedHeight = lines[0].getBoundingClientRect().height
+
+		const toggle = lines[0].querySelector('.dl-description-toggle') as HTMLElement
+		toggle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+		lines = Array.from(root.querySelectorAll('.editor-description-list > .dl-line')) as HTMLElement[]
+
+		expect(lines[0].style.gridRow).toBe('1')
+		expect(lines[0].classList.contains('dl-description-collapsed')).toBe(true)
+		expect(lines.slice(1, 3).every(line => line.classList.contains('dl-collapsed-child'))).toBe(true)
+		expect(lines[3].style.gridRow).toBe('2')
+		expect(lines[0].getBoundingClientRect().height).toBeLessThan(expandedHeight)
+		article.remove()
+	})
+
+	test('stacks repeated inline definitions under one vertically spanning term', () => {
+		const { root } = createEditor('- 🜨 :: Terra or Earth :: Alchemical symbol for antimony')
+		const article = document.createElement('article')
+		article.classList.add('note')
+		article.appendChild(root)
+		document.body.appendChild(article)
+		const line = root.querySelector('.dl-inline') as HTMLElement
+		const rows = Array.from(line.querySelectorAll('.dl-definition-row'))
+		const expandedHeight = line.getBoundingClientRect().height
+
+		expect(rows).toHaveLength(2)
+		expect(rows[0].textContent).toBe('Terra or Earth')
+		expect(rows[1].textContent.endsWith('Alchemical symbol for antimony')).toBe(true)
+		expect(line.querySelectorAll('.dl-description-toggle')).toHaveLength(1)
+
+		const toggle = line.querySelector('.dl-description-toggle') as HTMLElement
+		toggle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+		expect(getComputedStyle(root.querySelector('.dl-definition-stack')).display).toBe('none')
+		expect((root.querySelector('.dl-inline') as HTMLElement).getBoundingClientRect().height)
+			.toBeLessThan(expandedHeight)
+		article.remove()
+	})
+
 	test('hides separator source again after the caret leaves it', () => {
 		const { editor, root } = createMarkdownEditor('- term :: definition\nplain')
 		const source = () => root.querySelector('.dl_sep-source') as HTMLElement
@@ -130,6 +247,20 @@ describe('description-list HTML', () => {
 
 		editor.select(source.indexOf('::') + 1)
 		expect(root.querySelectorAll('.dl_sep-source.revealed')).toHaveLength(1)
+
+		editor.select(editor.getText().length)
+		expect(root.querySelectorAll('.dl_sep-source.revealed')).toHaveLength(0)
+	})
+
+	test('reveals only the active separator within a repeated description line', () => {
+		const source = '- term :: first :: second\nplain'
+		const { editor, root } = createMarkdownEditor(source)
+		const separators = Array.from(root.querySelectorAll('.dl_sep-source'))
+
+		expect(separators).toHaveLength(2)
+		editor.select(source.lastIndexOf('::') + 1)
+		expect(root.querySelectorAll('.dl_sep-source.revealed')).toHaveLength(1)
+		expect(separators[1].classList.contains('revealed')).toBe(true)
 
 		editor.select(editor.getText().length)
 		expect(root.querySelectorAll('.dl_sep-source.revealed')).toHaveLength(0)
