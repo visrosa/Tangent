@@ -51,9 +51,12 @@ describe('t-gloss', () => {
 		el.remove()
 	})
 
-	test('click requests selection matching only this span\'s instance', () => {
+	test('click requests selection matching only this span\'s inline id', () => {
+		const group = document.createElement('span')
+		group.setAttribute('data-hidden-group', '0-17')
 		const el = createGloss('SGR', 'graphics')
-		el.setAttribute('instance', '0-17')
+		group.appendChild(el)
+		document.body.appendChild(group)
 
 		let captured: any
 		el.addEventListener('click', event => {
@@ -61,10 +64,10 @@ describe('t-gloss', () => {
 		})
 		el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
-		expect(captured.inline({ gloss: { base: 'SGR', description: 'graphics', instance: '0-17' } })).toBe(true)
-		expect(captured.inline({ gloss: { base: 'SGR', description: 'graphics', instance: '17-34' } })).toBe(false)
+		expect(captured.inline({ hiddenGroup: '0-17' })).toBe(true)
+		expect(captured.inline({ hiddenGroup: '17-34' })).toBe(false)
 
-		el.remove()
+		group.remove()
 	})
 
 	test('releases its tooltip action when disconnected', () => {
@@ -86,13 +89,12 @@ describe('gloss format', () => {
 		return glossFormat.postProcess?.(rendered) ?? rendered
 	}
 
-	test('renders a t-gloss element carrying base/description/instance', () => {
-		const rendered = render({ gloss: { base: 'SGR', description: 'graphics', instance: '0-17' } })
+	test('renders a t-gloss element carrying base and description', () => {
+		const rendered = render({ gloss: { base: 'SGR', description: 'graphics' } })
 
-		expect(rendered.props['data-instance']).toBe('0-17')
 		expect(rendered.children[1]).toMatchObject({
 			type: 't-gloss',
-			props: { base: 'SGR', description: 'graphics', instance: '0-17' }
+			props: { base: 'SGR', description: 'graphics' }
 		})
 	})
 
@@ -105,30 +107,30 @@ describe('gloss format', () => {
 		expect(rendered.children[1].props.className).toBe('unfocused')
 	})
 
-	test('two adjacent identical glosses with distinct instances render as two containers', () => {
+	test('two adjacent identical glosses with distinct groups render as two containers', () => {
 		const editor = new Editor({ types: noteTypeset })
 		editor.setRoot(document.createElement('div'))
 		const delta = new Delta([
-			{ insert: '{a::b}', attributes: { gloss: { base: 'a', description: 'b', instance: '0-6' }, hiddenGroup: true } },
-			{ insert: '{a::b}', attributes: { gloss: { base: 'a', description: 'b', instance: '6-12' }, hiddenGroup: true } }
+			{ insert: '{a::b}', attributes: { gloss: { base: 'a', description: 'b' }, hiddenGroup: '0-6' } },
+			{ insert: '{a::b}', attributes: { gloss: { base: 'a', description: 'b' }, hiddenGroup: '6-12' } }
 		])
 
 		const html = inlineToHTML(editor, delta)
 		expect((html.match(/inline-gloss-container/g) ?? []).length).toBe(2)
 	})
 
-	test('decorations splitting one gloss instance do not duplicate its output', () => {
+	test('decorations splitting one gloss group do not duplicate its output', () => {
 		const editor = new Editor({ types: noteTypeset })
 		editor.setRoot(document.createElement('div'))
-		const gloss = { base: 'SGR', description: 'Select Graphic Rendition', instance: '0-31' }
+		const gloss = { base: 'SGR', description: 'Select Graphic Rendition' }
 		const delta = new Delta([
 			{
 				insert: '{SGR',
-				attributes: { gloss, hiddenGroup: true, decoration: { focus: { class: 'unfocused' } } }
+				attributes: { gloss, hiddenGroup: '0-31', decoration: { focus: { class: 'unfocused' } } }
 			},
 			{
 				insert: '::Select Graphic Rendition}',
-				attributes: { gloss, hiddenGroup: true, decoration: { focus: { class: 'focused' } } }
+				attributes: { gloss, hiddenGroup: '0-31', decoration: { focus: { class: 'focused' } } }
 			}
 		])
 
