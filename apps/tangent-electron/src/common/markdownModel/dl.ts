@@ -1,5 +1,6 @@
 import type NoteParser from './NoteParser'
 import type { ListDefinition } from './list'
+import { getInlineId } from './inline'
 
 export type DlLineData = {
 	role: 'term' | 'value'
@@ -9,10 +10,7 @@ export type DlLineData = {
 	termIndent?: string
 }
 
-export type DlSeparatorData = {
-	/** Keeps decoration-split separator spans from merging with one another. */
-	instance?: string
-}
+export type DlSeparatorData = true
 
 export type ParentDlTerm = {
 	rootIndent: string
@@ -174,10 +172,8 @@ export function parseDlSeparator(char: string, parser: NoteParser): boolean {
 	// but never consume the newline ending a bare term.
 	feed.nextByLength(following === ' ' || following === '\t' ? 3 : 2)
 	parser.commitSpan({
-		dl_sep: {
-			instance: parser.getInstanceId(start, feed.index + feed.currentStepLength)
-		},
-		hiddenGroup: true
+		dl_sep: true,
+		hiddenGroup: getInlineId(parser, start, feed.index + feed.currentStepLength)
 	})
 
 	return true

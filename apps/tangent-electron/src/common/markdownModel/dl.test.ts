@@ -37,7 +37,7 @@ describe('description-list parsing', () => {
 		expect(line.attributes.list).toBeUndefined()
 		expect(line.content.ops.find(op => op.attributes?.dl_sep)).toMatchObject({
 			insert: ' :: ',
-			attributes: { dl_sep: { instance: '6-10' }, hiddenGroup: true }
+			attributes: { dl_sep: true, hiddenGroup: '6-10' }
 		})
 	})
 
@@ -46,7 +46,7 @@ describe('description-list parsing', () => {
 		const separators = line.content.ops.filter(op => op.attributes?.dl_sep)
 
 		expect(separators).toHaveLength(2)
-		expect(separators.map(op => op.attributes.dl_sep.instance)).toEqual([
+		expect(separators.map(op => op.attributes.hiddenGroup)).toEqual([
 			'6-10',
 			'15-19'
 		])
@@ -160,8 +160,8 @@ describe('description-list rendering', () => {
 
 	const indent = (value: string) => ({ indent: value, indentSize: value.length })
 	const glyph = matchList('- item')
-	const makeSeparator = (instance = 'separator') => {
-		const separator = separatorFormat.render({ dl_sep: { instance }, hiddenGroup: true }, [' :: '], null, null) as any
+	const makeSeparator = (inlineId = 'separator') => {
+		const separator = separatorFormat.render({ dl_sep: true, hiddenGroup: inlineId }, [' :: '], null, null) as any
 		separatorFormat.postProcess?.(separator)
 		return separator
 	}
