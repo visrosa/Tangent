@@ -1,10 +1,9 @@
 import NoteParser from './NoteParser'
+import { getInlineId } from './inline'
 
 export type GlossData = {
 	base: string
 	description: string
-	/** Distinguishes adjacent glosses that share a base and description. */
-	instance?: string
 }
 
 export type GlossScanResult =
@@ -75,8 +74,8 @@ export function parseInlineGloss(char: string, parser: NoteParser): boolean {
 	const start = feed.index
 	feed.nextByLength(result.end - feed.index)
 	parser.commitSpan({
-		gloss: { ...result.gloss, instance: parser.getInstanceId(start, result.end + 1) },
-		hiddenGroup: true
+		gloss: result.gloss,
+		hiddenGroup: getInlineId(parser, start, result.end + 1)
 	})
 	return true
 }

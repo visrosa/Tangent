@@ -75,8 +75,8 @@ describe('gloss parsing', () => {
 		expect(line.content.ops.find(op => op.attributes?.gloss)).toEqual({
 			insert: '{ SGR :: Select Graphic Rendition }',
 			attributes: {
-				gloss: { base: 'SGR', description: 'Select Graphic Rendition', instance: '7-42' },
-				hiddenGroup: true
+				gloss: { base: 'SGR', description: 'Select Graphic Rendition' },
+				hiddenGroup: '7-42'
 			}
 		})
 	})
@@ -102,9 +102,9 @@ describe('gloss parsing', () => {
 		expect(opsWith('{漢字|かんじ} and {SGR::graphics}', 'gloss')).toHaveLength(1)
 	})
 
-	test('adjacent identical spans get distinct instances', () => {
-		const instances = opsWith('{a::b}{a::b}', 'gloss').map(op => op.attributes.gloss.instance)
-		expect(instances).toEqual(['0-6', '6-12'])
+	test('adjacent identical spans get distinct inline ids', () => {
+		const inlineIds = opsWith('{a::b}{a::b}', 'gloss').map(op => op.attributes.hiddenGroup)
+		expect(inlineIds).toEqual(['0-6', '6-12'])
 	})
 
 	test('does not activate inside inline code', () => {

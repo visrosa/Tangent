@@ -765,7 +765,7 @@ const noteTypeset:TypesetTypes = {
 		hiddenGroupEmbedFormat<GlossData>({
 			name: 'gloss',
 			renderOutput: (gloss, revealed, attributes) => {
-				const tGlossAttr = { base: gloss.base, description: gloss.description, instance: gloss.instance } as any
+				const tGlossAttr = { base: gloss.base, description: gloss.description } as any
 
 				if (attributes.decoration?.focus) {
 					// Inject the focus decoration onto the shadow root, as math does.
