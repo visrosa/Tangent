@@ -6,9 +6,12 @@ import { isLargeList, type ListDefinition } from './list'
 import type { TagSectionData } from './tag'
 import type { CodeData } from './code'
 import type { MathData } from './math'
+import type { FuriganaData } from './furigana'
+import type { GlossData } from './gloss'
+import type { DlLineData, DlSeparatorData } from './dl'
+import { hiddenGroupEmbedFormat } from './hiddenGroupEmbed'
 import { hasCollapsedChildren, isCollapsed } from './sections'
-import type { HrefFormedLink } from 'common/indexing/indexTypes'
-import { getMediaCustomizationsFromText } from './links'
+import { getMediaCustomizationsFromText, type LinkAttribute } from './links'
 
 const defaultOptions = {}
 
@@ -194,6 +197,76 @@ function fillTooltip(source: string|object, props: AttributeMap) {
 	}
 }
 
+function isDlSeparatorNode(child): boolean {
+	if (typeof child !== 'object' || !child) return false
+	const className = child.props?.className ?? child.props?.class
+	return typeof className === 'string'
+		&& className.split(/\s+/).includes('inline-dl_sep-container')
+}
+
+function unwrapDlSeparatorNode(child) {
+	if (isDlSeparatorNode(child)) return child
+	if (typeof child !== 'object' || !child
+		|| typeof child.props?.['data-hidden-group'] !== 'string'
+		|| child.children?.length !== 1) return null
+	return isDlSeparatorNode(child.children[0]) ? child.children[0] : null
+}
+
+function splitDlChildren(children: any[]) {
+	const separators: any[] = []
+	const segments: any[][] = [[]]
+
+	for (const child of children) {
+		const separator = unwrapDlSeparatorNode(child)
+		if (separator) {
+			separators.push(separator)
+			segments.push([])
+		}
+		else {
+			segments.at(-1).push(child)
+		}
+	}
+
+	return {
+		term: segments[0],
+		separators,
+		definitions: segments.slice(1)
+	}
+}
+
+function withoutDlSourceFormatting(children: any[]) {
+	const visible = children.filter(child => {
+		if (typeof child !== 'object' || !child) return true
+		const className = child.props?.className ?? child.props?.class
+		return typeof className !== 'string'
+			|| !className.split(/\s+/).includes('line_format')
+	})
+
+	const firstText = visible.findIndex(child => typeof child === 'string')
+	if (firstText >= 0) visible[firstText] = visible[firstText].trimStart()
+	return visible
+}
+
+function appendStyle(props: AttributeMap, declaration: string) {
+	const style = props.style as string ?? ''
+	props.style = `${style}${style && !style.endsWith(';') ? ';' : ''}${declaration}`
+}
+
+const collapsedDlDescriptions = new WeakMap<object, Set<string>>()
+
+function getCollapsedDlDescriptions(editor: object): Set<string> {
+	let collapsed = collapsedDlDescriptions.get(editor)
+	if (!collapsed) {
+		collapsed = new Set()
+		collapsedDlDescriptions.set(editor, collapsed)
+	}
+	return collapsed
+}
+
+function getDlIndent(attributes: AttributeMap): number {
+	return attributes.indent?.indentSize ?? attributes.indent?.indent?.length ?? 0
+}
+
 const noteTypeset:TypesetTypes = {
 	lines: [
 		{
@@ -210,6 +283,237 @@ const noteTypeset:TypesetTypes = {
 			defaultFollows: true,
 			render: (attributes, children) => h(`h${attributes.header}`, getCoreLineProperties(attributes), children),
 			fromDom: defaultLineFromDom('header') // Technically incorrect, but will be re-parsed anyhow
+		},
+		{
+			name: 'dl',
+			selector: 'dl.description-list > dt, dl.description-list > dd, div.editor-description-list > div.dl-line',
+			defaultFollows: true,
+			fromDom(node: HTMLElement) {
+				const role = node.getAttribute('data-dl-role') === 'value' ? 'value' : 'term'
+				const dl: DlLineData = {
+					role,
+					glyph: undefined
+				}
+
+				const hasDef = node.getAttribute('data-dl-has-def')
+				if (hasDef !== null) dl.hasDef = hasDef === 'true'
+
+				const termIndent = node.getAttribute('data-dl-term-indent')
+				if (termIndent !== null) dl.termIndent = termIndent
+
+				const rootIndent = node.getAttribute('data-dl-root-indent')
+				if (rootIndent !== null) dl.rootIndent = rootIndent
+
+				const attributes: AttributeMap = { dl }
+				extractCoreLineProperties(node, attributes)
+				return attributes
+			},
+			shouldCombine: (first, next) => {
+				const firstDl = first.dl as DlLineData
+				const nextDl = next.dl as DlLineData
+				if (!firstDl || !nextDl) return false
+
+				const firstRootIndent = firstDl.rootIndent
+					?? firstDl.termIndent
+					?? first.indent?.indent
+					?? ''
+				const nextRootIndent = nextDl.rootIndent
+					?? nextDl.termIndent
+					?? next.indent?.indent
+					?? ''
+				return firstRootIndent === nextRootIndent
+					&& first.blockquote === next.blockquote
+			},
+			renderMultiple: (lineData, editor, forHTML) => {
+				let revealed = false
+				const wrap = content => {
+					const depth = lineData[0][0].blockquote
+					if (!depth) return content
+
+					return h('blockquote', {
+						className: `depth-${depth}${revealed ? ' revealed' : ''}`
+					}, content)
+				}
+
+				if (!forHTML) {
+					const collapsed = getCollapsedDlDescriptions(editor)
+					const collapsedAncestorIndents: number[] = []
+					const states = lineData.map(([attributes, _children, id], index) => {
+						const dl = attributes.dl as DlLineData
+						const indent = getDlIndent(attributes)
+						while (collapsedAncestorIndents.length
+							&& collapsedAncestorIndents.at(-1) >= indent) {
+							collapsedAncestorIndents.pop()
+						}
+
+						const nextAttributes = lineData[index + 1]?.[0]
+						const hasNestedDescription = dl.role === 'term'
+							&& nextAttributes
+							&& getDlIndent(nextAttributes) > indent
+						const collapsible = dl.role === 'term'
+							&& (dl.hasDef === true || hasNestedDescription)
+						const isCollapsed = collapsible && collapsed.has(id)
+						const hiddenByAncestor = collapsedAncestorIndents.length > 0
+
+						if (isCollapsed && hasNestedDescription) {
+							collapsedAncestorIndents.push(indent)
+						}
+
+						return { collapsible, hiddenByAncestor, isCollapsed }
+					})
+					const layouts: Array<{ row: number, span: number }> = []
+					let nextRow = 1
+					for (let index = 0; index < lineData.length; index++) {
+						if (layouts[index]) continue
+						if (states[index].hiddenByAncestor) {
+							layouts[index] = { row: nextRow, span: 1 }
+							continue
+						}
+
+						const [attributes] = lineData[index]
+						const dl = attributes.dl as DlLineData
+						if (dl.role === 'term' && dl.hasDef === false && !states[index].isCollapsed) {
+							const termIndent = attributes.indent?.indent ?? ''
+							let valueCount = 0
+							for (let valueIndex = index + 1; valueIndex < lineData.length; valueIndex++) {
+								const [valueAttributes] = lineData[valueIndex]
+								const valueDl = valueAttributes.dl as DlLineData
+								if (valueDl.role !== 'value' || valueDl.termIndent !== termIndent) break
+								if (states[valueIndex].hiddenByAncestor) continue
+								layouts[valueIndex] = { row: nextRow + valueCount, span: 1 }
+								valueCount++
+							}
+
+							const span = Math.max(1, valueCount)
+							layouts[index] = { row: nextRow, span }
+							nextRow += span
+							continue
+						}
+
+						layouts[index] = { row: nextRow, span: 1 }
+						nextRow++
+					}
+
+					const lines = lineData.map(([attributes, children, id], index) => {
+						const dl = attributes.dl as DlLineData
+						const state = states[index]
+						if (attributes.revealed) revealed = true
+
+						let className = `dl-line dl-${dl.role}`
+						if (dl.termIndent !== undefined) className += ' dl-nested'
+						if (state.isCollapsed) className += ' dl-description-collapsed'
+						if (state.hiddenByAncestor) className += ' dl-collapsed-child'
+
+						let toggle
+						if (state.collapsible) {
+							const onToggle = event => {
+								if (!editor.enabled) return
+								event.preventDefault()
+								event.stopPropagation()
+								if (collapsed.has(id)) collapsed.delete(id)
+								else collapsed.add(id)
+								editor.render()
+							}
+							toggle = h('button', {
+								className: 'dl-description-toggle',
+								contentEditable: false,
+								'aria-label': state.isCollapsed ? 'Expand description' : 'Collapse description',
+								'aria-expanded': String(!state.isCollapsed),
+								onmousedown: onToggle,
+								ontouchstart: onToggle
+							})
+						}
+
+						let lineChildren = children
+						if (dl.role === 'term') {
+							const split = splitDlChildren(children)
+							if (split.separators.length) {
+								const controls = h('span', { className: 'dl-separator-controls' }, [
+									split.separators[0],
+									toggle
+								].filter(Boolean))
+
+								if (dl.hasDef) {
+									className += ' dl-inline'
+									const definitionRows = split.definitions.map((definition, definitionIndex) => {
+										const rowChildren = definitionIndex === 0
+											? definition
+											: [split.separators[definitionIndex], ...definition]
+										return h('span', { className: 'dl-definition-row dl-definition-content' }, rowChildren)
+									})
+									lineChildren = [
+										h('span', { className: 'dl-term-content' }, split.term),
+										controls,
+										h('span', { className: 'dl-definition-stack' }, definitionRows)
+									]
+								}
+								else {
+									lineChildren = [
+										h('span', { className: 'dl-term-content' }, split.term),
+										controls
+									]
+								}
+							}
+						}
+
+						const props = getCoreLineProperties(attributes, className)
+						const layout = layouts[index]
+						appendStyle(props, layout.span > 1
+							? `grid-row:${layout.row} / span ${layout.span};`
+							: `grid-row:${layout.row};`)
+						props.key = id
+						props['data-dl-role'] = dl.role
+						if (dl.hasDef !== undefined) props['data-dl-has-def'] = String(dl.hasDef)
+						if (dl.termIndent !== undefined) props['data-dl-term-indent'] = dl.termIndent
+						if (dl.rootIndent !== undefined) props['data-dl-root-indent'] = dl.rootIndent
+						return h('div', props, lineChildren)
+					})
+
+					return wrap(h('div', {
+						className: revealed
+							? 'description-list editor-description-list revealed'
+							: 'description-list editor-description-list'
+					}, lines))
+				}
+
+				const items = []
+
+				for (const [attributes, children, id] of lineData) {
+					const dl = attributes.dl as DlLineData
+					if (attributes.revealed) revealed = true
+
+					const getProps = (role: DlLineData['role'], key: string) => {
+						const props = getCoreLineProperties(attributes, `dl-${role}`)
+						props.key = key
+						props['data-dl-role'] = role
+						if (dl.hasDef !== undefined) props['data-dl-has-def'] = String(dl.hasDef)
+						if (dl.termIndent !== undefined) props['data-dl-term-indent'] = dl.termIndent
+						if (dl.rootIndent !== undefined) props['data-dl-root-indent'] = dl.rootIndent
+						return props
+					}
+
+					if (dl.role === 'value') {
+						items.push(h('dd', getProps('value', id), withoutDlSourceFormatting(children)))
+						continue
+					}
+
+					if (!dl.hasDef) {
+						const split = splitDlChildren(children)
+						items.push(h('dt', getProps('term', id), withoutDlSourceFormatting(split.term)))
+						continue
+					}
+
+					const split = splitDlChildren(children)
+					items.push(h('dt', getProps('term', `${id}-term`), withoutDlSourceFormatting(split.term)))
+					for (const [definitionIndex, definition] of split.definitions.entries()) {
+						items.push(h('dd', getProps('value', `${id}-definition-${definitionIndex}`), definition))
+					}
+				}
+
+				return wrap(h('dl', {
+					className: revealed ? 'description-list revealed' : 'description-list'
+				}, items))
+			}
 		},
 		{
 			name: 'list',
@@ -471,6 +775,16 @@ const noteTypeset:TypesetTypes = {
 		revealableLine('horizontal_rule', 'p')
 	],
 	formats: [
+		{
+			name: 'hiddenGroup',
+			selector: 'span[data-hidden-group]',
+			render: (attributes, children) => {
+				if (typeof attributes.hiddenGroup === 'string') {
+					return h('span', { 'data-hidden-group': attributes.hiddenGroup }, children)
+				}
+			}
+		},
+
 		// Formatting that starts a line
 		{
 			name: 'line_format',
@@ -508,6 +822,14 @@ const noteTypeset:TypesetTypes = {
 				return h('span', { className }, children)
 			}
 		},
+
+		hiddenGroupEmbedFormat<DlSeparatorData>({
+			name: 'dl_sep',
+			renderOutput: () => h('span', {
+				className: 'dl-separator-output',
+				'aria-hidden': 'true'
+			})
+		}),
 
 		{
 			name: 'list_format',
@@ -552,7 +874,7 @@ const noteTypeset:TypesetTypes = {
 					className += ' revealed'
 				}
 
-				let link = attributes.t_link as HrefFormedLink
+				let link = attributes.t_link as LinkAttribute
 
 				let embedClassname = 'output'
 				const customizations = getMediaCustomizationsFromText(link.text)
@@ -570,7 +892,7 @@ const noteTypeset:TypesetTypes = {
 				let node = h(
 					'span',
 					{
-						class: className,
+						class: className
 					},
 					children
 				) as any
@@ -733,30 +1055,18 @@ const noteTypeset:TypesetTypes = {
 			}
 		},
 
-		{
+		hiddenGroupEmbedFormat<MathData>({
 			name: 'math',
-			selector: 'span.math-source',
-			render: (attributes, children) => {
-
-				let containerAttr = {
-					className: 'inline-math-container'
-				}
-
-				let sourceAttr = {
-					className: 'math-source hidden'
-				}
-				
+			renderOutput: (math, revealed, attributes) => {
 				let tMathAttr = {
-					'math-source': attributes.math.source,
+					'math-source': math.source
 				} as any
 
-				if (attributes.revealed) {
-					containerAttr.className += ' revealed'
-					sourceAttr.className += ' revealed'
+				if (revealed) {
 					tMathAttr.className = 'revealed'
 				}
 
-				if (attributes.math.isBlock) {
+				if (math.isBlock) {
 					tMathAttr.block = ''
 				}
 
@@ -765,12 +1075,37 @@ const noteTypeset:TypesetTypes = {
 					tMathAttr.className += ' ' + attributes.decoration.focus.class
 				}
 
-				return h('span', containerAttr, [
-					h('span', sourceAttr, children),
-					h('t-math', tMathAttr, [])
-				])
+				return h('t-math', tMathAttr, [])
 			}
-		},
+		}),
+
+		hiddenGroupEmbedFormat<GlossData>({
+			name: 'gloss',
+			renderOutput: (gloss, revealed, attributes) => {
+				const tGlossAttr = { base: gloss.base, description: gloss.description } as any
+
+				if (attributes.decoration?.focus) {
+					// Inject the focus decoration onto the shadow root, as math does.
+					tGlossAttr.className = attributes.decoration.focus.class
+				}
+
+				return h('t-gloss', tGlossAttr, [])
+			}
+		}),
+
+		hiddenGroupEmbedFormat<FuriganaData>({
+			name: 'furigana',
+			renderOutput: (furigana, revealed, attributes) => {
+				const tFuriganaAttr = { base: furigana.base, reading: furigana.reading } as any
+
+				if (attributes.decoration?.focus) {
+					// Inject the focus decoration onto the shadow root, as math does.
+					tFuriganaAttr.className = attributes.decoration.focus.class
+				}
+
+				return h('t-furigana', tFuriganaAttr, [])
+			}
+		}),
 
 		{
 			name: 'templateToken',

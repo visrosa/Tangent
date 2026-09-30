@@ -247,6 +247,180 @@ article.note {
 		}
 	}
 
+	.editor-description-list {
+		margin: 0;
+		display: grid;
+		grid-template-columns: max-content max-content minmax(0, 1fr);
+		grid-auto-rows: minmax(rhythmUnit(1), auto);
+		column-gap: .55em;
+		row-gap: .125em;
+
+		.dl-line {
+			min-height: rhythmUnit(1);
+			line-height: rhythmUnit(1);
+
+			&.dl-collapsed-child {
+				display: none;
+			}
+		}
+
+		.dl-term {
+			grid-column: 1 / 3;
+			display: grid;
+			grid-template-columns: subgrid;
+			align-items: center;
+			font-weight: 600;
+		}
+
+		.dl-value {
+			grid-column: 3;
+			padding-inline-start: .7em;
+			border-inline-start: .125em solid var(--accentDeemphasizedBackgroundColor);
+			transition: border-color .12s ease;
+
+			&:hover,
+			&:focus-within {
+				border-inline-start-color: var(--accentTextColor);
+			}
+		}
+
+		.dl-term:not(.revealed) .dl-term-content {
+			padding-inline-start: calc(var(--spaceWidth) * var(--lineIndent));
+		}
+
+		.dl-term.dl-nested:not(.revealed) .dl-term-content {
+			padding-inline-start: calc((var(--spaceWidth) * var(--lineIndent)) + var(--indentWidth));
+		}
+
+		.dl-inline {
+			grid-column: 1 / -1;
+
+			&:not(.revealed) .dl-term-content {
+				color: var(--accentTextColor);
+			}
+
+			.dl-term-content {
+				grid-column: 1;
+				align-self: center;
+				transition: color .12s ease;
+			}
+
+			.dl-separator-controls {
+				grid-column: 2;
+				align-self: center;
+			}
+
+			.dl-definition-stack {
+				grid-column: 3;
+				display: grid;
+				font-weight: 400;
+				min-width: 0;
+				padding-inline-start: .7em;
+				border-inline-start: .125em solid var(--accentDeemphasizedBackgroundColor);
+				transition: border-color .12s ease;
+			}
+
+			.dl-definition-row {
+				display: block;
+				min-height: rhythmUnit(1);
+
+				+ .dl-definition-row {
+					border-block-start: 1px solid var(--borderColor);
+				}
+			}
+
+			&:hover .dl-definition-stack,
+			&:focus-within .dl-definition-stack {
+				border-inline-start-color: var(--accentTextColor);
+			}
+
+			&.dl-description-collapsed .dl-definition-stack {
+				display: none;
+			}
+		}
+
+		.dl-definition-content {
+			font-weight: 400;
+		}
+
+		.dl-separator-controls {
+			display: inline-flex;
+			align-items: baseline;
+			gap: .2em;
+		}
+
+		.dl-term:not(.dl-inline) .dl-term-content {
+			grid-column: 1;
+		}
+
+		.dl-term:not(.dl-inline) .dl-separator-controls {
+			grid-column: 2;
+		}
+
+		.dl-description-toggle {
+			appearance: none;
+			background: none;
+			border: 0;
+			border-radius: 50%;
+			color: var(--deemphasizedTextColor);
+			cursor: pointer;
+			font: inherit;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			height: 1.25em;
+			line-height: 1;
+			padding: 0;
+			width: 1.25em;
+			opacity: .72;
+			transition: background-color .12s ease, color .12s ease, opacity .12s ease;
+
+			&::before {
+				content: "▸";
+				display: inline-block;
+				transition: transform .12s ease;
+			}
+
+			&[aria-expanded="true"]::before {
+				transform: rotate(90deg);
+			}
+
+			&:hover {
+				background: var(--accentDeemphasizedBackgroundColor);
+				color: var(--accentTextColor);
+				opacity: 1;
+			}
+
+			&:focus-visible {
+				outline: 2px solid var(--accentTextColor);
+				outline-offset: 1px;
+				opacity: 1;
+			}
+		}
+
+		.inline-dl_sep-container {
+			display: inline-flex;
+			align-items: baseline;
+
+			.dl_sep-source {
+				font-size: 0 !important;
+				line-height: 0 !important;
+				tab-size: 0 !important;
+			}
+
+			&.revealed .dl_sep-source {
+				font-size: unset !important;
+				line-height: unset !important;
+				tab-size: unset !important;
+			}
+		}
+
+		span.dl_sep-source {
+			font-family: var(--codeFontFamily);
+			color: var(--accentTextColor);
+		}
+	}
+
 	// We want large lists to have extra space around them, but we don't want extra space when adjacent to blank lines.
 	// We also don't want extra space between a large list item and a child normal list item.
 	// Technically a large followed by a small sibling also doesn't have space, but I'm okay with that slight glitch.
@@ -537,19 +711,43 @@ article.note {
 		}
 	}
 
-	.inline-math-container.revealed {
+	// Shared reveal styling for hidden-group inline embeds (see
+	// hiddenGroupEmbed.ts's `${name}-source` / `inline-${name}-container`
+	// naming convention); outline-offset stays per-format since math and
+	// furigana's output shapes sit differently against the outline.
+	.inline-math-container.revealed,
+	.inline-furigana-container.revealed {
 		outline: 2px solid var(--textColor);
-		outline-offset: 4px;
 		border-radius: var(--inputBorderRadius);
 	}
 
-	span.math-source {
+	.inline-math-container.revealed {
+		outline-offset: 4px;
+	}
+
+	.inline-furigana-container.revealed {
+		outline-offset: 3px;
+	}
+
+	span.math-source,
+	span.furigana-source {
 		font-family: var(--codeFontFamily);
 		color: var(--accentTextColor);
+	}
 
-		&.revealed {
-			padding-right: .5em;
-		}
+	span.math-source.revealed {
+		padding-right: .5em;
+	}
+
+	.inline-gloss-container.revealed {
+		outline: 2px solid var(--textColor);
+		border-radius: var(--inputBorderRadius);
+		outline-offset: 3px;
+	}
+
+	span.gloss-source {
+		font-family: var(--codeFontFamily);
+		color: var(--accentTextColor);
 	}
 
 	.mathLine {

@@ -1,0 +1,92 @@
+import { describe, test, expect } from 'vitest'
+
+import { Editor, inlineToHTML } from 'typewriter-editor'
+import { Delta } from '@typewriter/delta'
+import noteTypeset from 'common/markdownModel/typewriterTypes'
+import { parseMarkdown } from 'common/markdownModel/parser'
+
+function getEditor() {
+	const editor = new Editor({ types: noteTypeset })
+	editor.setRoot(document.createElement('div'))
+	return editor
+}
+
+function containerCount(html: string, name = 'math') {
+	return (html.match(new RegExp(`inline-${name}-container`, 'g')) ?? []).length
+}
+
+function elementCount(html: string, element: string) {
+	return (html.match(new RegExp(`<${element}(?:\\s|>)`, 'g')) ?? []).length
+}
+
+describe('renderInline: adjacent hidden-group embeds', () => {
+	test('Distinct groups with the same source render as two containers', () => {
+		const editor = getEditor()
+		const delta = new Delta([
+			{ insert: '$a$', attributes: { math: { source: 'a' }, hiddenGroup: '0-3' } },
+			{ insert: '$a$', attributes: { math: { source: 'a' }, hiddenGroup: '3-6' } }
+		])
+
+		const html = inlineToHTML(editor, delta)
+		expect(containerCount(html)).toBe(2)
+		expect(html).toContain('data-hidden-group="0-3"')
+		expect(html).toContain('data-hidden-group="3-6"')
+	})
+
+	test('Distinct furigana groups with the same content render as two containers', () => {
+		const editor = getEditor()
+		const delta = new Delta([
+			{ insert: '{a|b}', attributes: { furigana: { base: 'a', reading: 'b' }, hiddenGroup: '0-5' } },
+			{ insert: '{a|b}', attributes: { furigana: { base: 'a', reading: 'b' }, hiddenGroup: '5-10' } }
+		])
+
+		expect(containerCount(inlineToHTML(editor, delta), 'furigana')).toBe(2)
+	})
+
+	test('Decorations splitting one furigana group do not duplicate its output', () => {
+		const editor = getEditor()
+		const furigana = { base: 'Mr. Smith', reading: 'ミスター・スミス' }
+		const delta = new Delta([
+			{
+				insert: '{Mr.',
+				attributes: { furigana, hiddenGroup: '0-20', decoration: { focus: { class: 'unfocused' } } }
+			},
+			{
+				insert: ' Smith|ミスター・スミス}',
+				attributes: { furigana, hiddenGroup: '0-20', decoration: { focus: { class: 'focused' } } }
+			}
+		])
+		const html = inlineToHTML(editor, delta)
+
+		expect(containerCount(html, 'furigana')).toBe(1)
+		expect(elementCount(html, 't-furigana')).toBe(1)
+	})
+})
+
+describe('renderInline: adjacent embeds', () => {
+	test('Distinct embed groups render as distinct outputs', () => {
+		const editor = getEditor()
+		const delta = parseMarkdown('![[a.png]]![[b.png]]').lines[0].content
+		const html = inlineToHTML(editor, delta)
+
+		expect(elementCount(html, 't-embed')).toBe(2)
+	})
+
+	test('Nested formatting does not split an embed instance', () => {
+		const editor = getEditor()
+		const delta = parseMarkdown('![[a.png|**x**]]').lines[0].content
+		const html = inlineToHTML(editor, delta)
+
+		expect(elementCount(html, 't-embed')).toBe(1)
+	})
+})
+
+describe('renderInline: adjacent links', () => {
+	test('Distinct wiki-link instances with the same href render separately', () => {
+		const editor = getEditor()
+		const delta = parseMarkdown('[[a]][[a]]').lines[0].content
+		const html = inlineToHTML(editor, delta)
+
+		expect(elementCount(html, 't-link')).toBe(2)
+	})
+})

@@ -6,18 +6,16 @@ import { markAsSelectionRequest } from 'app/events'
 import katexStyleUrl from 'katex/dist/katex.min.css?url'
 import { defineCustomElement } from 'app/utils/defineCustomElement'
 import { getKatex } from 'app/shim/katex'
+import { bindInlineSelectionListeners } from './hiddenGroupInlineElement'
 
 class TangentMath extends HTMLElement {
-	
+
 	private content: HTMLElement
 
 	constructor() {
 		super()
 
-		this.addEventListener('click', this.onClick)
-		this.addEventListener('dblclick', this.onClick)
-		this.addEventListener('mousedown', this.onClick)
-		this.addEventListener('contextmenu', this.onClick)
+		bindInlineSelectionListeners(this, this.onClick)
 
 		const shadow = this.attachShadow({ mode: 'open' })
 
@@ -100,9 +98,11 @@ class TangentMath extends HTMLElement {
 			})
 		}
 		else {
+			const hiddenGroup = this.closest('[data-hidden-group]')?.getAttribute('data-hidden-group')
+			if (!hiddenGroup) return
 			markAsSelectionRequest(event, {
 				inline: attr => {
-					return attr?.math?.source == source
+					return attr?.hiddenGroup === hiddenGroup
 				}
 			})
 		}

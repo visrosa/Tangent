@@ -59,6 +59,62 @@ test('Ending in italics', () => {
 })
 
 describe('Document-based parsing', () => {
+	describe('Description-list edits', () => {
+		test('typing a separator upgrades a list line', () => {
+			const document = parser.markdownToTextDocument('- term')
+			const [, end] = document.getLineRange(document.lines[0])
+			const edited = document.apply(document.change.insert(end - 1, ' :: definition'))
+			const [line] = parser.parseMarkdown(edited, {
+				documentStartLine: 0,
+				documentEndLine: 0
+			}).lines
+
+			expect(line.attributes.dl).toMatchObject({ role: 'term', hasDef: true })
+			expect(line.attributes.list).toBeUndefined()
+		})
+
+		test('deleting a separator downgrades to a regular list line', () => {
+			const source = '- term :: definition'
+			const document = parser.markdownToTextDocument(source)
+			const edited = document.apply(document.change.delete([6, source.length]))
+			const [line] = parser.parseMarkdown(edited, {
+				documentStartLine: 0,
+				documentEndLine: 0
+			}).lines
+
+			expect(line.attributes.list).toBeTruthy()
+			expect(line.attributes.dl).toBeUndefined()
+		})
+
+		test('upgrading a bare term reparses its child values', () => {
+			const document = parser.markdownToTextDocument('- term\n  - value')
+			const [, end] = document.getLineRange(document.lines[0])
+			const edited = document.apply(document.change.insert(end - 1, ' ::'))
+			const result = parser.parseMarkdown(edited, {
+				documentStartLine: 0,
+				documentEndLine: 0
+			})
+
+			expect(result.lines).toHaveLength(2)
+			expect(result.lines[0].attributes.dl).toMatchObject({ role: 'term', hasDef: false })
+			expect(result.lines[1].attributes.dl).toMatchObject({ role: 'value', termIndent: '' })
+		})
+
+		test('downgrading a bare term reparses its child values', () => {
+			const source = '- term ::\n  - value'
+			const document = parser.markdownToTextDocument(source)
+			const edited = document.apply(document.change.delete([6, 9]))
+			const result = parser.parseMarkdown(edited, {
+				documentStartLine: 0,
+				documentEndLine: 0
+			})
+
+			expect(result.lines).toHaveLength(2)
+			expect(result.lines[0].attributes.list).toBeTruthy()
+			expect(result.lines[1].attributes.list).toBeTruthy()
+			expect(result.lines[1].attributes.dl).toBeUndefined()
+		})
+	})
 
 	test('Inserting code characters on blank line', () => {
 		// This was created for an infinite loop bug
@@ -224,7 +280,7 @@ End`
 			expect(doc.lines[0].content.ops).toEqual(buildOpsFromInsertList([
 				'Some ',
 				'$math$', {
-					hiddenGroup: true,
+					hiddenGroup: '5-11',
 					math: {
 						isBlock: false,
 						source: 'math'
@@ -241,7 +297,7 @@ End`
 			expect(doc.lines[0].content.ops).toEqual(buildOpsFromInsertList([
 				'Some ',
 				'$$math$$', {
-					hiddenGroup: true,
+					hiddenGroup: '5-13',
 					math: {
 						isBlock: true,
 						source: 'math'
@@ -546,6 +602,32 @@ describe('Embeds', () => {
 				href: 'An Image.png'
 			}
 		])
+	})
+})
+
+describe('Inline ids', () => {
+	test('Adjacent identical inline math get distinct ids', () => {
+		const ops = parser.parseMarkdown('$a$$a$').lines[0].content.ops
+		expect(ops.map(op => op.attributes.hiddenGroup)).toEqual(['0-3', '3-6'])
+
+		// Line reformatting composes ops with Delta.push, which merges equal neighbors
+		const delta = new Delta()
+		for (const op of ops) {
+			delta.push(op)
+		}
+		expect(delta.ops).toHaveLength(2)
+	})
+
+	test('Adjacent same-href embeds get distinct ids', () => {
+		const ops = parser.parseMarkdown('![[a.png]]![[a.png]]').lines[0].content.ops
+		const inlineIds = new Set(ops.map(op => op.attributes?.hiddenGroup))
+		expect([...inlineIds]).toEqual(['0-10', '10-20'])
+	})
+
+	test('Ids are relative to their line', () => {
+		const ops = parser.parseMarkdown('Before\n$a$ and ![[a]]').lines[1].content.ops
+		expect(ops[0].attributes.hiddenGroup).toEqual('0-3')
+		expect(ops.find(op => op.attributes?.t_embed)?.attributes.hiddenGroup).toEqual('8-14')
 	})
 })
 
