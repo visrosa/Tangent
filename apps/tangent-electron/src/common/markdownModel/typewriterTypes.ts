@@ -205,13 +205,22 @@ function isDlSeparatorNode(child): boolean {
 		&& className.split(/\s+/).includes('inline-dl_sep-container')
 }
 
+function unwrapDlSeparatorNode(child) {
+	if (isDlSeparatorNode(child)) return child
+	if (typeof child !== 'object' || !child
+		|| typeof child.props?.['data-hidden-group'] !== 'string'
+		|| child.children?.length !== 1) return null
+	return isDlSeparatorNode(child.children[0]) ? child.children[0] : null
+}
+
 function splitDlChildren(children: any[]) {
 	const separators: any[] = []
 	const segments: any[][] = [[]]
 
 	for (const child of children) {
-		if (isDlSeparatorNode(child)) {
-			separators.push(child)
+		const separator = unwrapDlSeparatorNode(child)
+		if (separator) {
+			separators.push(separator)
 			segments.push([])
 		}
 		else {
