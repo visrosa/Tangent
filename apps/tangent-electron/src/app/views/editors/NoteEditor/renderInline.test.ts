@@ -20,7 +20,7 @@ function elementCount(html: string, element: string) {
 }
 
 describe('renderInline: adjacent hidden-group embeds', () => {
-	test('Distinct instances with the same source render as two containers', () => {
+	test('Distinct groups with the same source render as two containers', () => {
 		const editor = getEditor()
 		const delta = new Delta([
 			{ insert: '$a$', attributes: { math: { source: 'a' }, hiddenGroup: '0-3' } },
@@ -33,27 +33,27 @@ describe('renderInline: adjacent hidden-group embeds', () => {
 		expect(html).toContain('data-hidden-group="3-6"')
 	})
 
-	test('Distinct furigana instances with the same content render as two containers', () => {
+	test('Distinct furigana groups with the same content render as two containers', () => {
 		const editor = getEditor()
 		const delta = new Delta([
-			{ insert: '{a|b}', attributes: { furigana: { base: 'a', reading: 'b', instance: '0-5' }, hiddenGroup: true } },
-			{ insert: '{a|b}', attributes: { furigana: { base: 'a', reading: 'b', instance: '5-10' }, hiddenGroup: true } }
+			{ insert: '{a|b}', attributes: { furigana: { base: 'a', reading: 'b' }, hiddenGroup: '0-5' } },
+			{ insert: '{a|b}', attributes: { furigana: { base: 'a', reading: 'b' }, hiddenGroup: '5-10' } }
 		])
 
 		expect(containerCount(inlineToHTML(editor, delta), 'furigana')).toBe(2)
 	})
 
-	test('Decorations splitting one furigana instance do not duplicate its output', () => {
+	test('Decorations splitting one furigana group do not duplicate its output', () => {
 		const editor = getEditor()
-		const furigana = { base: 'Mr. Smith', reading: 'ミスター・スミス', instance: '0-20' }
+		const furigana = { base: 'Mr. Smith', reading: 'ミスター・スミス' }
 		const delta = new Delta([
 			{
 				insert: '{Mr.',
-				attributes: { furigana, hiddenGroup: true, decoration: { focus: { class: 'unfocused' } } }
+				attributes: { furigana, hiddenGroup: '0-20', decoration: { focus: { class: 'unfocused' } } }
 			},
 			{
 				insert: ' Smith|ミスター・スミス}',
-				attributes: { furigana, hiddenGroup: true, decoration: { focus: { class: 'focused' } } }
+				attributes: { furigana, hiddenGroup: '0-20', decoration: { focus: { class: 'focused' } } }
 			}
 		])
 		const html = inlineToHTML(editor, delta)
@@ -64,7 +64,7 @@ describe('renderInline: adjacent hidden-group embeds', () => {
 })
 
 describe('renderInline: adjacent embeds', () => {
-	test('Distinct embed instances render as distinct outputs', () => {
+	test('Distinct embed groups render as distinct outputs', () => {
 		const editor = getEditor()
 		const delta = parseMarkdown('![[a.png]]![[b.png]]').lines[0].content
 		const html = inlineToHTML(editor, delta)
