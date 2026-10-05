@@ -219,7 +219,7 @@ describe('description-list rendering', () => {
 	test('renders the separator as hidden source syntax', () => {
 		expect(separator).toMatchObject({
 			type: 'span',
-			props: { className: 'inline-dl_sep-container' },
+			props: { className: 'inline-dl_sep-container', 'data-hidden-group': 'separator' },
 			children: [
 				{
 					type: 'span',
