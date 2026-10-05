@@ -764,7 +764,7 @@ const noteTypeset:TypesetTypes = {
 
 		hiddenGroupEmbedFormat<GlossData>({
 			name: 'gloss',
-			renderOutput: (gloss, revealed, attributes) => {
+			renderOutput: (gloss, attributes) => {
 				const tGlossAttr = { base: gloss.base, description: gloss.description } as any
 
 				if (attributes.decoration?.focus) {

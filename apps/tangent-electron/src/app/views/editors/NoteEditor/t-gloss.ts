@@ -1,7 +1,6 @@
 import { markAsSelectionRequest } from 'app/events'
 import { defineCustomElement } from 'app/utils/defineCustomElement'
 import { requestTooltip, tooltip } from 'app/utils/tooltips'
-import { bindInlineSelectionListeners } from './hiddenGroupInlineElement'
 
 const glossStyleSheet = new CSSStyleSheet()
 glossStyleSheet.replaceSync(`
@@ -44,7 +43,10 @@ class TangentGloss extends HTMLElement {
 	constructor() {
 		super()
 
-		bindInlineSelectionListeners(this, this.onClick)
+		this.addEventListener('click', this.onClick)
+		this.addEventListener('dblclick', this.onClick)
+		this.addEventListener('mousedown', this.onClick)
+		this.addEventListener('contextmenu', this.onClick)
 		this.addEventListener('pointerdown', this.onPointerDown)
 
 		const shadow = this.attachShadow({ mode: 'open' })
