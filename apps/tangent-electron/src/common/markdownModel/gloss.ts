@@ -14,8 +14,8 @@ export type GlossScanResult =
 /**
  * Scans a `{base::description}` span. Only the first unescaped `::` separates;
  * `|` has no meaning here, which is what gives gloss precedence over furigana
- * (parseInlineGloss runs first). Nested spans are left for the furigana
- * scanner to reject.
+ * (parseInlineGloss runs first). A span interrupted by an inner `{` is left
+ * for the furigana scanner, which keeps it as literal source.
  */
 export function scanGlossSpan(text: string, start = 0): GlossScanResult {
 	if (text[start] !== '{' || isEscaped(text, start)) return { type: 'invalid' }

@@ -561,13 +561,17 @@ article.note {
 
 	.inline-gloss-container.revealed {
 		outline: 2px solid var(--textColor);
+		outline-offset: 4px;
 		border-radius: var(--inputBorderRadius);
-		outline-offset: 3px;
 	}
 
 	span.gloss-source {
 		font-family: var(--codeFontFamily);
 		color: var(--accentTextColor);
+
+		&.revealed {
+			padding-right: .5em;
+		}
 	}
 
 	.mathLine {
