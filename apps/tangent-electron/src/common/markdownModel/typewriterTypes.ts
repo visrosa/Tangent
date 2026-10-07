@@ -234,6 +234,88 @@ function appendStyle(props: AttributeMap, declaration: string) {
 	props.style = `${style}${style && !style.endsWith(';') ? ';' : ''}${declaration}`
 }
 
+type DlLineEntry = [AttributeMap, any[], string]
+type DlTreeNode = { entry: DlLineEntry, children: DlTreeNode[] }
+
+function buildDlTree(lineData: DlLineEntry[]): DlTreeNode[] {
+	const roots: DlTreeNode[] = []
+	const latestTermByIndent = new Map<string, DlTreeNode>()
+
+	for (const entry of lineData) {
+		const [attributes] = entry
+		const dl = attributes.dl as DlLineData
+		const node: DlTreeNode = { entry, children: [] }
+		const parent = dl.termIndent === undefined
+			? undefined
+			: latestTermByIndent.get(dl.termIndent)
+
+		;(parent?.children ?? roots).push(node)
+		if (dl.role === 'term') latestTermByIndent.set(attributes.indent?.indent ?? '', node)
+	}
+
+	return roots
+}
+
+function getDlExportProps(attributes: AttributeMap, role: DlLineData['role'], key: string) {
+	const dl = attributes.dl as DlLineData
+	const props = getCoreLineProperties(attributes, `dl-${role}`)
+	props.key = key
+	props['data-dl-role'] = role
+	if (dl.hasDef !== undefined) props['data-dl-has-def'] = String(dl.hasDef)
+	if (dl.termIndent !== undefined) props['data-dl-term-indent'] = dl.termIndent
+	if (dl.rootIndent !== undefined) props['data-dl-root-indent'] = dl.rootIndent
+	return props
+}
+
+/**
+ * HTML reads consecutive `<dt>`s as terms sharing the `<dd>`s that follow,
+ * so nested terms are wrapped in a `<dd>` of their parent instead of being
+ * emitted beside it.
+ */
+function renderDlExportItems(nodes: DlTreeNode[]) {
+	const items = []
+
+	for (const node of nodes) {
+		const [attributes, children, id] = node.entry
+		const dl = attributes.dl as DlLineData
+
+		if (dl.role === 'value') {
+			items.push(h('dd', getDlExportProps(attributes, 'value', id), withoutDlSourceFormatting(children)))
+		}
+		else if (dl.hasDef) {
+			const split = splitDlChildren(children)
+			items.push(h('dt', getDlExportProps(attributes, 'term', `${id}-term`), withoutDlSourceFormatting(split.term)))
+			items.push(h('dd', getDlExportProps(attributes, 'value', `${id}-definition`), split.definition))
+		}
+		else {
+			const split = splitDlChildren(children)
+			items.push(h('dt', getDlExportProps(attributes, 'term', id), withoutDlSourceFormatting(split.term)))
+		}
+
+		let subtree: DlTreeNode[] = []
+		const flushSubtree = () => {
+			if (!subtree.length) return
+			items.push(h('dd', { className: 'dl-subtree', key: `${subtree[0].entry[2]}-subtree` }, [
+				h('dl', { className: 'description-list' }, renderDlExportItems(subtree))
+			]))
+			subtree = []
+		}
+
+		for (const child of node.children) {
+			if ((child.entry[0].dl as DlLineData).role === 'term') {
+				subtree.push(child)
+			}
+			else {
+				flushSubtree()
+				items.push(...renderDlExportItems([child]))
+			}
+		}
+		flushSubtree()
+	}
+
+	return items
+}
+
 const collapsedDlDescriptions = new WeakMap<object, Set<string>>()
 
 function getCollapsedDlDescriptions(editor: object): Set<string> {
@@ -268,7 +350,7 @@ const noteTypeset:TypesetTypes = {
 		},
 		{
 			name: 'dl',
-			selector: 'dl.description-list > dt, dl.description-list > dd, div.editor-description-list > div.dl-line',
+			selector: 'dl.description-list > dt, dl.description-list > dd:not(.dl-subtree), div.editor-description-list > div.dl-line',
 			defaultFollows: true,
 			fromDom(node: HTMLElement) {
 				const role = node.getAttribute('data-dl-role') === 'value' ? 'value' : 'term'
@@ -452,37 +534,8 @@ const noteTypeset:TypesetTypes = {
 					}, lines))
 				}
 
-				const items = []
-
-				for (const [attributes, children, id] of lineData) {
-					const dl = attributes.dl as DlLineData
-					if (attributes.revealed) revealed = true
-
-					const getProps = (role: DlLineData['role'], key: string) => {
-						const props = getCoreLineProperties(attributes, `dl-${role}`)
-						props.key = key
-						props['data-dl-role'] = role
-						if (dl.hasDef !== undefined) props['data-dl-has-def'] = String(dl.hasDef)
-						if (dl.termIndent !== undefined) props['data-dl-term-indent'] = dl.termIndent
-						if (dl.rootIndent !== undefined) props['data-dl-root-indent'] = dl.rootIndent
-						return props
-					}
-
-					if (dl.role === 'value') {
-						items.push(h('dd', getProps('value', id), withoutDlSourceFormatting(children)))
-						continue
-					}
-
-					if (!dl.hasDef) {
-						const split = splitDlChildren(children)
-						items.push(h('dt', getProps('term', id), withoutDlSourceFormatting(split.term)))
-						continue
-					}
-
-					const split = splitDlChildren(children)
-					items.push(h('dt', getProps('term', `${id}-term`), withoutDlSourceFormatting(split.term)))
-					items.push(h('dd', getProps('value', `${id}-definition`), split.definition))
-				}
+				if (lineData.some(([attributes]) => attributes.revealed)) revealed = true
+				const items = renderDlExportItems(buildDlTree(lineData))
 
 				return wrap(h('dl', {
 					className: revealed ? 'description-list revealed' : 'description-list'

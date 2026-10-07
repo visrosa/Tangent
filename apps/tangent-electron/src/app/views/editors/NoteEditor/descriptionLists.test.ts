@@ -1,8 +1,9 @@
 import { describe, expect, test } from 'vitest'
 import { wait } from '@such-n-such/core'
-import { Editor, docToHTML } from 'typewriter-editor'
+import { Editor, docFromHTML, docToHTML } from 'typewriter-editor'
 import { markdownToTextDocument } from 'common/markdownModel/parser'
 import noteTypeset from 'common/markdownModel/typewriterTypes'
+import type { DlLineData } from 'common/markdownModel/dl'
 import './t-embed'
 import MarkdownEditor from './MarkdownEditor'
 import 'app/style/note.scss'
@@ -30,6 +31,13 @@ function createMarkdownEditor(source: string) {
 		root
 	})
 	return { editor, root }
+}
+
+/** Each list item as [tag, text], with a nested list as ['SUBTREE', items] */
+function structure(list: Element): any[] {
+	return Array.from(list.children, child => child.classList.contains('dl-subtree')
+		? ['SUBTREE', structure(child.querySelector(':scope > dl.description-list'))]
+		: [child.tagName, child.textContent])
 }
 
 function mountInNote(root: HTMLElement) {
@@ -78,7 +86,7 @@ describe('description-list HTML', () => {
 		expect(signature(compact)).toEqual(signature(expanded))
 	})
 
-	test('does not flatten nested term-description pairs into inline definitions', () => {
+	test('nests term children inside a definition of their parent', () => {
 		const inlineParent = render(`- A :: 1
   - B :: 2
   - C :: 3`)
@@ -86,28 +94,57 @@ describe('description-list HTML', () => {
   - 1
   - B :: 2
   - C :: 3`)
+		const nested = [['DT', 'B'], ['DD', '2'], ['DT', 'C'], ['DD', '3']]
 
-		expect(inlineParent.querySelectorAll('dl.description-list')).toHaveLength(1)
-		expect(bareParent.querySelectorAll('dl.description-list')).toHaveLength(1)
+		expect(structure(inlineParent.querySelector('dl.description-list')))
+			.toEqual([['DT', 'A'], ['DD', '1'], ['SUBTREE', nested]])
+		expect(structure(bareParent.querySelector('dl.description-list')))
+			.toEqual([['DT', 'A'], ['DD', '1'], ['SUBTREE', nested]])
 		expect(inlineParent.querySelector('dd').hasAttribute('data-dl-term-indent')).toBe(false)
 		expect(bareParent.querySelector('dd').getAttribute('data-dl-term-indent')).toBe('')
 	})
 
-	test('renders one semantic list for mixed inline and nested definitions', () => {
+	test('keeps values and nested terms of one parent in source order', () => {
 		const container = render(`- alpha :: one
 - beta ::
   - first ::
     - third level item
   - second
 - gamma :: three`)
-		const lists = container.querySelectorAll('dl.description-list')
 
-		expect(lists).toHaveLength(1)
-		expect(lists[0].querySelectorAll(':scope > dt')).toHaveLength(4)
-		expect(lists[0].querySelectorAll(':scope > dd')).toHaveLength(4)
-		expect(Array.from(lists[0].children, child => child.tagName)).toEqual([
-			'DT', 'DD', 'DT', 'DT', 'DD', 'DD', 'DT', 'DD'
+		expect(container.querySelectorAll(':scope > dl.description-list')).toHaveLength(1)
+		expect(structure(container.querySelector('dl.description-list'))).toEqual([
+			['DT', 'alpha'],
+			['DD', 'one'],
+			['DT', 'beta'],
+			['SUBTREE', [['DT', 'first'], ['DD', 'third level item']]],
+			['DD', 'second'],
+			['DT', 'gamma'],
+			['DD', 'three']
 		])
+	})
+
+	test.each([
+		['nested terms', `- beta ::
+  - first ::
+    - one
+  - second`],
+		['a multi-term group', `- uses ::
+- requires ::
+  - npm
+  - typescript`],
+	])('reads its own HTML back as the same lines for %s', (_name, source) => {
+		const editor = new Editor({ types: noteTypeset })
+		editor.setRoot(document.createElement('div'))
+		const original = markdownToTextDocument(source)
+		const roundTripped = docFromHTML(editor, docToHTML(editor, original))
+		const signature = (lines: typeof original.lines) => lines.map(line => {
+			const { glyph, ...dl } = line.attributes.dl as DlLineData
+			return dl
+		})
+
+		expect(roundTripped.lines).toHaveLength(original.lines.length)
+		expect(signature(roundTripped.lines)).toEqual(signature(original.lines))
 	})
 
 	test('separates groups across a blank line', () => {
