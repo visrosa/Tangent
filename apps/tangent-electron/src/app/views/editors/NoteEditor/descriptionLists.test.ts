@@ -250,6 +250,24 @@ describe('description-list HTML', () => {
 		article.remove()
 	})
 
+	test('gives rows to collapsed lines revealed around the caret', async () => {
+		const source = '- term ::\n  - first\n  - second\nplain'
+		const { editor, root } = createMarkdownEditor(source)
+		const article = mountInNote(root)
+
+		editor.collapsingSections.toggleLineCollapsed(0)
+		await wait()
+		editor.select(source.indexOf('first'))
+		await wait()
+		const lines = Array.from(root.querySelectorAll('.editor-description-list > .dl-line')) as HTMLElement[]
+
+		expect(lines.slice(1).every(line => line.classList.contains('collapsed-revealed'))).toBe(true)
+		expect(lines.map(line => line.style.gridRow)).toEqual(['1 / span 2', '1', '2'])
+		expect(lines.slice(1).every(line => getComputedStyle(line).display !== 'none')).toBe(true)
+		expect(lines[0].classList.contains('dl-description-collapsed')).toBe(false)
+		article.remove()
+	})
+
 	test('hides an inline definition while its term is collapsed', async () => {
 		const { editor, root } = createMarkdownEditor('- 🜨 :: Terra or Earth\nplain')
 		const article = mountInNote(root)
