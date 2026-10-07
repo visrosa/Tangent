@@ -206,23 +206,13 @@ function isDlSeparatorNode(child): boolean {
 }
 
 function splitDlChildren(children: any[]) {
-	const separators: any[] = []
-	const segments: any[][] = [[]]
-
-	for (const child of children) {
-		if (isDlSeparatorNode(child)) {
-			separators.push(child)
-			segments.push([])
-		}
-		else {
-			segments.at(-1).push(child)
-		}
-	}
+	const separatorIndex = children.findIndex(isDlSeparatorNode)
+	if (separatorIndex < 0) return { term: children, separator: undefined, definition: [] }
 
 	return {
-		term: segments[0],
-		separators,
-		definitions: segments.slice(1)
+		term: children.slice(0, separatorIndex),
+		separator: children[separatorIndex],
+		definition: children.slice(separatorIndex + 1)
 	}
 }
 
@@ -419,24 +409,18 @@ const noteTypeset:TypesetTypes = {
 						let lineChildren = children
 						if (dl.role === 'term') {
 							const split = splitDlChildren(children)
-							if (split.separators.length) {
+							if (split.separator) {
 								const controls = h('span', { className: 'dl-separator-controls' }, [
-									split.separators[0],
+									split.separator,
 									toggle
 								].filter(Boolean))
 
 								if (dl.hasDef) {
 									className += ' dl-inline'
-									const definitionRows = split.definitions.map((definition, definitionIndex) => {
-										const rowChildren = definitionIndex === 0
-											? definition
-											: [split.separators[definitionIndex], ...definition]
-										return h('span', { className: 'dl-definition-row dl-definition-content' }, rowChildren)
-									})
 									lineChildren = [
 										h('span', { className: 'dl-term-content' }, split.term),
 										controls,
-										h('span', { className: 'dl-definition-stack' }, definitionRows)
+										h('span', { className: 'dl-definition' }, split.definition)
 									]
 								}
 								else {
@@ -497,9 +481,7 @@ const noteTypeset:TypesetTypes = {
 
 					const split = splitDlChildren(children)
 					items.push(h('dt', getProps('term', `${id}-term`), withoutDlSourceFormatting(split.term)))
-					for (const [definitionIndex, definition] of split.definitions.entries()) {
-						items.push(h('dd', getProps('value', `${id}-definition-${definitionIndex}`), definition))
-					}
+					items.push(h('dd', getProps('value', `${id}-definition`), split.definition))
 				}
 
 				return wrap(h('dl', {

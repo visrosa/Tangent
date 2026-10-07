@@ -33,23 +33,21 @@ function createMarkdownEditor(source: string) {
 }
 
 describe('description-list HTML', () => {
-	test('renders compact repeated descriptions as separate definitions', () => {
+	test('keeps a later separator as literal definition text', () => {
 		const container = render('- 🜨 :: Terra or Earth :: Alchemical symbol for antimony')
 		const list = container.querySelector('dl.description-list')
 
-		expect(Array.from(list.children, child => child.tagName)).toEqual(['DT', 'DD', 'DD'])
+		expect(Array.from(list.children, child => child.tagName)).toEqual(['DT', 'DD'])
 		expect(Array.from(list.children, child => child.textContent)).toEqual([
 			'🜨',
-			'Terra or Earth',
-			'Alchemical symbol for antimony'
+			'Terra or Earth :: Alchemical symbol for antimony'
 		])
 	})
 
-	test('gives compact and expanded plain descriptions equivalent semantic HTML', () => {
-		const compact = render('- 🜨 :: Terra or Earth :: Alchemical symbol for antimony')
+	test('gives inline and expanded single descriptions equivalent semantic HTML', () => {
+		const compact = render('- 🜨 :: Terra or Earth')
 		const expanded = render(`- 🜨 ::
-  - Terra or Earth
-  - Alchemical symbol for antimony`)
+  - Terra or Earth`)
 		const signature = (container: HTMLElement) => Array.from(
 			container.querySelector('dl.description-list').children,
 			child => [child.tagName, child.textContent]
@@ -205,24 +203,24 @@ describe('description-list HTML', () => {
 		article.remove()
 	})
 
-	test('stacks repeated inline definitions under one vertically spanning term', () => {
+	test('renders text after the first separator as one inline definition', () => {
 		const { root } = createEditor('- 🜨 :: Terra or Earth :: Alchemical symbol for antimony')
 		const article = document.createElement('article')
 		article.classList.add('note')
 		article.appendChild(root)
 		document.body.appendChild(article)
 		const line = root.querySelector('.dl-inline') as HTMLElement
-		const rows = Array.from(line.querySelectorAll('.dl-definition-row'))
+		const definitions = Array.from(line.querySelectorAll('.dl-definition'))
 		const expandedHeight = line.getBoundingClientRect().height
 
-		expect(rows).toHaveLength(2)
-		expect(rows[0].textContent).toBe('Terra or Earth')
-		expect(rows[1].textContent.endsWith('Alchemical symbol for antimony')).toBe(true)
+		expect(definitions).toHaveLength(1)
+		expect(definitions[0].textContent).toBe('Terra or Earth :: Alchemical symbol for antimony')
+		expect(line.querySelectorAll('.dl_sep-source')).toHaveLength(1)
 		expect(line.querySelectorAll('.dl-description-toggle')).toHaveLength(1)
 
 		const toggle = line.querySelector('.dl-description-toggle') as HTMLElement
 		toggle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
-		expect(getComputedStyle(root.querySelector('.dl-definition-stack')).display).toBe('none')
+		expect(getComputedStyle(root.querySelector('.dl-definition')).display).toBe('none')
 		expect((root.querySelector('.dl-inline') as HTMLElement).getBoundingClientRect().height)
 			.toBeLessThan(expandedHeight)
 		article.remove()
@@ -247,20 +245,6 @@ describe('description-list HTML', () => {
 
 		editor.select(source.indexOf('::') + 1)
 		expect(root.querySelectorAll('.dl_sep-source.revealed')).toHaveLength(1)
-
-		editor.select(editor.getText().length)
-		expect(root.querySelectorAll('.dl_sep-source.revealed')).toHaveLength(0)
-	})
-
-	test('reveals only the active separator within a repeated description line', () => {
-		const source = '- term :: first :: second\nplain'
-		const { editor, root } = createMarkdownEditor(source)
-		const separators = Array.from(root.querySelectorAll('.dl_sep-source'))
-
-		expect(separators).toHaveLength(2)
-		editor.select(source.lastIndexOf('::') + 1)
-		expect(root.querySelectorAll('.dl_sep-source.revealed')).toHaveLength(1)
-		expect(separators[1].classList.contains('revealed')).toBe(true)
 
 		editor.select(editor.getText().length)
 		expect(root.querySelectorAll('.dl_sep-source.revealed')).toHaveLength(0)
@@ -317,7 +301,7 @@ plain`
 		document.body.appendChild(article)
 		const nested = root.querySelectorAll('.dl-line')[1]
 		const term = nested.querySelector('.dl-term-content') as HTMLElement
-		const definition = nested.querySelector('.dl-definition-content') as HTMLElement
+		const definition = nested.querySelector('.dl-definition') as HTMLElement
 
 		expect(nested.classList.contains('dl-inline')).toBe(true)
 		expect(term.textContent.endsWith('Furigana')).toBe(true)

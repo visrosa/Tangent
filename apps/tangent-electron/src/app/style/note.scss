@@ -310,37 +310,25 @@ article.note {
 				align-self: center;
 			}
 
-			.dl-definition-stack {
+			.dl-definition {
 				grid-column: 3;
-				display: grid;
+				display: block;
 				font-weight: 400;
 				min-width: 0;
+				min-height: rhythmUnit(1);
 				padding-inline-start: .7em;
 				border-inline-start: .125em solid var(--accentDeemphasizedBackgroundColor);
 				transition: border-color .12s ease;
 			}
 
-			.dl-definition-row {
-				display: block;
-				min-height: rhythmUnit(1);
-
-				+ .dl-definition-row {
-					border-block-start: 1px solid var(--borderColor);
-				}
-			}
-
-			&:hover .dl-definition-stack,
-			&:focus-within .dl-definition-stack {
+			&:hover .dl-definition,
+			&:focus-within .dl-definition {
 				border-inline-start-color: var(--accentTextColor);
 			}
 
-			&.dl-description-collapsed .dl-definition-stack {
+			&.dl-description-collapsed .dl-definition {
 				display: none;
 			}
-		}
-
-		.dl-definition-content {
-			font-weight: 400;
 		}
 
 		.dl-separator-controls {

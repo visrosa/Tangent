@@ -1,7 +1,7 @@
 import { StructureType, type TodoState } from 'common/indexing/indexTypes'
 import NoteParser from './NoteParser'
 import { escapeRegExp } from '@such-n-such/core'
-import { findParentDlTerm, matchDlSeparator, type DlLineData } from './dl'
+import { findParentDlTerm, matchDlSeparator, setDlTermSeparator, type DlLineData } from './dl'
 import DocumentFeeder from './DocumentFeeder'
 
 // Unordered glyphs are split by visual weight because large glyphs get extra
@@ -286,6 +286,7 @@ export function parseListItem(char: string, parser: NoteParser): boolean {
 	const dlSeparator = matchDlSeparator(line, listDetail)
 	const currentIndent = parser.getCurrentIndent().indent
 	if (dlSeparator) {
+		setDlTermSeparator(parser, start + dlSeparator.index)
 		const parentDlTerm = findParentDlTerm(parser, currentIndent, false)
 		setDlLineData(parser, {
 			role: 'term',

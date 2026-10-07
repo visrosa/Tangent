@@ -18,8 +18,12 @@ export type ParentDlTerm = {
 }
 
 type DlSeparatorMatch = {
+	/** Offset of the separator's leading whitespace within the matched line */
+	index: number
 	hasDef: boolean
 }
+
+const termSeparatorIndices = new WeakMap<NoteParser, number>()
 
 function findClosingRun(text: string, start: number, marker: string) {
 	const end = text.indexOf(marker, start + marker.length)
@@ -119,13 +123,23 @@ function findDlSeparator(content: string) {
 
 export function matchDlSeparator(line: string, listDetail: ListDefinition | null): DlSeparatorMatch | null {
 	if (!listDetail) return null
-	const content = line.slice(listDetail.indent.length + listDetail.glyph.length + 1)
+	const contentStart = listDetail.indent.length + listDetail.glyph.length + 1
+	const content = line.slice(contentStart)
 	const separator = findDlSeparator(content)
 	if (separator < 0) return null
 
 	return {
+		index: contentStart + separator,
 		hasDef: content.slice(separator + 3).trim().length > 0
 	}
+}
+
+/**
+ * Only the first top-level separator on a term line separates; any later
+ * ` :: ` is literal definition text.
+ */
+export function setDlTermSeparator(parser: NoteParser, feedIndex: number) {
+	termSeparatorIndices.set(parser, feedIndex)
 }
 
 export function findParentDlTerm(
@@ -160,11 +174,9 @@ export function parseDlSeparator(char: string, parser: NoteParser): boolean {
 	if (dl?.role !== 'term') return false
 
 	const { feed } = parser
-	if (feed.text[feed.index + 1] !== ':' || feed.text[feed.index + 2] !== ':') return false
+	if (feed.index !== termSeparatorIndices.get(parser)) return false
 
 	const following = feed.text[feed.index + 3]
-	if (following !== undefined && following !== '\n' && following !== ' ' && following !== '\t') return false
-
 	parser.commitSpan(null, 0)
 	const start = feed.index
 

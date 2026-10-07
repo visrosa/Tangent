@@ -9,10 +9,12 @@ import { getLineFormattingPrefix, lineFormatEscapeMode, lineHasMultiLineContext 
 
 describe('matchDlSeparator', () => {
 	test.each([
-		['- term :: definition', { hasDef: true }],
-		['- term\t::\tdefinition', { hasDef: true }],
-		['- term ::', { hasDef: false }],
-		['- term ::   ', { hasDef: false }],
+		['- term :: definition', { index: 6, hasDef: true }],
+		['- term\t::\tdefinition', { index: 6, hasDef: true }],
+		['- term ::', { index: 6, hasDef: false }],
+		['- term ::   ', { index: 6, hasDef: false }],
+		['- term :: first :: second', { index: 6, hasDef: true }],
+		['- `a :: b` :: definition', { index: 10, hasDef: true }],
 	])('matches %j', (source, expected) => {
 		expect(matchDlSeparator(source, matchList(source))).toEqual(expected)
 	})
@@ -41,15 +43,13 @@ describe('description-list parsing', () => {
 		})
 	})
 
-	test('marks every top-level separator on a term line', () => {
+	test('marks only the first top-level separator on a term line', () => {
 		const [line] = parseMarkdown('- term :: first :: second').lines
 		const separators = line.content.ops.filter(op => op.attributes?.dl_sep)
 
-		expect(separators).toHaveLength(2)
-		expect(separators.map(op => op.attributes.hiddenGroup)).toEqual([
-			'6-10',
-			'15-19'
-		])
+		expect(separators).toHaveLength(1)
+		expect(separators[0].attributes.hiddenGroup).toBe('6-10')
+		expect(line.content.ops.at(-1).insert).toBe('first :: second')
 	})
 
 	test('marks only direct children of a bare term as values', () => {
@@ -90,12 +90,12 @@ describe('description-list parsing', () => {
 		}
 	})
 
-	test('marks repeated separators around protected inline objects', () => {
-		const [line] = parseMarkdown('- term :: `code :: literal` :: $math :: literal$ :: final').lines
+	test('marks the first separator after protected inline objects', () => {
+		const [line] = parseMarkdown('- `code :: literal` $math :: literal$ :: final :: literal').lines
 		const separators = line.content.ops.filter(op => op.attributes?.dl_sep)
 
-		expect(separators).toHaveLength(3)
-		expect(separators.map(op => op.insert)).toEqual([' :: ', ' :: ', ' :: '])
+		expect(separators).toHaveLength(1)
+		expect(separators[0].attributes.hiddenGroup).toBe('37-41')
 	})
 
 	test.each([
@@ -200,19 +200,19 @@ describe('description-list rendering', () => {
 		})
 	})
 
-	test('renders each inline definition as its own semantic element', () => {
+	test('renders everything after the separator as one definition', () => {
+		const emphasis = { type: 'em', props: {}, children: ['Sb'] }
 		const rendered = lineType.renderMultiple([
 			[{
 				dl: { role: 'term', glyph, hasDef: true, rootIndent: '' },
 				indent: indent('')
-			}, ['symbol', makeSeparator('first'), 'earth', makeSeparator('second'), 'antimony'], 'a']
+			}, ['symbol', separator, 'earth :: ', emphasis], 'a']
 		], null, true) as any
 
-		expect(rendered.children.map(child => child.type)).toEqual(['dt', 'dd', 'dd'])
+		expect(rendered.children.map(child => child.type)).toEqual(['dt', 'dd'])
 		expect(rendered.children.map(child => child.children)).toEqual([
 			['symbol'],
-			['earth'],
-			['antimony']
+			['earth :: ', emphasis]
 		])
 	})
 
