@@ -32,6 +32,28 @@ function createMarkdownEditor(source: string) {
 	return { editor, root }
 }
 
+function mountInNote(root: HTMLElement) {
+	const article = document.createElement('article')
+	article.classList.add('note')
+	article.appendChild(root)
+	document.body.appendChild(article)
+	return article
+}
+
+function textLeft(element: Element, text: string) {
+	const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT)
+	while (walker.nextNode()) {
+		const node = walker.currentNode
+		const offset = node.textContent.indexOf(text)
+		if (offset < 0) continue
+		const range = document.createRange()
+		range.setStart(node, offset)
+		range.setEnd(node, offset + 1)
+		return range.getBoundingClientRect().left
+	}
+	throw new Error(`"${text}" not found`)
+}
+
 describe('description-list HTML', () => {
 	test('keeps a later separator as literal definition text', () => {
 		const container = render('- 🜨 :: Terra or Earth :: Alchemical symbol for antimony')
@@ -223,6 +245,31 @@ describe('description-list HTML', () => {
 		expect(getComputedStyle(root.querySelector('.dl-definition')).display).toBe('none')
 		expect((root.querySelector('.dl-inline') as HTMLElement).getBoundingClientRect().height)
 			.toBeLessThan(expandedHeight)
+		article.remove()
+	})
+
+	test('starts value text at the same edge as inline definition text', () => {
+		const { root } = createEditor(`- alpha :: one
+- beta ::
+  - two`)
+		const article = mountInNote(root)
+
+		expect(textLeft(root.querySelector('.dl-value'), 'two'))
+			.toBeCloseTo(textLeft(root.querySelector('.dl-definition'), 'one'), 0)
+		article.remove()
+	})
+
+	test('reveals the space after a value glyph together with the glyph', () => {
+		const source = '- beta ::\n  - two\nplain'
+		const { editor, root } = createMarkdownEditor(source)
+		const article = mountInNote(root)
+		const glyph = () => root.querySelector('.dl-value .line_format.dl') as HTMLElement
+
+		expect(glyph().textContent).toBe('- ')
+		expect(getComputedStyle(glyph()).fontSize).toBe('0px')
+
+		editor.select(source.indexOf('two'))
+		expect(getComputedStyle(glyph()).fontSize).not.toBe('0px')
 		article.remove()
 	})
 

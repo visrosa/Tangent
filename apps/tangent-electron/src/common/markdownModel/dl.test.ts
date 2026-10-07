@@ -52,6 +52,15 @@ describe('description-list parsing', () => {
 		expect(line.content.ops.at(-1).insert).toBe('first :: second')
 	})
 
+	test('hides the space after the glyph together with the glyph', () => {
+		for (const line of parseMarkdown('- term ::\n  - value').lines) {
+			expect(line.content.ops.find(op => op.attributes?.line_format === 'dl')).toMatchObject({
+				insert: '- ',
+				attributes: { hidden: true }
+			})
+		}
+	})
+
 	test('marks only direct children of a bare term as values', () => {
 		const lines = parseMarkdown(`- term ::
   - first value

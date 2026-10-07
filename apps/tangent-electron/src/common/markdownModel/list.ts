@@ -321,15 +321,18 @@ export function parseListItem(char: string, parser: NoteParser): boolean {
 		}
 	}
 
-	// Consume the line glyph
-	feed.nextByLength(listDetail.glyph.length - 1)
 	if (parser.lineData.dl) {
+		// The following space is hidden with the glyph so that wrapped lines
+		// and inline definitions share a left edge with the first line.
+		feed.nextByLength(listDetail.glyph.length)
 		parser.commitSpan({
 			line_format: 'dl',
 			hidden: true
 		})
 	}
 	else {
+		// Consume the line glyph
+		feed.nextByLength(listDetail.glyph.length - 1)
 		parser.commitSpan({
 			line_format: 'list',
 			hiddenGroup: true,
