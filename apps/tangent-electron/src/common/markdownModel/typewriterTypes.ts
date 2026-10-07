@@ -316,21 +316,6 @@ function renderDlExportItems(nodes: DlTreeNode[]) {
 	return items
 }
 
-const collapsedDlDescriptions = new WeakMap<object, Set<string>>()
-
-function getCollapsedDlDescriptions(editor: object): Set<string> {
-	let collapsed = collapsedDlDescriptions.get(editor)
-	if (!collapsed) {
-		collapsed = new Set()
-		collapsedDlDescriptions.set(editor, collapsed)
-	}
-	return collapsed
-}
-
-function getDlIndent(attributes: AttributeMap): number {
-	return attributes.indent?.indentSize ?? attributes.indent?.indent?.length ?? 0
-}
-
 const noteTypeset:TypesetTypes = {
 	lines: [
 		{
@@ -400,115 +385,67 @@ const noteTypeset:TypesetTypes = {
 				}
 
 				if (!forHTML) {
-					const collapsed = getCollapsedDlDescriptions(editor)
-					const collapsedAncestorIndents: number[] = []
-					const states = lineData.map(([attributes, _children, id], index) => {
-						const dl = attributes.dl as DlLineData
-						const indent = getDlIndent(attributes)
-						while (collapsedAncestorIndents.length
-							&& collapsedAncestorIndents.at(-1) >= indent) {
-							collapsedAncestorIndents.pop()
-						}
-
-						const nextAttributes = lineData[index + 1]?.[0]
-						const hasNestedDescription = dl.role === 'term'
-							&& nextAttributes
-							&& getDlIndent(nextAttributes) > indent
-						const collapsible = dl.role === 'term'
-							&& (dl.hasDef === true || hasNestedDescription)
-						const isCollapsed = collapsible && collapsed.has(id)
-						const hiddenByAncestor = collapsedAncestorIndents.length > 0
-
-						if (isCollapsed && hasNestedDescription) {
-							collapsedAncestorIndents.push(indent)
-						}
-
-						return { collapsible, hiddenByAncestor, isCollapsed }
-					})
-					const layouts: Array<{ row: number, span: number }> = []
+					const hidden = lineData.map(([attributes]) => isCollapsed(attributes.collapsed)
+						&& !attributes.collapsedReveal)
+					const layouts: Array<{ row: number, span: number } | undefined> = []
+					const definitionCollapsed: boolean[] = []
 					let nextRow = 1
 					for (let index = 0; index < lineData.length; index++) {
-						if (layouts[index]) continue
-						if (states[index].hiddenByAncestor) {
-							layouts[index] = { row: nextRow, span: 1 }
-							continue
-						}
+						if (layouts[index] || hidden[index]) continue
 
 						const [attributes] = lineData[index]
 						const dl = attributes.dl as DlLineData
-						if (dl.role === 'term' && dl.hasDef === false && !states[index].isCollapsed) {
+						const collapseParent = dl.role === 'term' && hasCollapsedChildren(attributes.collapsed)
+						if (dl.role === 'term' && dl.hasDef === false) {
 							const termIndent = attributes.indent?.indent ?? ''
 							let valueCount = 0
 							for (let valueIndex = index + 1; valueIndex < lineData.length; valueIndex++) {
 								const [valueAttributes] = lineData[valueIndex]
 								const valueDl = valueAttributes.dl as DlLineData
 								if (valueDl.role !== 'value' || valueDl.termIndent !== termIndent) break
-								if (states[valueIndex].hiddenByAncestor) continue
+								if (hidden[valueIndex]) continue
 								layouts[valueIndex] = { row: nextRow + valueCount, span: 1 }
 								valueCount++
 							}
 
+							definitionCollapsed[index] = collapseParent && valueCount === 0
 							const span = Math.max(1, valueCount)
 							layouts[index] = { row: nextRow, span }
 							nextRow += span
 							continue
 						}
 
+						definitionCollapsed[index] = collapseParent
 						layouts[index] = { row: nextRow, span: 1 }
 						nextRow++
 					}
 
 					const lines = lineData.map(([attributes, children, id], index) => {
 						const dl = attributes.dl as DlLineData
-						const state = states[index]
 						if (attributes.revealed) revealed = true
 
 						let className = `dl-line dl-${dl.role}`
 						if (dl.termIndent !== undefined) className += ' dl-nested'
-						if (state.isCollapsed) className += ' dl-description-collapsed'
-						if (state.hiddenByAncestor) className += ' dl-collapsed-child'
-
-						let toggle
-						if (state.collapsible) {
-							const onToggle = event => {
-								if (!editor.enabled) return
-								event.preventDefault()
-								event.stopPropagation()
-								if (collapsed.has(id)) collapsed.delete(id)
-								else collapsed.add(id)
-								editor.render()
-							}
-							toggle = h('button', {
-								className: 'dl-description-toggle',
-								contentEditable: false,
-								'aria-label': state.isCollapsed ? 'Expand description' : 'Collapse description',
-								'aria-expanded': String(!state.isCollapsed),
-								onmousedown: onToggle,
-								ontouchstart: onToggle
-							})
-						}
+						if (definitionCollapsed[index]) className += ' dl-description-collapsed'
 
 						let lineChildren = children
 						if (dl.role === 'term') {
 							const split = splitDlChildren(children)
 							if (split.separator) {
-								const controls = h('span', { className: 'dl-separator-controls' }, [
-									split.separator,
-									toggle
-								].filter(Boolean))
+								const separator = h('span', { className: 'dl-separator' }, [split.separator])
 
 								if (dl.hasDef) {
 									className += ' dl-inline'
 									lineChildren = [
 										h('span', { className: 'dl-term-content' }, split.term),
-										controls,
+										separator,
 										h('span', { className: 'dl-definition' }, split.definition)
 									]
 								}
 								else {
 									lineChildren = [
 										h('span', { className: 'dl-term-content' }, split.term),
-										controls
+										separator
 									]
 								}
 							}
@@ -516,9 +453,11 @@ const noteTypeset:TypesetTypes = {
 
 						const props = getCoreLineProperties(attributes, className)
 						const layout = layouts[index]
-						appendStyle(props, layout.span > 1
-							? `grid-row:${layout.row} / span ${layout.span};`
-							: `grid-row:${layout.row};`)
+						if (layout) {
+							appendStyle(props, layout.span > 1
+								? `grid-row:${layout.row} / span ${layout.span};`
+								: `grid-row:${layout.row};`)
+						}
 						props.key = id
 						props['data-dl-role'] = dl.role
 						if (dl.hasDef !== undefined) props['data-dl-has-def'] = String(dl.hasDef)

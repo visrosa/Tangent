@@ -176,113 +176,105 @@ describe('description-list HTML', () => {
 		expect(lines).toHaveLength(documentModel.lines.length)
 		expect(lines.map(line => line.key)).toEqual(documentModel.lines.map(line => line.id))
 		expect(root.querySelector('dl')).toBeNull()
-		const controls = lines[0].querySelector('.dl-separator-controls') as HTMLElement
-		expect(controls.firstElementChild.classList.contains('inline-dl_sep-container')).toBe(true)
-		expect(controls.lastElementChild.classList.contains('dl-description-toggle')).toBe(true)
-		expect(controls.querySelector('.dl-separator-output').textContent).toBe('')
+		const separator = lines[0].querySelector('.dl-separator') as HTMLElement
+		expect(separator.children).toHaveLength(1)
+		expect(separator.firstElementChild.classList.contains('inline-dl_sep-container')).toBe(true)
+		expect(separator.querySelector('.dl-separator-output').textContent).toBe('')
 	})
 
-	test('collapses inline and nested descriptions without hiding their terms', () => {
-		const source = `- alpha :: one
+	test('collapses inline and nested descriptions without hiding their terms', async () => {
+		const { editor, root } = createMarkdownEditor(`- alpha :: one
 - beta ::
   - first ::
     - third level item
   - second
-- gamma :: three`
-		const { root } = createEditor(source)
-		let lines = Array.from(root.querySelectorAll('.editor-description-list > .dl-line'))
+- gamma :: three`)
+		const lines = () => Array.from(root.querySelectorAll('.editor-description-list > .dl-line'))
 
-		expect(root.querySelectorAll('.dl-description-toggle')).toHaveLength(4)
+		editor.collapsingSections.toggleLineCollapsed(0)
+		await wait()
+		expect(lines()[0].classList.contains('dl-description-collapsed')).toBe(true)
+		expect(lines().some(line => line.classList.contains('collapsed'))).toBe(false)
 
-		const alphaToggle = lines[0].querySelector('.dl-description-toggle') as HTMLElement
-		alphaToggle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
-		lines = Array.from(root.querySelectorAll('.editor-description-list > .dl-line'))
-		expect(lines[0].classList.contains('dl-description-collapsed')).toBe(true)
-		expect(lines[0].classList.contains('dl-collapsed-child')).toBe(false)
-
-		const betaToggle = lines[1].querySelector('.dl-description-toggle') as HTMLElement
-		betaToggle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
-		lines = Array.from(root.querySelectorAll('.editor-description-list > .dl-line'))
-		expect(lines[1].classList.contains('dl-description-collapsed')).toBe(true)
-		expect(lines.slice(2, 5).every(line => line.classList.contains('dl-collapsed-child'))).toBe(true)
-		expect(lines[5].classList.contains('dl-collapsed-child')).toBe(false)
+		editor.collapsingSections.toggleLineCollapsed(1)
+		await wait()
+		expect(lines()[1].classList.contains('dl-description-collapsed')).toBe(true)
+		expect(lines().map(line => line.classList.contains('collapsed')))
+			.toEqual([false, false, true, true, true, false])
 	})
 
-	test('collapses description subtrees independently at arbitrary depth', () => {
-		const { root } = createEditor(`- term :: description
+	test('collapses description subtrees independently at arbitrary depth', async () => {
+		const { editor, root } = createMarkdownEditor(`- term :: description
   - term2 ::
     - descA
     - descB
     - term3 ::
       - descC`)
-		let lines = Array.from(root.querySelectorAll('.editor-description-list > .dl-line'))
-		expect(lines).toHaveLength(6)
-		expect(root.querySelectorAll('.dl-description-toggle')).toHaveLength(3)
+		const collapsed = () => Array.from(root.querySelectorAll('.editor-description-list > .dl-line'),
+			line => line.classList.contains('collapsed'))
 
-		const deepestToggle = lines[4].querySelector('.dl-description-toggle') as HTMLElement
-		deepestToggle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
-		lines = Array.from(root.querySelectorAll('.editor-description-list > .dl-line'))
-		expect(lines[5].classList.contains('dl-collapsed-child')).toBe(true)
-		expect(lines[4].classList.contains('dl-collapsed-child')).toBe(false)
+		editor.collapsingSections.toggleLineCollapsed(4)
+		await wait()
+		expect(collapsed()).toEqual([false, false, false, false, false, true])
 
-		const rootToggle = lines[0].querySelector('.dl-description-toggle') as HTMLElement
-		rootToggle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
-		lines = Array.from(root.querySelectorAll('.editor-description-list > .dl-line'))
-		expect(lines.slice(1).every(line => line.classList.contains('dl-collapsed-child'))).toBe(true)
-		expect(lines[0].classList.contains('dl-collapsed-child')).toBe(false)
+		editor.collapsingSections.toggleLineCollapsed(0)
+		await wait()
+		expect(collapsed()).toEqual([false, true, true, true, true, true])
+
+		editor.collapsingSections.toggleLineCollapsed(0)
+		await wait()
+		expect(collapsed()).toEqual([false, false, false, false, false, true])
 	})
 
-	test('aligns expanded values with compact definitions and shrinks the term when collapsed', () => {
-		const { root } = createEditor(`- 🜨 ::
+	test('aligns expanded values with compact definitions and shrinks the term when collapsed', async () => {
+		const { editor, root } = createMarkdownEditor(`- 🜨 ::
   - Terra or Earth
   - Alchemical symbol for antimony
 - next :: value`)
-		const article = document.createElement('article')
-		article.classList.add('note')
-		article.appendChild(root)
-		document.body.appendChild(article)
-		let lines = Array.from(root.querySelectorAll('.editor-description-list > .dl-line')) as HTMLElement[]
+		const article = mountInNote(root)
+		const lines = () => Array.from(root.querySelectorAll('.editor-description-list > .dl-line')) as HTMLElement[]
 
-		expect(lines[0].style.gridRow).toBe('1 / span 2')
-		expect(lines[1].style.gridRow).toBe('1')
-		expect(lines[2].style.gridRow).toBe('2')
-		expect(lines[3].style.gridRow).toBe('3')
-		expect(lines[1].getBoundingClientRect().left).toBe(lines[2].getBoundingClientRect().left)
-		const expandedHeight = lines[0].getBoundingClientRect().height
+		expect(lines().map(line => line.style.gridRow)).toEqual(['1 / span 2', '1', '2', '3'])
+		expect(lines()[1].getBoundingClientRect().left).toBe(lines()[2].getBoundingClientRect().left)
+		const expandedHeight = lines()[0].getBoundingClientRect().height
 
-		const toggle = lines[0].querySelector('.dl-description-toggle') as HTMLElement
-		toggle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
-		lines = Array.from(root.querySelectorAll('.editor-description-list > .dl-line')) as HTMLElement[]
+		editor.collapsingSections.toggleLineCollapsed(0)
+		await wait()
 
-		expect(lines[0].style.gridRow).toBe('1')
-		expect(lines[0].classList.contains('dl-description-collapsed')).toBe(true)
-		expect(lines.slice(1, 3).every(line => line.classList.contains('dl-collapsed-child'))).toBe(true)
-		expect(lines[3].style.gridRow).toBe('2')
-		expect(lines[0].getBoundingClientRect().height).toBeLessThan(expandedHeight)
+		expect(lines().map(line => line.style.gridRow)).toEqual(['1', '', '', '2'])
+		expect(lines()[0].classList.contains('dl-description-collapsed')).toBe(true)
+		expect(lines().slice(1, 3).every(line => getComputedStyle(line).display === 'none')).toBe(true)
+		expect(getComputedStyle(lines()[0], '::after').content).toBe('"\u22ef"')
+		expect(lines()[0].getBoundingClientRect().height).toBeLessThan(expandedHeight)
+		article.remove()
+	})
+
+	test('hides an inline definition while its term is collapsed', async () => {
+		const { editor, root } = createMarkdownEditor('- 🜨 :: Terra or Earth\nplain')
+		const article = mountInNote(root)
+		const line = () => root.querySelector('.dl-inline') as HTMLElement
+
+		expect(getComputedStyle(line().querySelector('.dl-definition')).display).not.toBe('none')
+
+		editor.collapsingSections.toggleLineCollapsed(0)
+		await wait()
+		expect(getComputedStyle(line().querySelector('.dl-definition')).display).toBe('none')
+		expect(getComputedStyle(line(), '::after').content).toBe('"\u22ef"')
+
+		editor.collapsingSections.toggleLineCollapsed(0)
+		await wait()
+		expect(getComputedStyle(line().querySelector('.dl-definition')).display).not.toBe('none')
 		article.remove()
 	})
 
 	test('renders text after the first separator as one inline definition', () => {
 		const { root } = createEditor('- 🜨 :: Terra or Earth :: Alchemical symbol for antimony')
-		const article = document.createElement('article')
-		article.classList.add('note')
-		article.appendChild(root)
-		document.body.appendChild(article)
 		const line = root.querySelector('.dl-inline') as HTMLElement
 		const definitions = Array.from(line.querySelectorAll('.dl-definition'))
-		const expandedHeight = line.getBoundingClientRect().height
 
 		expect(definitions).toHaveLength(1)
 		expect(definitions[0].textContent).toBe('Terra or Earth :: Alchemical symbol for antimony')
 		expect(line.querySelectorAll('.dl_sep-source')).toHaveLength(1)
-		expect(line.querySelectorAll('.dl-description-toggle')).toHaveLength(1)
-
-		const toggle = line.querySelector('.dl-description-toggle') as HTMLElement
-		toggle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
-		expect(getComputedStyle(root.querySelector('.dl-definition')).display).toBe('none')
-		expect((root.querySelector('.dl-inline') as HTMLElement).getBoundingClientRect().height)
-			.toBeLessThan(expandedHeight)
-		article.remove()
 	})
 
 	test('starts value text at the same edge as inline definition text', () => {

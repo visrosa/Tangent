@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { compareSectionDepth, findSectionLines, getFirstCollapseableParentIndex } from './sections'
+import { collapseSection, compareSectionDepth, findSectionLines, getFirstCollapseableParentIndex, isLineCollapsible } from './sections'
 import { markdownToTextDocument } from './parser'
 
 describe('Section Depth', () => {
@@ -209,5 +209,45 @@ And some paragraph content.`)
 			expect(getFirstCollapseableParentIndex(doc, 72)).toEqual(0)
 			expect(getFirstCollapseableParentIndex(doc, 99)).toEqual(0)
 		})
+	})
+})
+
+describe('Description lists', () => {
+	it('Ranks description-list lines with list lines', () => {
+		const doc = markdownToTextDocument(`- term ::
+	- value
+- plain item`)
+		const change = collapseSection(doc, doc.lines[0])
+
+		expect(compareSectionDepth(doc.lines[0], doc.lines[2])).toEqual(0)
+		expect(Object.keys(change)).toEqual([doc.lines[0].id, doc.lines[1].id])
+	})
+
+	it('Lets an introducing paragraph collapse the description list below it', () => {
+		const doc = markdownToTextDocument(`Intro
+- term :: definition`)
+
+		expect(isLineCollapsible(doc.lines, 0)).toBe(true)
+		expect(Object.keys(collapseSection(doc, doc.lines[0]))).toEqual([doc.lines[0].id, doc.lines[1].id])
+	})
+
+	it('Offers collapse only on lines with something to hide', () => {
+		const doc = markdownToTextDocument(`- inline :: definition
+- valueless ::
+- owner ::
+	- value
+		- regular nested item
+	- last value
+- final :: definition`)
+
+		expect(doc.lines.map((_line, index) => isLineCollapsible(doc.lines, index))).toEqual([
+			true,
+			false,
+			true,
+			true,
+			false,
+			false,
+			true
+		])
 	})
 })
