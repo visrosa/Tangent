@@ -418,3 +418,74 @@ plain`
 		article.remove()
 	})
 })
+
+describe('description-list alignment', () => {
+	const settle = async () => {
+		for (let frame = 0; frame < 3; frame++) await new Promise(resolve => requestAnimationFrame(resolve))
+	}
+
+	async function mountMarkdownEditor(source: string) {
+		const { editor, root } = createMarkdownEditor(source)
+		const article = mountInNote(root)
+		await settle()
+		const definitionLeft = (text: string) => textLeft(
+			Array.from(root.querySelectorAll('.dl-definition')).find(definition => definition.textContent === text),
+			text
+		)
+		return { editor, root, article, definitionLeft }
+	}
+
+	test('aligns description lists separated only by blank lines', async () => {
+		const { article, definitionLeft } = await mountMarkdownEditor('- x :: one\n\n- a longer term :: two')
+
+		expect(definitionLeft('one')).toBeCloseTo(definitionLeft('two'), 0)
+		article.remove()
+	})
+
+	test('joins a run across a whitespace-only line', async () => {
+		const { article, definitionLeft } = await mountMarkdownEditor('- x :: one\n\t\n- a longer term :: two')
+
+		expect(definitionLeft('one')).toBeCloseTo(definitionLeft('two'), 0)
+		article.remove()
+	})
+
+	test('aligns blockquoted description lists separated by a blank quote line', async () => {
+		const { article, definitionLeft } = await mountMarkdownEditor('> - x :: one\n>\n> - a longer term :: two')
+
+		expect(definitionLeft('one')).toBeCloseTo(definitionLeft('two'), 0)
+		article.remove()
+	})
+
+	test('aligns each depth across a run', async () => {
+		const { root, article } = await mountMarkdownEditor(`- a :: first
+  - b :: nested one
+
+- a :: second
+  - a longer nested term :: nested two`)
+		const lefts = Array.from(root.querySelectorAll('.dl-definition'), definition =>
+			definition.getBoundingClientRect().left)
+
+		expect(lefts[0]).toBeCloseTo(lefts[2], 0)
+		expect(lefts[1]).toBeCloseTo(lefts[3], 0)
+		article.remove()
+	})
+
+	test('keeps lists separated by other lines independent', async () => {
+		const { article, definitionLeft } = await mountMarkdownEditor('- x :: one\nparagraph\n- a longer term :: two')
+
+		expect(definitionLeft('one')).toBeLessThan(definitionLeft('two'))
+		article.remove()
+	})
+
+	test('does not move other blocks while a term is revealed', async () => {
+		const source = '- x :: one\n\n- a longer term :: two\n\nplain'
+		const { editor, article, definitionLeft } = await mountMarkdownEditor(source)
+		const aligned = definitionLeft('one')
+
+		editor.select(source.indexOf('- a longer'))
+		await settle()
+		expect(article.querySelector('.dl-line.revealed')).not.toBeNull()
+		expect(definitionLeft('one')).toBeCloseTo(aligned, 0)
+		article.remove()
+	})
+})

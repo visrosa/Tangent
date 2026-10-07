@@ -15,6 +15,7 @@ import UnicodeAutocompleter from '../autocomplete/UnicodeAutocompleter'
 import CodeBlockAutocompleter from '../autocomplete/CodeBlockAutoCompleter'
 import autoWrapping from '../autobraces/autoWrappingModule'
 import { collapsingSections, type CollapsingSectionsModule } from './collapsingSections'
+import { descriptionListAlignment } from './descriptionListAlignment'
 import TemplateTokenAutocompleter from "../autocomplete/TemplateTokenAutocompleter"
 
 function indentLines(editor: MarkdownEditor, direction: -1 | 1) {
@@ -162,6 +163,7 @@ export default class MarkdownEditor extends Editor {
 				tangent: editor => editorModule(editor, { workspace }),
 				// After the main pass so that on-edit-uncollapse occurs after markdown reparse
 				collapsingSections,
+				descriptionListAlignment,
 				
 				copy: editor => copy(editor, {
 					copyHTML: false,

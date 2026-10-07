@@ -247,12 +247,12 @@ function getDlColumns(lineData: DlLineEntry[]) {
 	const lines = lineData.map(([attributes]) => {
 		const dl = attributes.dl as DlLineData
 		const parentDepth = dl.termIndent === undefined ? -1 : termDepths.get(dl.termIndent) ?? -1
-		if (dl.role === 'value') return { start: 2 * parentDepth + 3 }
+		if (dl.role === 'value') return { start: 2 * parentDepth + 3, depth: undefined }
 
 		const depth = parentDepth + 1
 		termDepths.set(attributes.indent?.indent ?? '', depth)
 		maxDepth = Math.max(maxDepth, depth)
-		return { start: 2 * depth + 1 }
+		return { start: 2 * depth + 1, depth }
 	})
 	return { lines, maxDepth }
 }
@@ -480,9 +480,10 @@ const noteTypeset:TypesetTypes = {
 								? `grid-row:${layout.row} / span ${layout.span};`
 								: `grid-row:${layout.row};`)
 						}
-						const { start } = columns.lines[index]
+						const { start, depth } = columns.lines[index]
 						const end = dl.role === 'value' || dl.hasDef || definitionCollapsed[index] ? -1 : start + 2
 						appendStyle(props, `grid-column:${start} / ${end};`)
+						if (depth !== undefined) props['data-dl-depth'] = String(depth)
 						props.key = id
 						props['data-dl-role'] = dl.role
 						if (dl.hasDef !== undefined) props['data-dl-has-def'] = String(dl.hasDef)
@@ -491,12 +492,15 @@ const noteTypeset:TypesetTypes = {
 						return h('div', props, lineChildren)
 					})
 
-					const termTracks = Array.from({ length: columns.maxDepth + 1 }, () => 'max-content max-content')
+					// descriptionListAlignment sets the widths to align blocks separated by blank lines
+					const termTracks = Array.from({ length: columns.maxDepth + 1 },
+						(_track, depth) => `minmax(var(--dlTermWidth${depth}, 0px), max-content) max-content`)
 					const rootIndent = lineData[0][0].indent?.indentSize ?? 0
 					return wrap(h('div', {
 						className: revealed
 							? 'description-list editor-description-list revealed'
 							: 'description-list editor-description-list',
+						'data-dl-block': lineData[0][2],
 						style: `grid-template-columns:${termTracks.join(' ')} minmax(0, 1fr);`
 							+ `margin-inline-start:calc(var(--spaceWidth) * ${rootIndent});`
 					}, lines))

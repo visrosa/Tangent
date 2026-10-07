@@ -283,6 +283,8 @@ article.note {
 
 		.dl-term-content {
 			padding-inline-end: var(--dlTermGap);
+			// Keeps the box at its content width so it can be measured for alignment
+			justify-self: start;
 		}
 
 		// Line a nested term up with its parent's definition text
