@@ -6,6 +6,7 @@ import noteTypeset from 'common/markdownModel/typewriterTypes'
 import type { DlLineData } from 'common/markdownModel/dl'
 import './t-embed'
 import MarkdownEditor from './MarkdownEditor'
+import '../../../../../static/global.css'
 import 'app/style/note.scss'
 
 function render(source: string) {
@@ -285,6 +286,35 @@ describe('description-list HTML', () => {
 
 		expect(textLeft(root.querySelector('.dl-value'), 'two'))
 			.toBeCloseTo(textLeft(root.querySelector('.dl-definition'), 'one'), 0)
+		article.remove()
+	})
+
+	test('starts a nested group at its parent definition text', () => {
+		const nestedSource = `- root :: Sol, our nearest star
+  - r :: Nominal Solar Radius
+  - longer nested term :: Nominal Total Solar Irradiance`
+		const { root } = createEditor(nestedSource)
+		const { root: flatRoot } = createEditor('- root :: Sol, our nearest star')
+		const article = mountInNote(root)
+		const flatArticle = mountInNote(flatRoot)
+		const lines = root.querySelectorAll('.dl-line')
+		const definitionLeft = (line: Element) => textLeft(line.querySelector('.dl-definition'), 'Nominal')
+		const rootDefinitionLeft = textLeft(lines[0].querySelector('.dl-definition'), 'Sol')
+
+		expect(textLeft(lines[1].querySelector('.dl-term-content'), 'r')).toBeCloseTo(rootDefinitionLeft, 0)
+		expect(definitionLeft(lines[1])).toBeCloseTo(definitionLeft(lines[2]), 0)
+		expect(rootDefinitionLeft)
+			.toBeCloseTo(textLeft(flatRoot.querySelector('.dl-definition'), 'Sol'), 0)
+		article.remove()
+		flatArticle.remove()
+	})
+
+	test('indents a description list nested under a regular list item', () => {
+		const { root } = createEditor('- parent\n  - term :: definition')
+		const article = mountInNote(root)
+
+		expect(parseFloat(getComputedStyle(root.querySelector('.editor-description-list')).marginLeft))
+			.toBeGreaterThan(0)
 		article.remove()
 	})
 

@@ -248,11 +248,14 @@ article.note {
 	}
 
 	.editor-description-list {
+		// Grid columns and line placement are set inline by the renderer
+		--dlBarWidth: .125em;
+		--dlBarPadding: .7em;
+		--dlTermGap: .55em;
+
 		margin: 0;
 		display: grid;
-		grid-template-columns: max-content max-content minmax(0, 1fr);
 		grid-auto-rows: minmax(rhythmUnit(1), auto);
-		column-gap: .55em;
 		row-gap: .125em;
 
 		.dl-line {
@@ -261,7 +264,6 @@ article.note {
 		}
 
 		.dl-term {
-			grid-column: 1 / 3;
 			display: grid;
 			grid-template-columns: subgrid;
 			align-items: center;
@@ -269,9 +271,8 @@ article.note {
 		}
 
 		.dl-value {
-			grid-column: 3;
-			padding-inline-start: .7em;
-			border-inline-start: .125em solid var(--accentDeemphasizedBackgroundColor);
+			padding-inline-start: var(--dlBarPadding);
+			border-inline-start: var(--dlBarWidth) solid var(--accentDeemphasizedBackgroundColor);
 			transition: border-color .12s ease;
 
 			&:hover,
@@ -280,17 +281,16 @@ article.note {
 			}
 		}
 
-		.dl-term:not(.revealed) .dl-term-content {
-			padding-inline-start: calc(var(--spaceWidth) * var(--lineIndent));
+		.dl-term-content {
+			padding-inline-end: var(--dlTermGap);
 		}
 
-		.dl-term.dl-nested:not(.revealed) .dl-term-content {
-			padding-inline-start: calc((var(--spaceWidth) * var(--lineIndent)) + var(--indentWidth));
+		// Line a nested term up with its parent's definition text
+		.dl-term.dl-nested .dl-term-content {
+			padding-inline-start: calc(var(--dlBarWidth) + var(--dlBarPadding));
 		}
 
 		.dl-inline {
-			grid-column: 1 / -1;
-
 			&:not(.revealed) .dl-term-content {
 				color: var(--accentTextColor);
 			}
@@ -302,13 +302,13 @@ article.note {
 			}
 
 			.dl-definition {
-				grid-column: 3;
+				grid-column: 3 / -1;
 				display: block;
 				font-weight: 400;
 				min-width: 0;
 				min-height: rhythmUnit(1);
-				padding-inline-start: .7em;
-				border-inline-start: .125em solid var(--accentDeemphasizedBackgroundColor);
+				padding-inline-start: var(--dlBarPadding);
+				border-inline-start: var(--dlBarWidth) solid var(--accentDeemphasizedBackgroundColor);
 				transition: border-color .12s ease;
 			}
 
@@ -337,18 +337,14 @@ article.note {
 			content: none;
 		}
 
-		.dl-term.dl-description-collapsed {
-			grid-column: 1 / -1;
-
-			&::after {
-				content: "\22EF";
-				grid-column: 3;
-				align-self: center;
-				padding-inline-start: .7em;
-				border-inline-start: .125em solid transparent;
-				font-weight: 400;
-				line-height: inherit;
-			}
+		.dl-term.dl-description-collapsed::after {
+			content: "\22EF";
+			grid-column: 3 / -1;
+			align-self: center;
+			padding-inline-start: var(--dlBarPadding);
+			border-inline-start: var(--dlBarWidth) solid transparent;
+			font-weight: 400;
+			line-height: inherit;
 		}
 
 		.inline-dl_sep-container {

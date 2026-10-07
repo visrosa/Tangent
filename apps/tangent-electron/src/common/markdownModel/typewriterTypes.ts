@@ -235,6 +235,27 @@ function appendStyle(props: AttributeMap, declaration: string) {
 }
 
 type DlLineEntry = [AttributeMap, any[], string]
+
+/**
+ * Each term depth gets a term/separator column pair, and a term's definitions
+ * start at the next pair, so a nested group begins in its parent's definition
+ * column.
+ */
+function getDlColumns(lineData: DlLineEntry[]) {
+	const termDepths = new Map<string, number>()
+	let maxDepth = 0
+	const lines = lineData.map(([attributes]) => {
+		const dl = attributes.dl as DlLineData
+		const parentDepth = dl.termIndent === undefined ? -1 : termDepths.get(dl.termIndent) ?? -1
+		if (dl.role === 'value') return { start: 2 * parentDepth + 3 }
+
+		const depth = parentDepth + 1
+		termDepths.set(attributes.indent?.indent ?? '', depth)
+		maxDepth = Math.max(maxDepth, depth)
+		return { start: 2 * depth + 1 }
+	})
+	return { lines, maxDepth }
+}
 type DlTreeNode = { entry: DlLineEntry, children: DlTreeNode[] }
 
 function buildDlTree(lineData: DlLineEntry[]): DlTreeNode[] {
@@ -387,6 +408,7 @@ const noteTypeset:TypesetTypes = {
 				if (!forHTML) {
 					const hidden = lineData.map(([attributes]) => isCollapsed(attributes.collapsed)
 						&& !attributes.collapsedReveal)
+					const columns = getDlColumns(lineData)
 					const layouts: Array<{ row: number, span: number } | undefined> = []
 					const definitionCollapsed: boolean[] = []
 					let nextRow = 1
@@ -458,6 +480,9 @@ const noteTypeset:TypesetTypes = {
 								? `grid-row:${layout.row} / span ${layout.span};`
 								: `grid-row:${layout.row};`)
 						}
+						const { start } = columns.lines[index]
+						const end = dl.role === 'value' || dl.hasDef || definitionCollapsed[index] ? -1 : start + 2
+						appendStyle(props, `grid-column:${start} / ${end};`)
 						props.key = id
 						props['data-dl-role'] = dl.role
 						if (dl.hasDef !== undefined) props['data-dl-has-def'] = String(dl.hasDef)
@@ -466,10 +491,14 @@ const noteTypeset:TypesetTypes = {
 						return h('div', props, lineChildren)
 					})
 
+					const termTracks = Array.from({ length: columns.maxDepth + 1 }, () => 'max-content max-content')
+					const rootIndent = lineData[0][0].indent?.indentSize ?? 0
 					return wrap(h('div', {
 						className: revealed
 							? 'description-list editor-description-list revealed'
-							: 'description-list editor-description-list'
+							: 'description-list editor-description-list',
+						style: `grid-template-columns:${termTracks.join(' ')} minmax(0, 1fr);`
+							+ `margin-inline-start:calc(var(--spaceWidth) * ${rootIndent});`
 					}, lines))
 				}
 
