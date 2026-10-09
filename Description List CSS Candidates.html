@@ -1,0 +1,2399 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>15 CSS Description List Styles</title>
+    <style>
+      /* ==========================================
+       GLOBAL RESET & BASE SETUP
+       ========================================== */
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
+        line-height: 1.5;
+        color: #334155;
+        background-color: #f8fafc;
+        padding: 40px 20px;
+      }
+
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        text-align: center;
+        color: #0f172a;
+        margin-bottom: 12px;
+      }
+
+      .subtitle {
+        text-align: center;
+        color: #64748b;
+        margin-bottom: 48px;
+      }
+
+      section {
+        background: #ffffff;
+        padding: 32px;
+        border-radius: 12px;
+        box-shadow:
+          0 1px 3px rgba(0, 0, 0, 0.05),
+          0 1px 2px rgba(0, 0, 0, 0.1);
+        margin-bottom: 40px;
+      }
+
+      section h2 {
+        font-size: 1.25rem;
+        color: #0f172a;
+        margin-bottom: 24px;
+        border-bottom: 2px solid #f1f5f9;
+        padding-bottom: 8px;
+      }
+
+      .test-case {
+        margin-top: 32px;
+        padding-top: 24px;
+        border-top: 1px dashed #cbd5e1;
+      }
+
+      .test-case h3 {
+        font-size: 1rem;
+        color: #475569;
+        margin-bottom: 20px;
+      }
+
+      code {
+        font-family:
+          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", monospace;
+        font-size: 0.9em;
+        color: #334155;
+      }
+
+      /* ==========================================
+       SHARED NESTED CONTENT
+       ========================================== */
+
+      .long-description {
+        max-width: 72ch;
+      }
+
+      /* ==========================================
+       SHARED COLLAPSIBLE DESCRIPTIONS
+       ========================================== */
+
+      :is(.dl-collapsible, .dl-preview-collapsible) .description-toggle {
+        display: inline-flex;
+        width: 100%;
+        align-items: baseline;
+        gap: 0.45rem;
+        padding: 0;
+        border: 0;
+        appearance: none;
+        background: transparent;
+        cursor: pointer;
+        color: inherit;
+        font: inherit;
+        letter-spacing: inherit;
+        line-height: inherit;
+        text-align: left;
+        text-transform: inherit;
+      }
+
+      :is(.dl-collapsible, .dl-preview-collapsible)
+        .description-toggle::before {
+        content: "▸";
+        flex: 0 0 0.75rem;
+        color: #94a3b8;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 0.8em;
+        line-height: 1;
+        text-align: center;
+      }
+
+      :is(.dl-collapsible, .dl-preview-collapsible)
+        .description-toggle[aria-expanded="true"]::before {
+        content: "▾";
+      }
+
+      :is(.dl-collapsible, .dl-preview-collapsible)
+        .description-toggle:hover::before {
+        color: #64748b;
+      }
+
+      :is(.dl-collapsible, .dl-preview-collapsible)
+        .description-toggle:focus-visible {
+        outline: 2px solid #3b82f6;
+        outline-offset: 3px;
+        border-radius: 2px;
+      }
+
+      .dl-collapsible .collapsible-description[hidden] {
+        display: none;
+      }
+
+      /* Preview disclosures keep the term and a one-line description together. */
+      .dl-preview-collapsible > div,
+      .dl-preview-collapsible .dl-nested > div {
+        display: grid;
+        grid-template-columns: max-content minmax(0, 1fr);
+        column-gap: 0.45rem;
+        align-items: baseline;
+      }
+
+      .dl-preview-collapsible .description-toggle {
+        width: auto;
+        white-space: nowrap;
+      }
+
+      .dl-preview-collapsible .collapsible-description {
+        min-width: 0;
+        margin: 0;
+      }
+
+      .dl-preview-collapsible
+        .collapsible-description[data-preview-collapsed="true"]
+        > .description-preview-text {
+        display: -webkit-box;
+        overflow: hidden;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 1;
+      }
+
+      .dl-preview-collapsible .description-preview-text {
+        display: inline;
+      }
+
+      .dl-preview-collapsible .dl-nested[hidden],
+      .dl-preview-collapsible .nested-summary-toggle[hidden] {
+        display: none;
+      }
+
+      .dl-preview-grouped .nested-summary-toggle {
+        width: max-content;
+        margin: 0.35rem 0 0 0.75rem;
+        padding: 0;
+        border: 0;
+        appearance: none;
+        background: transparent;
+        color: #64748b;
+        cursor: pointer;
+        font: inherit;
+        font-weight: 600;
+        line-height: inherit;
+        text-align: left;
+      }
+
+      .dl-preview-grouped .nested-summary-toggle::before {
+        content: "▸";
+        display: inline-block;
+        width: 0.75rem;
+        margin-right: 0.35rem;
+        color: #94a3b8;
+        font-family: ui-sans-serif, system-ui, sans-serif;
+        font-size: 0.8em;
+        line-height: 1;
+        text-align: center;
+      }
+
+      .dl-preview-grouped .nested-summary-toggle:hover::before {
+        color: #64748b;
+      }
+
+      .dl-preview-grouped .nested-summary-toggle:focus-visible {
+        outline: 2px solid #3b82f6;
+        outline-offset: 3px;
+        border-radius: 2px;
+      }
+
+      .dl-preview-collapsible > .description-expanded,
+      .dl-preview-collapsible .dl-nested > .description-expanded {
+        display: block;
+      }
+
+      .dl-preview-collapsible > .description-expanded > dt,
+      .dl-preview-collapsible > .description-expanded > dd,
+      .dl-preview-collapsible .dl-nested > .description-expanded > dt,
+      .dl-preview-collapsible .dl-nested > .description-expanded > dd {
+        display: inline;
+      }
+
+      .dl-preview-collapsible
+        > .description-expanded
+        > .collapsible-description,
+      .dl-preview-collapsible
+        .dl-nested
+        > .description-expanded
+        > .collapsible-description {
+        margin-left: 0.45rem;
+      }
+
+      /* ==========================================
+       STYLE 1: HORIZONTAL ROW LAYOUT
+       ========================================== */
+
+      .dl-horizontal {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 16px 24px;
+        align-items: baseline;
+      }
+
+      .dl-horizontal dt {
+        font-weight: 700;
+        color: #1e293b;
+      }
+
+      .dl-horizontal dd {
+        margin: 0;
+        color: #475569;
+      }
+
+      .dl-horizontal dd > .dl-nested {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 10px 16px;
+        margin-top: 12px;
+        padding-left: 16px;
+        border-left: 2px solid #e2e8f0;
+        align-items: baseline;
+      }
+
+      .dl-horizontal.dl-collapsible .dl-nested > div {
+        display: contents;
+      }
+
+      .dl-horizontal.dl-collapsible .collapsible-description[hidden] {
+        display: block;
+        block-size: 0;
+        overflow: hidden;
+        visibility: hidden;
+      }
+
+      .dl-horizontal .dl-nested dt {
+        font-weight: 600;
+        color: #475569;
+        font-size: 0.9rem;
+      }
+
+      .dl-horizontal .dl-nested dd {
+        color: #64748b;
+        font-size: 0.9rem;
+      }
+
+      @media (max-width: 600px) {
+        .dl-horizontal {
+          grid-template-columns: 1fr;
+          gap: 8px;
+        }
+
+        .dl-horizontal dd {
+          margin-bottom: 12px;
+        }
+
+        .dl-horizontal dd > .dl-nested {
+          grid-template-columns: 1fr;
+          gap: 4px;
+        }
+      }
+
+      /* ==========================================
+       STYLE 2: MINIMAL SPLIT LINE
+       ========================================== */
+
+      .dl-split-line > div {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 16px;
+      }
+
+      .dl-split-line dt {
+        font-weight: 600;
+        color: #0f172a;
+        padding-right: 8px;
+        background: #ffffff;
+        z-index: 2;
+      }
+
+      .dl-split-line > div::after {
+        content: "";
+        flex-grow: 1;
+        border-bottom: 2px dotted #cbd5e1;
+        margin-bottom: 4px;
+        order: 1;
+      }
+
+      .dl-split-line dd {
+        margin: 0;
+        padding-left: 8px;
+        color: #64748b;
+        background: #ffffff;
+        z-index: 2;
+        order: 2;
+      }
+
+      .dl-split-line .dl-nested {
+        width: 100%;
+        margin-top: 10px;
+        padding: 12px 0 0 16px;
+        border-left: 2px solid #e2e8f0;
+      }
+
+      .dl-split-line .dl-nested > div {
+        display: flex;
+        align-items: baseline;
+        margin-bottom: 12px;
+      }
+
+      .dl-split-line .dl-nested > div::after {
+        border-bottom-width: 1px;
+        border-bottom-style: dotted;
+        margin-bottom: 3px;
+      }
+
+      .dl-split-line .dl-nested dt {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #475569;
+      }
+
+      .dl-split-line .dl-nested dd {
+        font-size: 0.85rem;
+        line-height: 1.5;
+        white-space: normal;
+        max-width: 65%;
+      }
+
+      /* ==========================================
+       STYLE 3: BOLD MODERN GRID CARDS
+       ========================================== */
+
+      .dl-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+      }
+
+      .dl-cards > div {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+      }
+
+      .dl-cards dt {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #64748b;
+        margin-bottom: 6px;
+      }
+
+      .dl-cards dd {
+        margin: 0;
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: #0f172a;
+      }
+
+      .dl-cards .dl-nested {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+        padding-top: 16px;
+        border-top: 1px solid #e2e8f0;
+      }
+
+      .dl-cards .dl-nested > div {
+        padding: 14px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+      }
+
+      .dl-cards .dl-nested dt {
+        font-size: 0.7rem;
+        margin-bottom: 4px;
+      }
+
+      .dl-cards .dl-nested dd {
+        font-size: 0.9rem;
+        font-weight: 400;
+        line-height: 1.55;
+        color: #475569;
+      }
+
+      /* ==========================================
+       STYLE 4: TIMELINE / PROCESS
+       ========================================== */
+
+      .dl-timeline {
+        position: relative;
+        border-left: 2px solid #3b82f6;
+        padding-left: 24px;
+        margin-left: 12px;
+      }
+
+      .dl-timeline dt {
+        font-weight: 700;
+        color: #2563eb;
+        position: relative;
+        margin-bottom: 4px;
+      }
+
+      .dl-timeline dt::before {
+        content: "";
+        position: absolute;
+        left: -31px;
+        top: 6px;
+        width: 12px;
+        height: 12px;
+        background: #3b82f6;
+        border-radius: 50%;
+        border: 2px solid #ffffff;
+      }
+
+      .dl-timeline dd {
+        margin: 0 0 28px;
+        color: #4b5563;
+      }
+
+      .dl-timeline dd:last-child {
+        margin-bottom: 0;
+      }
+
+      .dl-timeline .dl-nested {
+        margin-top: 14px;
+        margin-left: 8px;
+        padding-left: 20px;
+        border-left: 1px solid #cbd5e1;
+      }
+
+      .dl-timeline .dl-nested > div {
+        margin-bottom: 18px;
+      }
+
+      .dl-timeline .dl-nested dt {
+        font-size: 0.9rem;
+        color: #475569;
+        margin-bottom: 3px;
+      }
+
+      .dl-timeline .dl-nested dt::before {
+        display: none;
+      }
+
+      .dl-timeline .dl-nested dd {
+        font-size: 0.9rem;
+        line-height: 1.6;
+        margin: 0;
+        color: #64748b;
+      }
+
+      /* ==========================================
+       STYLE 5: CLEAN BORDER
+       ========================================== */
+
+      .dl-borders {
+        border-top: 1px solid #e5e7eb;
+      }
+
+      .dl-borders dt {
+        font-weight: 600;
+        color: #111827;
+        background: #f9fafb;
+        padding: 14px 16px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .dl-borders dd {
+        margin: 0;
+        padding: 16px;
+        color: #475569;
+        border-bottom: 1px solid #e5e7eb;
+        line-height: 1.6;
+      }
+
+      .dl-borders .dl-nested {
+        margin: 4px 0 0 16px;
+        border-top: 1px solid #e5e7eb;
+      }
+
+      .dl-borders .dl-nested dt {
+        font-size: 0.9rem;
+        padding: 10px 12px;
+        background: #ffffff;
+      }
+
+      .dl-borders .dl-nested dd {
+        font-size: 0.9rem;
+        padding: 12px;
+        background: #fafafa;
+      }
+
+      /* ==========================================
+       STYLE 6: INDENTED HIERARCHY
+       ========================================== */
+
+      .dl-indent {
+        margin-left: 1.5rem;
+      }
+
+      .dl-indent > div {
+        margin-bottom: 1.25rem;
+      }
+
+      .dl-indent dt {
+        font-weight: 700;
+        color: #0f172a;
+      }
+
+      .dl-indent dd {
+        margin: 0.25rem 0 0 1.5rem;
+        color: #475569;
+      }
+
+      .dl-indent .dl-nested {
+        margin: 0.75rem 0 0 1.5rem;
+        padding-left: 1rem;
+        border-left: 2px solid #e2e8f0;
+      }
+
+      .dl-indent .dl-nested > div {
+        margin-bottom: 0.9rem;
+      }
+
+      .dl-indent .dl-nested dt {
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+
+      .dl-indent .dl-nested dd {
+        margin-left: 1rem;
+        font-size: 0.9rem;
+      }
+
+      /* ==========================================
+       STYLE 7: TERM AS HEADING
+       ========================================== */
+
+      .dl-heading > div {
+        margin-bottom: 2rem;
+      }
+
+      .dl-heading dt {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 0.35rem;
+      }
+
+      .dl-heading dd {
+        margin: 0;
+        color: #475569;
+        max-width: 70ch;
+      }
+
+      .dl-heading .dl-nested {
+        margin: 1rem 0 0 1.5rem;
+        padding-left: 1rem;
+        border-left: 2px solid #e2e8f0;
+      }
+
+      .dl-heading .dl-nested dt {
+        font-size: 0.95rem;
+      }
+
+      .dl-heading .dl-nested dd {
+        font-size: 0.9rem;
+      }
+
+      /* ==========================================
+       STYLE 8: COMPACT TREE
+       ========================================== */
+
+      .dl-tree > div {
+        position: relative;
+        padding-left: 1.5rem;
+        margin-bottom: 0.75rem;
+      }
+
+      .dl-tree > div::before {
+        content: "├─";
+        position: absolute;
+        left: 0;
+        color: #94a3b8;
+      }
+
+      .dl-tree > div:last-child::before {
+        content: "└─";
+      }
+
+      .dl-tree dt {
+        display: inline;
+        font-weight: 600;
+        color: #334155;
+      }
+
+      .dl-tree dd {
+        display: inline;
+        margin: 0;
+        color: #64748b;
+      }
+
+      .dl-tree .dl-nested {
+        margin-left: 1.5rem;
+        margin-top: 0.5rem;
+      }
+
+      .dl-tree .dl-nested > div {
+        position: relative;
+        padding-left: 1.5rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .dl-tree .dl-nested > div::before {
+        content: "├─";
+        position: absolute;
+        left: 0;
+        color: #cbd5e1;
+      }
+
+      .dl-tree .dl-nested > div:last-child::before {
+        content: "└─";
+      }
+
+      /* ==========================================
+       STYLE 9: PILL TERMS
+       ========================================== */
+
+      .dl-pill > div {
+        margin-bottom: 1.25rem;
+      }
+
+      .dl-pill dt {
+        display: inline-block;
+        padding: 0.2rem 0.6rem;
+        border-radius: 999px;
+        background: #e2e8f0;
+        color: #334155;
+        font-size: 0.8rem;
+        font-weight: 700;
+        margin-right: 0.5rem;
+      }
+
+      .dl-pill dd {
+        display: inline;
+        margin: 0;
+        color: #475569;
+      }
+
+      .dl-pill .dl-nested {
+        margin: 0.75rem 0 0 1.5rem;
+      }
+
+      .dl-pill .dl-nested dt {
+        font-size: 0.7rem;
+      }
+
+      .dl-pill .dl-nested dd {
+        font-size: 0.9rem;
+      }
+
+      /* ==========================================
+       STYLE 10: DEFINITION BLOCK
+       ========================================== */
+
+      .dl-definition > div {
+        margin-bottom: 2rem;
+      }
+
+      .dl-definition dt {
+        font-family: Georgia, serif;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #111827;
+      }
+
+      .dl-definition dd {
+        margin: 0.5rem 0 0 2rem;
+        max-width: 68ch;
+        color: #4b5563;
+      }
+
+      .dl-definition .dl-nested {
+        margin-top: 1rem;
+      }
+
+      .dl-definition .dl-nested dt {
+        font-size: 0.95rem;
+      }
+
+      .dl-definition .dl-nested dd {
+        margin-left: 1.5rem;
+      }
+
+      /* ==========================================
+       STYLE 11: TWO-LEVEL BACKGROUND BANDS
+       ========================================== */
+
+      .dl-bands > div {
+        padding: 1rem 1.25rem;
+        background: #f8fafc;
+        border-radius: 6px;
+        margin-bottom: 0.75rem;
+      }
+
+      .dl-bands dt {
+        font-weight: 700;
+        color: #0f172a;
+      }
+
+      .dl-bands dd {
+        margin: 0.4rem 0 0;
+        color: #475569;
+      }
+
+      .dl-bands .dl-nested {
+        margin-top: 1rem;
+      }
+
+      .dl-bands .dl-nested > div {
+        padding: 0.8rem 1rem;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 5px;
+        margin-bottom: 0.5rem;
+      }
+
+      .dl-bands .dl-nested dt {
+        font-size: 0.85rem;
+      }
+
+      .dl-bands .dl-nested dd {
+        font-size: 0.9rem;
+      }
+
+      /* ==========================================
+       STYLE 12: LEFT ACCENT BAR
+       ========================================== */
+
+      .dl-accent > div {
+        padding-left: 1rem;
+        border-left: 4px solid #cbd5e1;
+        margin-bottom: 1.5rem;
+      }
+
+      .dl-accent dt {
+        font-weight: 700;
+        color: #0f172a;
+      }
+
+      .dl-accent dd {
+        margin: 0.35rem 0 0;
+        color: #475569;
+      }
+
+      .dl-accent .dl-nested {
+        margin-top: 1rem;
+        padding-left: 1rem;
+        border-left: 2px solid #e2e8f0;
+      }
+
+      .dl-accent .dl-nested > div {
+        margin-bottom: 1rem;
+      }
+
+      .dl-accent .dl-nested dt {
+        font-size: 0.9rem;
+      }
+
+      /* ==========================================
+       STYLE 13: DEFINITION TABLE
+       ========================================== */
+
+      .dl-table {
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .dl-table > div {
+        display: grid;
+        grid-template-columns: minmax(180px, 30%) 1fr;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .dl-table > div:last-child {
+        border-bottom: 0;
+      }
+
+      .dl-table dt,
+      .dl-table dd {
+        padding: 0.9rem 1rem;
+      }
+
+      .dl-table dt {
+        margin: 0;
+        font-weight: 600;
+        background: #f8fafc;
+        color: #334155;
+      }
+
+      .dl-table dd {
+        margin: 0;
+        color: #475569;
+      }
+
+      .dl-table .dl-nested {
+        grid-column: 1 / -1;
+        margin: 0;
+        border-top: 1px solid #e2e8f0;
+        padding-left: 2rem;
+      }
+
+      .dl-table .dl-nested > div {
+        display: grid;
+        grid-template-columns: minmax(180px, 30%) 1fr;
+        border-bottom: 1px solid #f1f5f9;
+      }
+
+      .dl-table .dl-nested dt {
+        font-size: 0.85rem;
+      }
+
+      .dl-table .dl-nested dd {
+        font-size: 0.9rem;
+      }
+
+      /* ==========================================
+       STYLE 14: EDITORIAL / PROSE
+       ========================================== */
+
+      .dl-editorial {
+        max-width: 70ch;
+      }
+
+      .dl-editorial > div {
+        margin-bottom: 2rem;
+      }
+
+      .dl-editorial dt {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #111827;
+      }
+
+      .dl-editorial dd {
+        margin: 0.5rem 0 0 1.5rem;
+        color: #374151;
+      }
+
+      .dl-editorial .dl-nested {
+        margin-top: 1.25rem;
+        margin-left: 1.5rem;
+      }
+
+      .dl-editorial .dl-nested dt {
+        font-size: 0.95rem;
+      }
+
+      .dl-editorial .dl-nested dd {
+        margin-left: 1rem;
+        font-size: 0.9rem;
+      }
+
+      /* ==========================================
+       STYLE 15: NESTED DISCLOSURE
+       ========================================== */
+
+      .dl-disclosure > div {
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+        overflow: hidden;
+      }
+
+      .dl-disclosure dt {
+        padding: 0.8rem 1rem;
+        background: #f8fafc;
+        font-weight: 600;
+        color: #334155;
+      }
+
+      .dl-disclosure dt::before {
+        content: "›";
+        display: inline-block;
+        margin-right: 0.5rem;
+        color: #94a3b8;
+      }
+
+      .dl-disclosure dd {
+        margin: 0;
+        padding: 0.9rem 1rem;
+        color: #475569;
+        border-top: 1px solid #e2e8f0;
+      }
+
+      .dl-disclosure .dl-nested {
+        margin: 0;
+        padding: 0.75rem;
+        background: #f8fafc;
+      }
+
+      .dl-disclosure .dl-nested > div {
+        margin-bottom: 0.4rem;
+        border: 1px solid #e2e8f0;
+        border-radius: 4px;
+      }
+
+      .dl-disclosure .dl-nested dt {
+        font-size: 0.85rem;
+        padding: 0.6rem 0.75rem;
+      }
+
+      .dl-disclosure .dl-nested dd {
+        font-size: 0.85rem;
+        padding: 0.7rem 0.75rem;
+      }
+
+      .dl-disclosure.dl-collapsible dt::before {
+        display: none;
+      }
+
+      /* ==========================================
+       RESPONSIVE ADJUSTMENTS
+       ========================================== */
+
+      @media (max-width: 600px) {
+        section {
+          padding: 24px 20px;
+        }
+
+        .dl-table > div,
+        .dl-table .dl-nested > div {
+          grid-template-columns: 1fr;
+        }
+
+        .dl-table .dl-nested {
+          padding-left: 0;
+        }
+
+        .dl-split-line > div {
+          flex-wrap: wrap;
+        }
+
+        .dl-split-line .dl-nested dd {
+          max-width: none;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <h1>Description List Inspiration</h1>
+      <p class="subtitle">
+        Fifteen CSS variations for HTML semantic description lists, including
+        nested and long-description stress tests.
+      </p>
+
+      <!-- ==========================================
+         SHARED CONTENT USED IN TEST CASES
+         ==========================================
+
+         The structure deliberately mirrors:
+
+         - TODO.md ::
+             - TODO.md#ClaudeVassal :: ...
+             - TODO.md#Terminal Rendering... :: ...
+             - TODO.md#Resuming Sessions :: ...
+         - README.md :: ...
+
+         ========================================== -->
+
+      <!-- ==========================================
+         STYLE 1
+         ========================================== -->
+
+      <section>
+        <h2>1. Horizontal Row Layout (Two-Column Table Style)</h2>
+
+        <dl class="dl-horizontal">
+          <dt>Product Name</dt>
+          <dd>Ergonomic Wireless Keyboard</dd>
+
+          <dt>Battery Life</dt>
+          <dd>Up to 36 months of usage</dd>
+
+          <dt>Connectivity</dt>
+          <dd>Bluetooth 5.1 &amp; 2.4GHz USB Dongle</dd>
+        </dl>
+
+        <div class="test-case">
+          <h3>§1.1 Nested &amp; Long Description Test</h3>
+
+          <dl class="dl-horizontal dl-collapsible">
+            <dt>TODO.md</dt>
+            <dd>
+              Project task tracking and implementation notes.
+
+              <dl class="dl-nested">
+                <div>
+                  <dt>TODO.md#ClaudeVassal</dt>
+                  <dd>
+                    MVP implementation plan — implemented, live end-to-end API
+                    round-trip still unverified (no credentials in dev
+                    environment)
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Terminal Rendering &amp; Typography Roadmap</dt>
+                  <dd>
+                    design for <code>cv.fish</code> output rendering (the
+                    "read-head" stream-json dispatcher, math/diff/image routes,
+                    input-side prose highlighting); Tier 0 scoped concretely and
+                    ready for <code>/plan</code> — extract as standalone
+                    component, embed-vs-extract resolved; diff-aware
+                    <code>Edit</code> rendering and file-aware
+                    <code>Read</code>/<code>Write</code> rendering already
+                    executed ahead of Tier 0/1's own sequencing, see
+                    <code
+                      >TODO.md#Plan: Diff and File-Read Rendering Routes</code
+                    >
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Resuming Sessions</dt>
+                  <dd>
+                    stub — no way today to resume a past
+                    <code>cv</code> session from a fresh invocation (session ids
+                    are opaque UUIDs, nothing lists the
+                    <code>sessions/</code> directory); needs a
+                    <code>/design</code> pass before <code>/plan</code>
+                  </dd>
+                </div>
+              </dl>
+            </dd>
+
+            <dt>README.md</dt>
+            <dd>
+              motivation/backstory and deferred ideas (e.g. the
+              <code>fish</code>-instead-of-<code>bash</code> tool variant) not
+              captured in CLAUDE.md/TODO.md
+            </dd>
+          </dl>
+        </div>
+      </section>
+
+      <!-- ==========================================
+         STYLE 2
+         ========================================== -->
+
+      <section>
+        <h2>2. Minimal Split Line Style</h2>
+
+        <dl class="dl-split-line">
+          <div>
+            <dt>Margherita Pizza</dt>
+            <dd>$14.50</dd>
+          </div>
+
+          <div>
+            <dt>Truffle French Fries</dt>
+            <dd>$8.00</dd>
+          </div>
+
+          <div>
+            <dt>Craft Espresso Stout</dt>
+            <dd>$6.50</dd>
+          </div>
+        </dl>
+
+        <div class="test-case">
+          <h3>§2.1 Nested &amp; Long Description Test</h3>
+
+          <dl class="dl-split-line">
+            <div>
+              <dt>TODO.md</dt>
+              <dd>
+                <dl class="dl-nested">
+                  <div>
+                    <dt>TODO.md#ClaudeVassal</dt>
+                    <dd>
+                      MVP implementation plan — implemented, live end-to-end API
+                      round-trip still unverified (no credentials in dev
+                      environment)
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt>TODO.md#Terminal Rendering &amp; Typography Roadmap</dt>
+                    <dd>
+                      design for <code>cv.fish</code> output rendering (the
+                      "read-head" stream-json dispatcher, math/diff/image
+                      routes, input-side prose highlighting); Tier 0 scoped
+                      concretely and ready for <code>/plan</code> — extract as
+                      standalone component, embed-vs-extract resolved;
+                      diff-aware <code>Edit</code> rendering and file-aware
+                      <code>Read</code>/<code>Write</code> rendering already
+                      executed ahead of Tier 0/1's own sequencing, see
+                      <code
+                        >TODO.md#Plan: Diff and File-Read Rendering Routes</code
+                      >
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt>TODO.md#Resuming Sessions</dt>
+                    <dd>
+                      stub — no way today to resume a past
+                      <code>cv</code> session from a fresh invocation (session
+                      ids are opaque UUIDs, nothing lists the
+                      <code>sessions/</code> directory); needs a
+                      <code>/design</code> pass before <code>/plan</code>
+                    </dd>
+                  </div>
+                </dl>
+              </dd>
+            </div>
+
+            <div>
+              <dt>README.md</dt>
+              <dd>
+                motivation/backstory and deferred ideas (e.g. the
+                <code>fish</code>-instead-of-<code>bash</code> tool variant) not
+                captured in CLAUDE.md/TODO.md
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <!-- ==========================================
+         STYLE 3
+         ========================================== -->
+
+      <section>
+        <h2>3. Bold Modern Grid Cards</h2>
+
+        <dl class="dl-cards">
+          <div>
+            <dt>Active Users</dt>
+            <dd>14,205</dd>
+          </div>
+
+          <div>
+            <dt>Conversion Rate</dt>
+            <dd>3.82%</dd>
+          </div>
+
+          <div>
+            <dt>Monthly Revenue</dt>
+            <dd>$42.9K</dd>
+          </div>
+        </dl>
+
+        <div class="test-case">
+          <h3>§3.1 Nested &amp; Long Description Test</h3>
+
+          <dl class="dl-cards">
+            <div>
+              <dt>TODO.md</dt>
+              <dd>
+                <dl class="dl-nested">
+                  <div>
+                    <dt>TODO.md#ClaudeVassal</dt>
+                    <dd>
+                      MVP implementation plan — implemented, live end-to-end API
+                      round-trip still unverified (no credentials in dev
+                      environment)
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt>TODO.md#Terminal Rendering &amp; Typography Roadmap</dt>
+                    <dd>
+                      design for <code>cv.fish</code> output rendering (the
+                      "read-head" stream-json dispatcher, math/diff/image
+                      routes, input-side prose highlighting); Tier 0 scoped
+                      concretely and ready for <code>/plan</code> — extract as
+                      standalone component, embed-vs-extract resolved;
+                      diff-aware <code>Edit</code> rendering and file-aware
+                      <code>Read</code>/<code>Write</code> rendering already
+                      executed ahead of Tier 0/1's own sequencing, see
+                      <code
+                        >TODO.md#Plan: Diff and File-Read Rendering Routes</code
+                      >
+                    </dd>
+                  </div>
+
+                  <div>
+                    <dt>TODO.md#Resuming Sessions</dt>
+                    <dd>
+                      stub — no way today to resume a past
+                      <code>cv</code> session from a fresh invocation (session
+                      ids are opaque UUIDs, nothing lists the
+                      <code>sessions/</code> directory); needs a
+                      <code>/design</code> pass before <code>/plan</code>
+                    </dd>
+                  </div>
+                </dl>
+              </dd>
+            </div>
+
+            <div>
+              <dt>README.md</dt>
+              <dd>
+                motivation/backstory and deferred ideas (e.g. the
+                <code>fish</code>-instead-of-<code>bash</code> tool variant) not
+                captured in CLAUDE.md/TODO.md
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <!-- ==========================================
+         STYLE 4
+         ========================================== -->
+
+      <section>
+        <h2>4. Clean Timeline / Process Style</h2>
+
+        <dl class="dl-timeline">
+          <dt>Step 1: Ideation &amp; Planning</dt>
+          <dd>
+            Gather feedback from target users and design structural product
+            wireframes.
+          </dd>
+
+          <dt>Step 2: Core Engineering</dt>
+          <dd>
+            Build the primary APIs, set up cloud databases, and establish secure
+            login routes.
+          </dd>
+
+          <dt>Step 3: Public Release</dt>
+          <dd>
+            Launch the production build onto app stores and watch customer
+            performance metrics.
+          </dd>
+        </dl>
+
+        <div class="test-case">
+          <h3>§4.1 Nested &amp; Long Description Test</h3>
+
+          <dl class="dl-timeline dl-collapsible">
+            <dt>TODO.md</dt>
+            <dd>
+              Project task tracking and implementation notes.
+
+              <dl class="dl-nested">
+                <div>
+                  <dt>TODO.md#ClaudeVassal</dt>
+                  <dd>
+                    MVP implementation plan — implemented, live end-to-end API
+                    round-trip still unverified (no credentials in dev
+                    environment)
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Terminal Rendering &amp; Typography Roadmap</dt>
+                  <dd>
+                    design for <code>cv.fish</code> output rendering (the
+                    "read-head" stream-json dispatcher, math/diff/image routes,
+                    input-side prose highlighting); Tier 0 scoped concretely and
+                    ready for <code>/plan</code> — extract as standalone
+                    component, embed-vs-extract resolved; diff-aware
+                    <code>Edit</code> rendering and file-aware
+                    <code>Read</code>/<code>Write</code> rendering already
+                    executed ahead of Tier 0/1's own sequencing, see
+                    <code
+                      >TODO.md#Plan: Diff and File-Read Rendering Routes</code
+                    >
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Resuming Sessions</dt>
+                  <dd>
+                    stub — no way today to resume a past
+                    <code>cv</code> session from a fresh invocation (session ids
+                    are opaque UUIDs, nothing lists the
+                    <code>sessions/</code> directory); needs a
+                    <code>/design</code> pass before <code>/plan</code>
+                  </dd>
+                </div>
+              </dl>
+            </dd>
+
+            <dt>README.md</dt>
+            <dd>
+              motivation/backstory and deferred ideas (e.g. the
+              <code>fish</code>-instead-of-<code>bash</code> tool variant) not
+              captured in CLAUDE.md/TODO.md
+            </dd>
+          </dl>
+        </div>
+      </section>
+
+      <!-- ==========================================
+         STYLE 5
+         ========================================== -->
+
+      <section>
+        <h2>5. Accordion FAQs / Clean Border Style</h2>
+
+        <dl class="dl-borders">
+          <dt>How fast is standard shipping?</dt>
+          <dd>
+            Our standard transit option takes 3 to 5 business days depending
+            entirely on your regional zone code.
+          </dd>
+
+          <dt>Is there a setup fee required?</dt>
+          <dd>
+            No. Every account tier starts completely transparently with zero
+            activation fees or contract minimums.
+          </dd>
+        </dl>
+
+        <div class="test-case">
+          <h3>§5.1 Nested &amp; Long Description Test</h3>
+
+          <dl class="dl-borders dl-collapsible">
+            <dt>TODO.md</dt>
+            <dd>
+              Project task tracking and implementation notes.
+
+              <dl class="dl-nested">
+                <div>
+                  <dt>TODO.md#ClaudeVassal</dt>
+                  <dd>
+                    MVP implementation plan — implemented, live end-to-end API
+                    round-trip still unverified (no credentials in dev
+                    environment)
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Terminal Rendering &amp; Typography Roadmap</dt>
+                  <dd>
+                    design for <code>cv.fish</code> output rendering (the
+                    "read-head" stream-json dispatcher, math/diff/image routes,
+                    input-side prose highlighting); Tier 0 scoped concretely and
+                    ready for <code>/plan</code> — extract as standalone
+                    component, embed-vs-extract resolved; diff-aware
+                    <code>Edit</code> rendering and file-aware
+                    <code>Read</code>/<code>Write</code> rendering already
+                    executed ahead of Tier 0/1's own sequencing, see
+                    <code
+                      >TODO.md#Plan: Diff and File-Read Rendering Routes</code
+                    >
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Resuming Sessions</dt>
+                  <dd>
+                    stub — no way today to resume a past
+                    <code>cv</code> session from a fresh invocation (session ids
+                    are opaque UUIDs, nothing lists the
+                    <code>sessions/</code> directory); needs a
+                    <code>/design</code> pass before <code>/plan</code>
+                  </dd>
+                </div>
+              </dl>
+            </dd>
+
+            <dt>README.md</dt>
+            <dd>
+              motivation/backstory and deferred ideas (e.g. the
+              <code>fish</code>-instead-of-<code>bash</code> tool variant) not
+              captured in CLAUDE.md/TODO.md
+            </dd>
+          </dl>
+        </div>
+      </section>
+
+      <!-- ==========================================
+         STYLE 6
+         ========================================== -->
+
+      <section>
+        <h2>6. Indented Hierarchy</h2>
+
+        <dl class="dl-indent dl-collapsible">
+          <div>
+            <dt>TODO.md</dt>
+            <dd>
+              Project task tracking and implementation notes.
+
+              <dl class="dl-nested">
+                <div>
+                  <dt>TODO.md#ClaudeVassal</dt>
+                  <dd>
+                    MVP implementation plan — implemented, live end-to-end API
+                    round-trip still unverified (no credentials in dev
+                    environment)
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Terminal Rendering &amp; Typography Roadmap</dt>
+                  <dd>
+                    design for <code>cv.fish</code> output rendering (the
+                    "read-head" stream-json dispatcher, math/diff/image routes,
+                    input-side prose highlighting); Tier 0 scoped concretely and
+                    ready for <code>/plan</code> — extract as standalone
+                    component, embed-vs-extract resolved; diff-aware
+                    <code>Edit</code> rendering and file-aware
+                    <code>Read</code>/<code>Write</code> rendering already
+                    executed ahead of Tier 0/1's own sequencing, see
+                    <code
+                      >TODO.md#Plan: Diff and File-Read Rendering Routes</code
+                    >
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Resuming Sessions</dt>
+                  <dd>
+                    stub — no way today to resume a past
+                    <code>cv</code> session from a fresh invocation (session ids
+                    are opaque UUIDs, nothing lists the
+                    <code>sessions/</code> directory); needs a
+                    <code>/design</code> pass before <code>/plan</code>
+                  </dd>
+                </div>
+              </dl>
+            </dd>
+          </div>
+
+          <div>
+            <dt>README.md</dt>
+            <dd>
+              motivation/backstory and deferred ideas (e.g. the
+              <code>fish</code>-instead-of-<code>bash</code> tool variant) not
+              captured in CLAUDE.md/TODO.md
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <!-- ==========================================
+         STYLE 6.1
+         ========================================== -->
+
+      <section>
+        <h2>6.1. Indented Hierarchy — Inline Preview</h2>
+
+        <dl class="dl-indent dl-preview-collapsible dl-preview-grouped">
+          <div>
+            <dt>TODO.md</dt>
+            <dd>
+              Project task tracking and implementation notes.
+
+              <dl class="dl-nested">
+                <div>
+                  <dt>TODO.md#ClaudeVassal</dt>
+                  <dd>
+                    MVP implementation plan — implemented, live end-to-end API
+                    round-trip still unverified (no credentials in dev
+                    environment)
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Terminal Rendering &amp; Typography Roadmap</dt>
+                  <dd>
+                    design for <code>cv.fish</code> output rendering (the
+                    "read-head" stream-json dispatcher, math/diff/image routes,
+                    input-side prose highlighting); Tier 0 scoped concretely and
+                    ready for <code>/plan</code> — extract as standalone
+                    component, embed-vs-extract resolved; diff-aware
+                    <code>Edit</code> rendering and file-aware
+                    <code>Read</code>/<code>Write</code> rendering already
+                    executed ahead of Tier 0/1's own sequencing, see
+                    <code
+                      >TODO.md#Plan: Diff and File-Read Rendering Routes</code
+                    >
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Resuming Sessions</dt>
+                  <dd>
+                    stub — no way today to resume a past
+                    <code>cv</code> session from a fresh invocation (session ids
+                    are opaque UUIDs, nothing lists the
+                    <code>sessions/</code> directory); needs a
+                    <code>/design</code> pass before <code>/plan</code>
+                  </dd>
+                </div>
+              </dl>
+            </dd>
+          </div>
+
+          <div>
+            <dt>README.md</dt>
+            <dd>
+              motivation/backstory and deferred ideas (e.g. the
+              <code>fish</code>-instead-of-<code>bash</code> tool variant) not
+              captured in CLAUDE.md/TODO.md
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <!-- ==========================================
+         STYLE 7
+         ========================================== -->
+
+      <section>
+        <h2>7. Term as Heading</h2>
+
+        <dl class="dl-heading dl-collapsible">
+          <div>
+            <dt>TODO.md</dt>
+            <dd>
+              Project task tracking and implementation notes.
+
+              <dl class="dl-nested">
+                <div>
+                  <dt>TODO.md#ClaudeVassal</dt>
+                  <dd>
+                    MVP implementation plan — implemented, live end-to-end API
+                    round-trip still unverified (no credentials in dev
+                    environment)
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Terminal Rendering &amp; Typography Roadmap</dt>
+                  <dd>
+                    design for <code>cv.fish</code> output rendering (the
+                    "read-head" stream-json dispatcher, math/diff/image routes,
+                    input-side prose highlighting); Tier 0 scoped concretely and
+                    ready for <code>/plan</code> — extract as standalone
+                    component, embed-vs-extract resolved; diff-aware
+                    <code>Edit</code> rendering and file-aware
+                    <code>Read</code>/<code>Write</code> rendering already
+                    executed ahead of Tier 0/1's own sequencing, see
+                    <code
+                      >TODO.md#Plan: Diff and File-Read Rendering Routes</code
+                    >
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Resuming Sessions</dt>
+                  <dd>
+                    stub — no way today to resume a past
+                    <code>cv</code> session from a fresh invocation (session ids
+                    are opaque UUIDs, nothing lists the
+                    <code>sessions/</code> directory); needs a
+                    <code>/design</code> pass before <code>/plan</code>
+                  </dd>
+                </div>
+              </dl>
+            </dd>
+          </div>
+
+          <div>
+            <dt>README.md</dt>
+            <dd>
+              motivation/backstory and deferred ideas (e.g. the
+              <code>fish</code>-instead-of-<code>bash</code> tool variant) not
+              captured in CLAUDE.md/TODO.md
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <!-- ==========================================
+         STYLE 8
+         ========================================== -->
+
+      <section>
+        <h2>8. Compact Tree</h2>
+
+        <dl class="dl-tree dl-collapsible">
+          <div>
+            <dt>TODO.md</dt>
+            <dd>
+              Project task tracking and implementation notes.
+
+              <dl class="dl-nested">
+                <div>
+                  <dt>TODO.md#ClaudeVassal</dt>
+                  <dd>
+                    MVP implementation plan — implemented, live end-to-end API
+                    round-trip still unverified (no credentials in dev
+                    environment)
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Terminal Rendering &amp; Typography Roadmap</dt>
+                  <dd>
+                    design for <code>cv.fish</code> output rendering (the
+                    "read-head" stream-json dispatcher, math/diff/image routes,
+                    input-side prose highlighting); Tier 0 scoped concretely and
+                    ready for <code>/plan</code> — extract as standalone
+                    component, embed-vs-extract resolved; diff-aware
+                    <code>Edit</code> rendering and file-aware
+                    <code>Read</code>/<code>Write</code> rendering already
+                    executed ahead of Tier 0/1's own sequencing, see
+                    <code
+                      >TODO.md#Plan: Diff and File-Read Rendering Routes</code
+                    >
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Resuming Sessions</dt>
+                  <dd>
+                    stub — no way today to resume a past
+                    <code>cv</code> session from a fresh invocation (session ids
+                    are opaque UUIDs, nothing lists the
+                    <code>sessions/</code> directory); needs a
+                    <code>/design</code> pass before <code>/plan</code>
+                  </dd>
+                </div>
+              </dl>
+            </dd>
+          </div>
+
+          <div>
+            <dt>README.md</dt>
+            <dd>
+              motivation/backstory and deferred ideas (e.g. the
+              <code>fish</code>-instead-of-<code>bash</code> tool variant) not
+              captured in CLAUDE.md/TODO.md
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <!-- ==========================================
+         STYLE 9
+         ========================================== -->
+
+      <section>
+        <h2>9. Pill Terms</h2>
+
+        <dl class="dl-pill">
+          <div>
+            <dt>TODO.md</dt>
+            <dd>
+              Project task tracking and implementation notes.
+
+              <dl class="dl-nested">
+                <div>
+                  <dt>TODO.md#ClaudeVassal</dt>
+                  <dd>
+                    MVP implementation plan — implemented, live end-to-end API
+                    round-trip still unverified (no credentials in dev
+                    environment)
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Terminal Rendering &amp; Typography Roadmap</dt>
+                  <dd>
+                    design for <code>cv.fish</code> output rendering (the
+                    "read-head" stream-json dispatcher, math/diff/image routes,
+                    input-side prose highlighting); Tier 0 scoped concretely and
+                    ready for <code>/plan</code> — extract as standalone
+                    component, embed-vs-extract resolved; diff-aware
+                    <code>Edit</code> rendering and file-aware
+                    <code>Read</code>/<code>Write</code> rendering already
+                    executed ahead of Tier 0/1's own sequencing, see
+                    <code
+                      >TODO.md#Plan: Diff and File-Read Rendering Routes</code
+                    >
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Resuming Sessions</dt>
+                  <dd>
+                    stub — no way today to resume a past <code>cv</code> session
+                    from a fresh invocation (session ids are opaque UUIDs,
+                    nothing lists the <code>sessions/</code> directory); needs a
+                    <code>/design</code> pass before <code>/plan</code>
+                  </dd>
+                </div>
+              </dl>
+            </dd>
+          </div>
+
+          <div>
+            <dt>README.md</dt>
+            <dd>
+              motivation/backstory and deferred ideas (e.g. the
+              <code>fish</code>-instead-of-<code>bash</code> tool variant) not
+              captured in CLAUDE.md/TODO.md
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <!-- ==========================================
+         STYLE 10
+         ========================================== -->
+
+      <section>
+        <h2>10. Definition Block</h2>
+
+        <dl class="dl-definition dl-collapsible">
+          <div>
+            <dt>TODO.md</dt>
+            <dd>
+              Project task tracking and implementation notes.
+
+              <dl class="dl-nested">
+                <div>
+                  <dt>TODO.md#ClaudeVassal</dt>
+                  <dd>
+                    MVP implementation plan — implemented, live end-to-end API
+                    round-trip still unverified (no credentials in dev
+                    environment)
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Terminal Rendering &amp; Typography Roadmap</dt>
+                  <dd>
+                    design for <code>cv.fish</code> output rendering (the
+                    "read-head" stream-json dispatcher, math/diff/image routes,
+                    input-side prose highlighting); Tier 0 scoped concretely and
+                    ready for <code>/plan</code> — extract as standalone
+                    component, embed-vs-extract resolved; diff-aware
+                    <code>Edit</code> rendering and file-aware
+                    <code>Read</code>/<code>Write</code> rendering already
+                    executed ahead of Tier 0/1's own sequencing, see
+                    <code
+                      >TODO.md#Plan: Diff and File-Read Rendering Routes</code
+                    >
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Resuming Sessions</dt>
+                  <dd>
+                    stub — no way today to resume a past
+                    <code>cv</code> session from a fresh invocation (session ids
+                    are opaque UUIDs, nothing lists the
+                    <code>sessions/</code> directory); needs a
+                    <code>/design</code> pass before <code>/plan</code>
+                  </dd>
+                </div>
+              </dl>
+            </dd>
+          </div>
+
+          <div>
+            <dt>README.md</dt>
+            <dd>
+              motivation/backstory and deferred ideas (e.g. the
+              <code>fish</code>-instead-of-<code>bash</code> tool variant) not
+              captured in CLAUDE.md/TODO.md
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <!-- ==========================================
+         STYLE 11
+         ========================================== -->
+
+      <section>
+        <h2>11. Two-Level Background Bands</h2>
+
+        <dl class="dl-bands dl-collapsible">
+          <div>
+            <dt>TODO.md</dt>
+            <dd>
+              Project task tracking and implementation notes.
+
+              <dl class="dl-nested">
+                <div>
+                  <dt>TODO.md#ClaudeVassal</dt>
+                  <dd>
+                    MVP implementation plan — implemented, live end-to-end API
+                    round-trip still unverified (no credentials in dev
+                    environment)
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Terminal Rendering &amp; Typography Roadmap</dt>
+                  <dd>
+                    design for <code>cv.fish</code> output rendering (the
+                    "read-head" stream-json dispatcher, math/diff/image routes,
+                    input-side prose highlighting); Tier 0 scoped concretely and
+                    ready for <code>/plan</code> — extract as standalone
+                    component, embed-vs-extract resolved; diff-aware
+                    <code>Edit</code> rendering and file-aware
+                    <code>Read</code>/<code>Write</code> rendering already
+                    executed ahead of Tier 0/1's own sequencing, see
+                    <code
+                      >TODO.md#Plan: Diff and File-Read Rendering Routes</code
+                    >
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Resuming Sessions</dt>
+                  <dd>
+                    stub — no way today to resume a past
+                    <code>cv</code> session from a fresh invocation (session ids
+                    are opaque UUIDs, nothing lists the
+                    <code>sessions/</code> directory); needs a
+                    <code>/design</code> pass before <code>/plan</code>
+                  </dd>
+                </div>
+              </dl>
+            </dd>
+          </div>
+
+          <div>
+            <dt>README.md</dt>
+            <dd>
+              motivation/backstory and deferred ideas (e.g. the
+              <code>fish</code>-instead-of-<code>bash</code> tool variant) not
+              captured in CLAUDE.md/TODO.md
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <!-- ==========================================
+         STYLE 11.1
+         ========================================== -->
+
+      <section>
+        <h2>11.1. Two-Level Background Bands — Inline Preview</h2>
+
+        <dl class="dl-bands dl-preview-collapsible">
+          <div>
+            <dt>TODO.md</dt>
+            <dd>
+              Project task tracking and implementation notes.
+
+              <dl class="dl-nested">
+                <div>
+                  <dt>TODO.md#ClaudeVassal</dt>
+                  <dd>
+                    MVP implementation plan — implemented, live end-to-end API
+                    round-trip still unverified (no credentials in dev
+                    environment)
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Terminal Rendering &amp; Typography Roadmap</dt>
+                  <dd>
+                    design for <code>cv.fish</code> output rendering (the
+                    "read-head" stream-json dispatcher, math/diff/image routes,
+                    input-side prose highlighting); Tier 0 scoped concretely and
+                    ready for <code>/plan</code> — extract as standalone
+                    component, embed-vs-extract resolved; diff-aware
+                    <code>Edit</code> rendering and file-aware
+                    <code>Read</code>/<code>Write</code> rendering already
+                    executed ahead of Tier 0/1's own sequencing, see
+                    <code
+                      >TODO.md#Plan: Diff and File-Read Rendering Routes</code
+                    >
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Resuming Sessions</dt>
+                  <dd>
+                    stub — no way today to resume a past
+                    <code>cv</code> session from a fresh invocation (session ids
+                    are opaque UUIDs, nothing lists the
+                    <code>sessions/</code> directory); needs a
+                    <code>/design</code> pass before <code>/plan</code>
+                  </dd>
+                </div>
+              </dl>
+            </dd>
+          </div>
+
+          <div>
+            <dt>README.md</dt>
+            <dd>
+              motivation/backstory and deferred ideas (e.g. the
+              <code>fish</code>-instead-of-<code>bash</code> tool variant) not
+              captured in CLAUDE.md/TODO.md
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <!-- ==========================================
+         STYLE 12
+         ========================================== -->
+
+      <section>
+        <h2>12. Left Accent Bar</h2>
+
+        <dl class="dl-accent dl-collapsible">
+          <div>
+            <dt>TODO.md</dt>
+            <dd>
+              Project task tracking and implementation notes.
+
+              <dl class="dl-nested">
+                <div>
+                  <dt>TODO.md#ClaudeVassal</dt>
+                  <dd>
+                    MVP implementation plan — implemented, live end-to-end API
+                    round-trip still unverified (no credentials in dev
+                    environment)
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Terminal Rendering &amp; Typography Roadmap</dt>
+                  <dd>
+                    design for <code>cv.fish</code> output rendering (the
+                    "read-head" stream-json dispatcher, math/diff/image routes,
+                    input-side prose highlighting); Tier 0 scoped concretely and
+                    ready for <code>/plan</code> — extract as standalone
+                    component, embed-vs-extract resolved; diff-aware
+                    <code>Edit</code> rendering and file-aware
+                    <code>Read</code>/<code>Write</code> rendering already
+                    executed ahead of Tier 0/1's own sequencing, see
+                    <code
+                      >TODO.md#Plan: Diff and File-Read Rendering Routes</code
+                    >
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Resuming Sessions</dt>
+                  <dd>
+                    stub — no way today to resume a past
+                    <code>cv</code> session from a fresh invocation (session ids
+                    are opaque UUIDs, nothing lists the
+                    <code>sessions/</code> directory); needs a
+                    <code>/design</code> pass before <code>/plan</code>
+                  </dd>
+                </div>
+              </dl>
+            </dd>
+          </div>
+
+          <div>
+            <dt>README.md</dt>
+            <dd>
+              motivation/backstory and deferred ideas (e.g. the
+              <code>fish</code>-instead-of-<code>bash</code> tool variant) not
+              captured in CLAUDE.md/TODO.md
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <!-- ==========================================
+         STYLE 13
+         ========================================== -->
+
+      <section>
+        <h2>13. Definition Table</h2>
+
+        <dl class="dl-table">
+          <div>
+            <dt>TODO.md</dt>
+            <dd>
+              Project task tracking and implementation notes.
+
+              <dl class="dl-nested">
+                <div>
+                  <dt>TODO.md#ClaudeVassal</dt>
+                  <dd>
+                    MVP implementation plan — implemented, live end-to-end API
+                    round-trip still unverified (no credentials in dev
+                    environment)
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Terminal Rendering &amp; Typography Roadmap</dt>
+                  <dd>
+                    design for <code>cv.fish</code> output rendering (the
+                    "read-head" stream-json dispatcher, math/diff/image routes,
+                    input-side prose highlighting); Tier 0 scoped concretely and
+                    ready for <code>/plan</code> — extract as standalone
+                    component, embed-vs-extract resolved; diff-aware
+                    <code>Edit</code> rendering and file-aware
+                    <code>Read</code>/<code>Write</code> rendering already
+                    executed ahead of Tier 0/1's own sequencing, see
+                    <code
+                      >TODO.md#Plan: Diff and File-Read Rendering Routes</code
+                    >
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Resuming Sessions</dt>
+                  <dd>
+                    stub — no way today to resume a past <code>cv</code> session
+                    from a fresh invocation (session ids are opaque UUIDs,
+                    nothing lists the <code>sessions/</code> directory); needs a
+                    <code>/design</code> pass before <code>/plan</code>
+                  </dd>
+                </div>
+              </dl>
+            </dd>
+          </div>
+
+          <div>
+            <dt>README.md</dt>
+            <dd>
+              motivation/backstory and deferred ideas (e.g. the
+              <code>fish</code>-instead-of-<code>bash</code> tool variant) not
+              captured in CLAUDE.md/TODO.md
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <!-- ==========================================
+         STYLE 14
+         ========================================== -->
+
+      <section>
+        <h2>14. Editorial / Prose</h2>
+
+        <dl class="dl-editorial dl-collapsible">
+          <div>
+            <dt>TODO.md</dt>
+            <dd>
+              Project task tracking and implementation notes.
+
+              <dl class="dl-nested">
+                <div>
+                  <dt>TODO.md#ClaudeVassal</dt>
+                  <dd>
+                    MVP implementation plan — implemented, live end-to-end API
+                    round-trip still unverified (no credentials in dev
+                    environment)
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Terminal Rendering &amp; Typography Roadmap</dt>
+                  <dd>
+                    design for <code>cv.fish</code> output rendering (the
+                    "read-head" stream-json dispatcher, math/diff/image routes,
+                    input-side prose highlighting); Tier 0 scoped concretely and
+                    ready for <code>/plan</code> — extract as standalone
+                    component, embed-vs-extract resolved; diff-aware
+                    <code>Edit</code> rendering and file-aware
+                    <code>Read</code>/<code>Write</code> rendering already
+                    executed ahead of Tier 0/1's own sequencing, see
+                    <code
+                      >TODO.md#Plan: Diff and File-Read Rendering Routes</code
+                    >
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Resuming Sessions</dt>
+                  <dd>
+                    stub — no way today to resume a past
+                    <code>cv</code> session from a fresh invocation (session ids
+                    are opaque UUIDs, nothing lists the
+                    <code>sessions/</code> directory); needs a
+                    <code>/design</code> pass before <code>/plan</code>
+                  </dd>
+                </div>
+              </dl>
+            </dd>
+          </div>
+
+          <div>
+            <dt>README.md</dt>
+            <dd>
+              motivation/backstory and deferred ideas (e.g. the
+              <code>fish</code>-instead-of-<code>bash</code> tool variant) not
+              captured in CLAUDE.md/TODO.md
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      <!-- ==========================================
+         STYLE 15
+         ========================================== -->
+
+      <section>
+        <h2>15. Nested Disclosure</h2>
+
+        <dl class="dl-disclosure dl-collapsible">
+          <div>
+            <dt>TODO.md</dt>
+            <dd>
+              Project task tracking and implementation notes.
+
+              <dl class="dl-nested">
+                <div>
+                  <dt>TODO.md#ClaudeVassal</dt>
+                  <dd>
+                    MVP implementation plan — implemented, live end-to-end API
+                    round-trip still unverified (no credentials in dev
+                    environment)
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Terminal Rendering &amp; Typography Roadmap</dt>
+                  <dd>
+                    design for <code>cv.fish</code> output rendering (the
+                    "read-head" stream-json dispatcher, math/diff/image routes,
+                    input-side prose highlighting); Tier 0 scoped concretely and
+                    ready for <code>/plan</code> — extract as standalone
+                    component, embed-vs-extract resolved; diff-aware
+                    <code>Edit</code> rendering and file-aware
+                    <code>Read</code>/<code>Write</code> rendering already
+                    executed ahead of Tier 0/1's own sequencing, see
+                    <code
+                      >TODO.md#Plan: Diff and File-Read Rendering Routes</code
+                    >
+                  </dd>
+                </div>
+
+                <div>
+                  <dt>TODO.md#Resuming Sessions</dt>
+                  <dd>
+                    stub — no way today to resume a past <code>cv</code> session
+                    from a fresh invocation (session ids are opaque UUIDs,
+                    nothing lists the <code>sessions/</code> directory); needs a
+                    <code>/design</code> pass before <code>/plan</code>
+                  </dd>
+                </div>
+              </dl>
+            </dd>
+          </div>
+
+          <div>
+            <dt>README.md</dt>
+            <dd>
+              motivation/backstory and deferred ideas (e.g. the
+              <code>fish</code>-instead-of-<code>bash</code> tool variant) not
+              captured in CLAUDE.md/TODO.md
+            </dd>
+          </div>
+        </dl>
+      </section>
+    </div>
+
+    <script>
+      const collapsibleLists = document.querySelectorAll(
+        ".dl-collapsible, .dl-collapsible dl",
+      );
+
+      collapsibleLists.forEach((list, listIndex) => {
+        const terms = list.querySelectorAll(":scope > dt, :scope > div > dt");
+
+        terms.forEach((term, termIndex) => {
+          const description = term.nextElementSibling;
+
+          if (!description?.matches("dd")) return;
+
+          const toggle = document.createElement("button");
+          const descriptionId = `description-${listIndex + 1}-${termIndex + 1}`;
+
+          toggle.type = "button";
+          toggle.className = "description-toggle";
+          toggle.setAttribute("aria-expanded", "false");
+          toggle.setAttribute("aria-controls", descriptionId);
+
+          while (term.firstChild) toggle.append(term.firstChild);
+
+          term.append(toggle);
+          description.id = descriptionId;
+          description.classList.add("collapsible-description");
+          description.hidden = true;
+
+          toggle.addEventListener("click", () => {
+            const isExpanded = toggle.getAttribute("aria-expanded") === "true";
+
+            toggle.setAttribute("aria-expanded", String(!isExpanded));
+            description.hidden = isExpanded;
+          });
+        });
+      });
+
+      const previewCollapsibleLists = document.querySelectorAll(
+        ".dl-preview-collapsible, .dl-preview-collapsible dl",
+      );
+
+      const circledNumbers = [
+        "⓪",
+        "①",
+        "②",
+        "③",
+        "④",
+        "⑤",
+        "⑥",
+        "⑦",
+        "⑧",
+        "⑨",
+        "⑩",
+        "⑪",
+        "⑫",
+        "⑬",
+        "⑭",
+        "⑮",
+        "⑯",
+        "⑰",
+        "⑱",
+        "⑲",
+        "⑳",
+      ];
+
+      const collapsePreviewSubitems = (nestedList) => {
+        nestedList.querySelectorAll(".description-toggle").forEach((toggle) => {
+          const description = document.getElementById(
+            toggle.getAttribute("aria-controls"),
+          );
+
+          toggle.setAttribute("aria-expanded", "false");
+
+          if (!description) return;
+
+          description.dataset.previewCollapsed = "true";
+          description.parentElement.classList.remove("description-expanded");
+
+          const childList = description.querySelector(":scope > .dl-nested");
+
+          if (childList) childList.hidden = true;
+        });
+      };
+
+      previewCollapsibleLists.forEach((list, listIndex) => {
+        const terms = list.querySelectorAll(":scope > dt, :scope > div > dt");
+
+        terms.forEach((term, termIndex) => {
+          const description = term.nextElementSibling;
+
+          if (!description?.matches("dd")) return;
+
+          const item = term.parentElement;
+          const nestedList = description.querySelector(":scope > .dl-nested");
+          const previewText = document.createElement("span");
+          const toggle = document.createElement("button");
+          const descriptionId = `preview-description-${listIndex + 1}-${termIndex + 1}`;
+          let nestedSummaryToggle;
+
+          previewText.className = "description-preview-text";
+
+          if (nestedList) {
+            while (
+              description.firstChild &&
+              description.firstChild !== nestedList
+            ) {
+              previewText.append(description.firstChild);
+            }
+
+            description.insertBefore(previewText, nestedList);
+          } else {
+            while (description.firstChild) {
+              previewText.append(description.firstChild);
+            }
+
+            description.append(previewText);
+          }
+
+          toggle.type = "button";
+          toggle.className = "description-toggle";
+          toggle.setAttribute("aria-expanded", "false");
+          toggle.setAttribute("aria-controls", descriptionId);
+
+          while (term.firstChild) toggle.append(term.firstChild);
+
+          term.append(toggle);
+          description.id = descriptionId;
+          description.classList.add("collapsible-description");
+
+          if (nestedList && list.matches(".dl-preview-grouped")) {
+            const subitemTerms = nestedList.querySelectorAll(
+              ":scope > dt, :scope > div > dt",
+            );
+            const subitemCount = subitemTerms.length;
+            const nestedListId = `preview-subitems-${listIndex + 1}-${termIndex + 1}`;
+            const summaryText =
+              subitemCount > 1
+                ? (circledNumbers[subitemCount] ?? `(${subitemCount})`)
+                : subitemTerms[0].textContent.trim();
+
+            nestedSummaryToggle = document.createElement("button");
+            nestedSummaryToggle.type = "button";
+            nestedSummaryToggle.className = "nested-summary-toggle";
+            nestedSummaryToggle.textContent = summaryText;
+            nestedSummaryToggle.setAttribute(
+              "aria-label",
+              `Show ${subitemCount} subitem${subitemCount === 1 ? "" : "s"}`,
+            );
+            nestedSummaryToggle.setAttribute("aria-controls", nestedListId);
+
+            nestedList.id = nestedListId;
+            description.insertBefore(nestedSummaryToggle, nestedList);
+          }
+
+          const setExpanded = (isExpanded) => {
+            toggle.setAttribute("aria-expanded", String(isExpanded));
+            description.dataset.previewCollapsed = String(!isExpanded);
+            item.classList.toggle("description-expanded", isExpanded);
+
+            if (!nestedList) return;
+
+            nestedList.hidden = !isExpanded;
+
+            if (nestedSummaryToggle) {
+              nestedSummaryToggle.hidden = isExpanded;
+            }
+
+            if (!isExpanded) collapsePreviewSubitems(nestedList);
+          };
+
+          setExpanded(false);
+
+          toggle.addEventListener("click", () => {
+            const isExpanded = toggle.getAttribute("aria-expanded") === "true";
+
+            setExpanded(!isExpanded);
+          });
+
+          nestedSummaryToggle?.addEventListener("click", () => {
+            setExpanded(true);
+            toggle.focus();
+          });
+        });
+      });
+    </script>
+  </body>
+</html>

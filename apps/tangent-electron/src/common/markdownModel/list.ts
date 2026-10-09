@@ -1,6 +1,8 @@
 import { StructureType, type TodoState } from 'common/indexing/indexTypes'
 import NoteParser from './NoteParser'
 import { escapeRegExp } from '@such-n-such/core'
+import { findParentDlTerm, matchDlSeparator, setDlTermSeparator, type DlLineData } from './dl'
+import DocumentFeeder from './DocumentFeeder'
 
 // Unordered glyphs are split by visual weight because large glyphs get extra
 // vertical spacing via ListForm.UnorderedLarge / .largeList styling.
@@ -258,7 +260,9 @@ export function isLargeList(definition: ListDefinition) {
 }
 
 export function parseListItem(char: string, parser: NoteParser): boolean {
-	if (!parser.isStartOfContent) return false
+	const followsBlockquotePrefix = parser.lineData.blockquote
+		&& /^[ \t]*(> ?)+$/.test(parser.feed.text.slice(parser.lineStart, parser.feed.index))
+	if (!parser.isStartOfContent && !followsBlockquotePrefix) return false
 	const line = parser.feed.getLineText()
 	const listDetail = matchList(line)
 	if (!listDetail) return false
@@ -279,18 +283,73 @@ export function parseListItem(char: string, parser: NoteParser): boolean {
 		})
 	}
 
-	// Encode the list
-	parser.lineData.list = listDetail
+	const dlSeparator = matchDlSeparator(line, listDetail)
+	const currentIndent = parser.getCurrentIndent().indent
+	if (dlSeparator) {
+		setDlTermSeparator(parser, start + dlSeparator.index)
+		const parentDlTerm = findParentDlTerm(parser, currentIndent, false)
+		setDlLineData(parser, {
+			role: 'term',
+			glyph: listDetail,
+			hasDef: dlSeparator.hasDef,
+			rootIndent: parentDlTerm?.rootIndent ?? currentIndent,
+			termIndent: parentDlTerm?.termIndent
+		})
 
-	// Consume the line glyph
-	feed.nextByLength(listDetail.glyph.length - 1)
-	parser.commitSpan({
-		line_format: 'list',
-		hiddenGroup: true,
-		list_format: listDetail
-	})
+		if (feed instanceof DocumentFeeder) {
+			const termIndent = currentIndent
+			feed.injectAdjacentLinesWhile(nextLine => {
+				const nextIndent = nextLine.attributes.indent?.indent ?? ''
+				return nextIndent.length > termIndent.length
+					&& !!(nextLine.attributes.list || nextLine.attributes.dl)
+			})
+		}
+	}
+	else {
+		const parentDlTerm = findParentDlTerm(parser, currentIndent)
+		if (parentDlTerm) {
+			setDlLineData(parser, {
+				role: 'value',
+				glyph: listDetail,
+				rootIndent: parentDlTerm.rootIndent,
+				termIndent: parentDlTerm.termIndent
+			})
+		}
+		else {
+			// Encode the list
+			parser.lineData.list = listDetail
+		}
+	}
+
+	if (parser.lineData.dl) {
+		// The following space is hidden with the glyph so that wrapped lines
+		// and inline definitions share a left edge with the first line.
+		feed.nextByLength(listDetail.glyph.length)
+		parser.commitSpan({
+			line_format: 'dl',
+			hidden: true
+		})
+	}
+	else {
+		// Consume the line glyph
+		feed.nextByLength(listDetail.glyph.length - 1)
+		parser.commitSpan({
+			line_format: 'list',
+			hiddenGroup: true,
+			list_format: listDetail
+		})
+	}
 
 	return true
+}
+
+function setDlLineData(parser: NoteParser, dl: DlLineData) {
+	// Typewriter selects the first registered line attribute. Move blockquote
+	// behind dl so the composite dl renderer can preserve both structures.
+	const blockquote = parser.lineData.blockquote
+	if (blockquote !== undefined) delete parser.lineData.blockquote
+	parser.lineData.dl = dl
+	if (blockquote !== undefined) parser.lineData.blockquote = blockquote
 }
 
 export function getAutoChild(listData: ListDefinition) {

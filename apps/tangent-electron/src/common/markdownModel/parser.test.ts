@@ -59,6 +59,62 @@ test('Ending in italics', () => {
 })
 
 describe('Document-based parsing', () => {
+	describe('Description-list edits', () => {
+		test('typing a separator upgrades a list line', () => {
+			const document = parser.markdownToTextDocument('- term')
+			const [, end] = document.getLineRange(document.lines[0])
+			const edited = document.apply(document.change.insert(end - 1, ' :: definition'))
+			const [line] = parser.parseMarkdown(edited, {
+				documentStartLine: 0,
+				documentEndLine: 0
+			}).lines
+
+			expect(line.attributes.dl).toMatchObject({ role: 'term', hasDef: true })
+			expect(line.attributes.list).toBeUndefined()
+		})
+
+		test('deleting a separator downgrades to a regular list line', () => {
+			const source = '- term :: definition'
+			const document = parser.markdownToTextDocument(source)
+			const edited = document.apply(document.change.delete([6, source.length]))
+			const [line] = parser.parseMarkdown(edited, {
+				documentStartLine: 0,
+				documentEndLine: 0
+			}).lines
+
+			expect(line.attributes.list).toBeTruthy()
+			expect(line.attributes.dl).toBeUndefined()
+		})
+
+		test('upgrading a bare term reparses its child values', () => {
+			const document = parser.markdownToTextDocument('- term\n  - value')
+			const [, end] = document.getLineRange(document.lines[0])
+			const edited = document.apply(document.change.insert(end - 1, ' ::'))
+			const result = parser.parseMarkdown(edited, {
+				documentStartLine: 0,
+				documentEndLine: 0
+			})
+
+			expect(result.lines).toHaveLength(2)
+			expect(result.lines[0].attributes.dl).toMatchObject({ role: 'term', hasDef: false })
+			expect(result.lines[1].attributes.dl).toMatchObject({ role: 'value', termIndent: '' })
+		})
+
+		test('downgrading a bare term reparses its child values', () => {
+			const source = '- term ::\n  - value'
+			const document = parser.markdownToTextDocument(source)
+			const edited = document.apply(document.change.delete([6, 9]))
+			const result = parser.parseMarkdown(edited, {
+				documentStartLine: 0,
+				documentEndLine: 0
+			})
+
+			expect(result.lines).toHaveLength(2)
+			expect(result.lines[0].attributes.list).toBeTruthy()
+			expect(result.lines[1].attributes.list).toBeTruthy()
+			expect(result.lines[1].attributes.dl).toBeUndefined()
+		})
+	})
 
 	test('Inserting code characters on blank line', () => {
 		// This was created for an infinite loop bug

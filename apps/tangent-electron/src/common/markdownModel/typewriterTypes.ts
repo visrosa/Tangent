@@ -7,6 +7,8 @@ import type { TagSectionData } from './tag'
 import type { CodeData } from './code'
 import type { MathData } from './math'
 import type { FuriganaData } from './furigana'
+import type { GlossData } from './gloss'
+import type { DlLineData, DlSeparatorData } from './dl'
 import { hiddenGroupEmbedFormat } from './hiddenGroupEmbed'
 import { getHiddenGroupAttributes } from './inline'
 import { hasCollapsedChildren, isCollapsed } from './sections'
@@ -196,6 +198,145 @@ function fillTooltip(source: string|object, props: AttributeMap) {
 	}
 }
 
+function isDlSeparatorNode(child): boolean {
+	if (typeof child !== 'object' || !child) return false
+	const className = child.props?.className ?? child.props?.class
+	return typeof className === 'string'
+		&& className.split(/\s+/).includes('inline-dl_sep-container')
+}
+
+function splitDlChildren(children: any[]) {
+	const separatorIndex = children.findIndex(isDlSeparatorNode)
+	if (separatorIndex < 0) return { term: children, separator: undefined, definition: [] }
+
+	return {
+		term: children.slice(0, separatorIndex),
+		separator: children[separatorIndex],
+		definition: children.slice(separatorIndex + 1)
+	}
+}
+
+function withoutDlSourceFormatting(children: any[]) {
+	const visible = children.filter(child => {
+		if (typeof child !== 'object' || !child) return true
+		const className = child.props?.className ?? child.props?.class
+		return typeof className !== 'string'
+			|| !className.split(/\s+/).includes('line_format')
+	})
+
+	const firstText = visible.findIndex(child => typeof child === 'string')
+	if (firstText >= 0) visible[firstText] = visible[firstText].trimStart()
+	return visible
+}
+
+function appendStyle(props: AttributeMap, declaration: string) {
+	const style = props.style as string ?? ''
+	props.style = `${style}${style && !style.endsWith(';') ? ';' : ''}${declaration}`
+}
+
+type DlLineEntry = [AttributeMap, any[], string]
+
+/**
+ * Each term depth gets a term/separator column pair, and a term's definitions
+ * start at the next pair, so a nested group begins in its parent's definition
+ * column.
+ */
+function getDlColumns(lineData: DlLineEntry[]) {
+	const termDepths = new Map<string, number>()
+	let maxDepth = 0
+	const lines = lineData.map(([attributes]) => {
+		const dl = attributes.dl as DlLineData
+		const parentDepth = dl.termIndent === undefined ? -1 : termDepths.get(dl.termIndent) ?? -1
+		if (dl.role === 'value') return { start: 2 * parentDepth + 3, depth: undefined }
+
+		const depth = parentDepth + 1
+		termDepths.set(attributes.indent?.indent ?? '', depth)
+		maxDepth = Math.max(maxDepth, depth)
+		return { start: 2 * depth + 1, depth }
+	})
+	return { lines, maxDepth }
+}
+type DlTreeNode = { entry: DlLineEntry, children: DlTreeNode[] }
+
+function buildDlTree(lineData: DlLineEntry[]): DlTreeNode[] {
+	const roots: DlTreeNode[] = []
+	const latestTermByIndent = new Map<string, DlTreeNode>()
+
+	for (const entry of lineData) {
+		const [attributes] = entry
+		const dl = attributes.dl as DlLineData
+		const node: DlTreeNode = { entry, children: [] }
+		const parent = dl.termIndent === undefined
+			? undefined
+			: latestTermByIndent.get(dl.termIndent)
+
+		;(parent?.children ?? roots).push(node)
+		if (dl.role === 'term') latestTermByIndent.set(attributes.indent?.indent ?? '', node)
+	}
+
+	return roots
+}
+
+function getDlExportProps(attributes: AttributeMap, role: DlLineData['role'], key: string) {
+	const dl = attributes.dl as DlLineData
+	const props = getCoreLineProperties(attributes, `dl-${role}`)
+	props.key = key
+	props['data-dl-role'] = role
+	if (dl.hasDef !== undefined) props['data-dl-has-def'] = String(dl.hasDef)
+	if (dl.termIndent !== undefined) props['data-dl-term-indent'] = dl.termIndent
+	if (dl.rootIndent !== undefined) props['data-dl-root-indent'] = dl.rootIndent
+	return props
+}
+
+/**
+ * HTML reads consecutive `<dt>`s as terms sharing the `<dd>`s that follow,
+ * so nested terms are wrapped in a `<dd>` of their parent instead of being
+ * emitted beside it.
+ */
+function renderDlExportItems(nodes: DlTreeNode[]) {
+	const items = []
+
+	for (const node of nodes) {
+		const [attributes, children, id] = node.entry
+		const dl = attributes.dl as DlLineData
+
+		if (dl.role === 'value') {
+			items.push(h('dd', getDlExportProps(attributes, 'value', id), withoutDlSourceFormatting(children)))
+		}
+		else if (dl.hasDef) {
+			const split = splitDlChildren(children)
+			items.push(h('dt', getDlExportProps(attributes, 'term', `${id}-term`), withoutDlSourceFormatting(split.term)))
+			items.push(h('dd', getDlExportProps(attributes, 'value', `${id}-definition`), split.definition))
+		}
+		else {
+			const split = splitDlChildren(children)
+			items.push(h('dt', getDlExportProps(attributes, 'term', id), withoutDlSourceFormatting(split.term)))
+		}
+
+		let subtree: DlTreeNode[] = []
+		const flushSubtree = () => {
+			if (!subtree.length) return
+			items.push(h('dd', { className: 'dl-subtree', key: `${subtree[0].entry[2]}-subtree` }, [
+				h('dl', { className: 'description-list' }, renderDlExportItems(subtree))
+			]))
+			subtree = []
+		}
+
+		for (const child of node.children) {
+			if ((child.entry[0].dl as DlLineData).role === 'term') {
+				subtree.push(child)
+			}
+			else {
+				flushSubtree()
+				items.push(...renderDlExportItems([child]))
+			}
+		}
+		flushSubtree()
+	}
+
+	return items
+}
+
 const noteTypeset:TypesetTypes = {
 	lines: [
 		{
@@ -212,6 +353,166 @@ const noteTypeset:TypesetTypes = {
 			defaultFollows: true,
 			render: (attributes, children) => h(`h${attributes.header}`, getCoreLineProperties(attributes), children),
 			fromDom: defaultLineFromDom('header') // Technically incorrect, but will be re-parsed anyhow
+		},
+		{
+			name: 'dl',
+			selector: 'dl.description-list > dt, dl.description-list > dd:not(.dl-subtree), div.editor-description-list > div.dl-line',
+			defaultFollows: true,
+			fromDom(node: HTMLElement) {
+				const role = node.getAttribute('data-dl-role') === 'value' ? 'value' : 'term'
+				const dl: DlLineData = {
+					role,
+					glyph: undefined
+				}
+
+				const hasDef = node.getAttribute('data-dl-has-def')
+				if (hasDef !== null) dl.hasDef = hasDef === 'true'
+
+				const termIndent = node.getAttribute('data-dl-term-indent')
+				if (termIndent !== null) dl.termIndent = termIndent
+
+				const rootIndent = node.getAttribute('data-dl-root-indent')
+				if (rootIndent !== null) dl.rootIndent = rootIndent
+
+				const attributes: AttributeMap = { dl }
+				extractCoreLineProperties(node, attributes)
+				return attributes
+			},
+			shouldCombine: (first, next) => {
+				const firstDl = first.dl as DlLineData
+				const nextDl = next.dl as DlLineData
+				if (!firstDl || !nextDl) return false
+
+				const firstRootIndent = firstDl.rootIndent
+					?? firstDl.termIndent
+					?? first.indent?.indent
+					?? ''
+				const nextRootIndent = nextDl.rootIndent
+					?? nextDl.termIndent
+					?? next.indent?.indent
+					?? ''
+				return firstRootIndent === nextRootIndent
+					&& first.blockquote === next.blockquote
+			},
+			renderMultiple: (lineData, editor, forHTML) => {
+				let revealed = false
+				const wrap = content => {
+					const depth = lineData[0][0].blockquote
+					if (!depth) return content
+
+					return h('blockquote', {
+						className: `depth-${depth}${revealed ? ' revealed' : ''}`
+					}, content)
+				}
+
+				if (!forHTML) {
+					const hidden = lineData.map(([attributes]) => isCollapsed(attributes.collapsed)
+						&& !attributes.collapsedReveal)
+					const columns = getDlColumns(lineData)
+					const layouts: Array<{ row: number, span: number } | undefined> = []
+					const definitionCollapsed: boolean[] = []
+					let nextRow = 1
+					for (let index = 0; index < lineData.length; index++) {
+						if (layouts[index] || hidden[index]) continue
+
+						const [attributes] = lineData[index]
+						const dl = attributes.dl as DlLineData
+						const collapseParent = dl.role === 'term' && hasCollapsedChildren(attributes.collapsed)
+						if (dl.role === 'term' && dl.hasDef === false) {
+							const termIndent = attributes.indent?.indent ?? ''
+							let valueCount = 0
+							for (let valueIndex = index + 1; valueIndex < lineData.length; valueIndex++) {
+								const [valueAttributes] = lineData[valueIndex]
+								const valueDl = valueAttributes.dl as DlLineData
+								if (valueDl.role !== 'value' || valueDl.termIndent !== termIndent) break
+								if (hidden[valueIndex]) continue
+								layouts[valueIndex] = { row: nextRow + valueCount, span: 1 }
+								valueCount++
+							}
+
+							definitionCollapsed[index] = collapseParent && valueCount === 0
+							const span = Math.max(1, valueCount)
+							layouts[index] = { row: nextRow, span }
+							nextRow += span
+							continue
+						}
+
+						definitionCollapsed[index] = collapseParent
+						layouts[index] = { row: nextRow, span: 1 }
+						nextRow++
+					}
+
+					const lines = lineData.map(([attributes, children, id], index) => {
+						const dl = attributes.dl as DlLineData
+						if (attributes.revealed) revealed = true
+
+						let className = `dl-line dl-${dl.role}`
+						if (dl.termIndent !== undefined) className += ' dl-nested'
+						if (definitionCollapsed[index]) className += ' dl-description-collapsed'
+
+						let lineChildren = children
+						if (dl.role === 'term') {
+							const split = splitDlChildren(children)
+							if (split.separator) {
+								const separator = h('span', { className: 'dl-separator' }, [split.separator])
+
+								if (dl.hasDef) {
+									className += ' dl-inline'
+									lineChildren = [
+										h('span', { className: 'dl-term-content' }, split.term),
+										separator,
+										h('span', { className: 'dl-definition' }, split.definition)
+									]
+								}
+								else {
+									lineChildren = [
+										h('span', { className: 'dl-term-content' }, split.term),
+										separator
+									]
+								}
+							}
+						}
+
+						const props = getCoreLineProperties(attributes, className)
+						const layout = layouts[index]
+						if (layout) {
+							appendStyle(props, layout.span > 1
+								? `grid-row:${layout.row} / span ${layout.span};`
+								: `grid-row:${layout.row};`)
+						}
+						const { start, depth } = columns.lines[index]
+						const end = dl.role === 'value' || dl.hasDef || definitionCollapsed[index] ? -1 : start + 2
+						appendStyle(props, `grid-column:${start} / ${end};`)
+						if (depth !== undefined) props['data-dl-depth'] = String(depth)
+						props.key = id
+						props['data-dl-role'] = dl.role
+						if (dl.hasDef !== undefined) props['data-dl-has-def'] = String(dl.hasDef)
+						if (dl.termIndent !== undefined) props['data-dl-term-indent'] = dl.termIndent
+						if (dl.rootIndent !== undefined) props['data-dl-root-indent'] = dl.rootIndent
+						return h('div', props, lineChildren)
+					})
+
+					// descriptionListAlignment sets the widths to align blocks separated by blank lines
+					const termTracks = Array.from({ length: columns.maxDepth + 1 },
+						(_track, depth) => `minmax(var(--dlTermWidth${depth}, 0px), max-content) max-content`)
+					const rootIndent = lineData[0][0].indent?.indentSize ?? 0
+					return wrap(h('div', {
+						className: revealed
+							? 'description-list editor-description-list revealed'
+							: 'description-list editor-description-list',
+						'data-dl-block': lineData[0][2],
+						style: `grid-template-columns:${termTracks.join(' ')} minmax(0, 1fr);`
+							+ `margin-inline-start:calc(var(--spaceWidth) * ${rootIndent});`
+					}, lines))
+				}
+
+				if (lineData.some(([attributes]) => attributes.revealed)) revealed = true
+				const items = renderDlExportItems(buildDlTree(lineData))
+
+				return wrap(h('dl', {
+					className: revealed ? 'description-list revealed' : 'description-list'
+				}, items))
+			}
 		},
 		{
 			name: 'list',
@@ -511,6 +812,14 @@ const noteTypeset:TypesetTypes = {
 			}
 		},
 
+		hiddenGroupEmbedFormat<DlSeparatorData>({
+			name: 'dl_sep',
+			renderOutput: () => h('span', {
+				className: 'dl-separator-output',
+				'aria-hidden': 'true'
+			})
+		}),
+
 		{
 			name: 'list_format',
 			selector: 'span.list_format',
@@ -758,6 +1067,20 @@ const noteTypeset:TypesetTypes = {
 				}
 
 				return h('t-math', tMathAttr, [])
+			}
+		}),
+
+		hiddenGroupEmbedFormat<GlossData>({
+			name: 'gloss',
+			renderOutput: (gloss, attributes) => {
+				const tGlossAttr = { base: gloss.base, description: gloss.description } as any
+
+				if (attributes.decoration?.focus) {
+					// Inject the focus decoration onto the shadow root, as math does.
+					tGlossAttr.className = attributes.decoration.focus.class
+				}
+
+				return h('t-gloss', tGlossAttr, [])
 			}
 		}),
 
