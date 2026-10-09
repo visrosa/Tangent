@@ -1,5 +1,7 @@
 <script lang="ts">
 import { setContext } from 'svelte'
+import { writable } from 'svelte/store'
+import { wait } from '@such-n-such/core'
 
 import type Workspace from 'app/model/Workspace'
 import { FocusLevel } from 'common/dataTypes/TangentInfo'
@@ -15,6 +17,7 @@ import { appendContextTemplate, buildMainMenu, type ExtendedContextEvent, extrac
 import { isMac } from 'common/platform'
 import CreationRuleName from './summaries/CreationRuleName.svelte'
 import PopUpButton from 'app/utils/PopUpButton.svelte'
+import { countPopUps } from 'app/utils/popUpButton'
 import ModalStateView from 'app/modal/ModalStateView.svelte'
 import LeftSidebar from './LeftSidebar.svelte'
 import SvgIcon from './smart-icons/SVGIcon.svelte'
@@ -22,33 +25,43 @@ import ThreadHistoryListView from './summaries/ThreadHistoryListView.svelte'
 import { createCommandHandler } from 'app/model/commands/Command'
 import { shortcutDisplayString } from 'app/utils/shortcuts'
 
-export let workspace:Workspace
+let {
+	workspace
+} : {
+	workspace: Workspace
+} = $props()
 
+// svelte-ignore state_referenced_locally
 setContext('workspace', workspace)
 
-$: focusLevel = workspace.viewState.tangent.focusLevel
-$: targetFocusModeLevel = workspace.viewState.targetFocusModeLevel
-$: focusing = workspace.viewState.focusing
-$: {
-	// It is dumb I have to do this instead of class:focusing={$focusing}
+// svelte-ignore state_referenced_locally
+let focusLevel = workspace.viewState.tangent.focusLevel
+// svelte-ignore state_referenced_locally
+let targetFocusModeLevel = workspace.viewState.targetFocusModeLevel
+// svelte-ignore state_referenced_locally
+let focusing = workspace.viewState.focusing
+
+// It is dumb I have to do this instead of class:focusing={$focusing}
+$effect(() => {
 	if ($focusing) {
 		document.body.classList.add('focusing')
 	}
 	else {
 		document.body.classList.remove('focusing')
 	}
-}
-$: topCommandHandler = createCommandHandler(Object.values(workspace.commands).filter(c => !c.group || c.group === 'Pane'))
+})
+let topCommandHandler = $derived(createCommandHandler(
+	Object.values(workspace.commands)
+	.filter(c => !c.group || c.group === 'Pane')
+))
 
 // Top bar
-let hoveringForTopBar = false
-let topBarShouldBeVisible = false
-
-let focusMenuIsOpen = false
-let newNoteMenuIsOpen = false
-let backMenuIsOpen = false
-let forwardMenuIsOpen = false
+let hoveringForTopBar = $state(false)
+let topBarShouldBeVisible = $state(false)
+let topBarPopupCount = writable(0)
+// svelte-ignore state_referenced_locally
 let systemMenuIsOpen = workspace.viewState.system.showMenu
+// svelte-ignore state_referenced_locally
 workspace.on('editing', () => {
 	// This is cheeky, but it works!
 	if ($focusLevel >= FocusLevel.File) {
@@ -56,36 +69,36 @@ workspace.on('editing', () => {
 	}
 })
 
-$: {
+$effect(() => {
+	// A cursed latch, but it works!
 	topBarShouldBeVisible = topBarShouldBeVisible
 		|| $focusLevel <= FocusLevel.Thread
 		|| hoveringForTopBar
 		|| leftSidebarVisible
-		|| focusMenuIsOpen
-		|| newNoteMenuIsOpen
-		|| backMenuIsOpen
-		|| forwardMenuIsOpen
-}
+		|| $topBarPopupCount > 0
+})
 
 // Sidebar
+// svelte-ignore state_referenced_locally
 let sidebarHoverHotspot = workspace.settings.sidebarHoverHotspot
+// svelte-ignore state_referenced_locally
 let leftSidebarMode = workspace.viewState.leftSidebar.mode
-let leftSidebarSize = 100
+let leftSidebarSize = $state(100)
 
-let leftSidebarVisible = $leftSidebarMode === SidebarMode.pinned
+let leftSidebarVisible = $state($leftSidebarMode === SidebarMode.pinned)
+// svelte-ignore state_referenced_locally
 let lastLeftSidebarShouldBeVisible = leftSidebarVisible
 let shouldDelayClosingSidebar = false
 
-let hoveringForLeftSidebar = false
-let hoveringOverLeftSidebar = false
-let leftSidebarHasFocus = false
+let hoveringForLeftSidebar = $state(false)
+let hoveringOverLeftSidebar = $state(false)
+let leftSidebarHasFocus = $state(false)
 
-let resizingLeftSidebar = false
-let sortMenuIsOpen = false
+let resizingLeftSidebar = $state(false)
 
 let leftSidebarVisibilityTimeout = null
 
-$: {
+$effect(() => {
 	if ($leftSidebarMode === SidebarMode.closed) {
 		leftSidebarVisible = lastLeftSidebarShouldBeVisible = false
 
@@ -102,8 +115,7 @@ $: {
 			|| hoveringForLeftSidebar
 			|| hoveringOverLeftSidebar
 			|| leftSidebarHasFocus
-			|| resizingLeftSidebar
-			|| sortMenuIsOpen)
+			|| resizingLeftSidebar)
 
 		if (shouldBeVisible !== lastLeftSidebarShouldBeVisible) {
 			if (leftSidebarVisibilityTimeout) {
@@ -115,7 +127,6 @@ $: {
 				shouldDelayClosingSidebar = hoveringForLeftSidebar
 					|| hoveringOverLeftSidebar
 					|| resizingLeftSidebar
-					|| sortMenuIsOpen
 			}
 			else {
 				leftSidebarVisibilityTimeout = setTimeout(() => {
@@ -126,9 +137,7 @@ $: {
 			lastLeftSidebarShouldBeVisible = shouldBeVisible
 		}
 	}
-
-	topBarShouldBeVisible = topBarShouldBeVisible || $focusLevel <= FocusLevel.Thread || hoveringForTopBar || leftSidebarVisible || focusMenuIsOpen
-}
+})
 
 function onMainMouseMove(event: MouseEvent) {
 	hoveringForLeftSidebar = event.clientX < $sidebarHoverHotspot
@@ -196,12 +205,13 @@ function onContextMenu(event: ExtendedContextEvent) {
 }
 
 function openCreationRules(event: Event) {
-	event.preventDefault()
-	// Otherwise, the pop up menu closes itself immediately
-	event.stopPropagation()
-	newNoteMenuIsOpen = false
-	$systemMenuIsOpen = true
-	workspace.viewState.system.section.set('Creation Rules')
+	// Delay the opening of a new popup
+	// Otherwise, the new pop up menu closes itself immediately
+	// Strangely, `tick()` does not work here
+	wait().then(() => {
+		$systemMenuIsOpen = true
+		workspace.viewState.system.section.set('Creation Rules')
+	})
 }
 
 function onViewContextMenu(event: MouseEvent) {
@@ -230,12 +240,11 @@ function onViewContextMenu(event: MouseEvent) {
 </script>
 
 <svelte:window on:keydown={onWindowKeydown} on:auxclick={onWindowAuxClick} />
-<!-- svelte-ignore avoid-mouse-events-on-document -->
 <svelte:document on:mouseleave={onDocumentMouseLeave} />
 <svelte:body on:mousemove={onMainMouseMove} on:contextmenu={onContextMenu}/>
 
 <WindowBar showBorder={true} visible={topBarShouldBeVisible}>
-	<nav class="buttonBar" slot="left">
+	<nav class="buttonBar" slot="left" use:countPopUps={topBarPopupCount}>
 
 		{#if !isMac || process.env.NODE_ENV === 'development'}
 			<PopUpButton
@@ -243,9 +252,11 @@ function onViewContextMenu(event: MouseEvent) {
 				placement="bottom-start"
 				tooltip="Menus"
 				template={prepareMainMenuForWindow(buildMainMenu(workspace))}>
-				<svg slot="button" style={`width: 24px; height: 24px;`}>
-					<use href="tangent-icon-nocolor.svg#icon"/>
-				</svg>
+				{#snippet button()}
+					<svg style={`width: 24px; height: 24px;`}>
+						<use href="tangent-icon-nocolor.svg#icon"/>
+					</svg>	
+				{/snippet}
 			</PopUpButton>
 			<div class="spacer"></div>
 		{/if}
@@ -271,36 +282,37 @@ function onViewContextMenu(event: MouseEvent) {
 			placement="bottom-start"
 			menuMode="low-profile"
 			tooltip="Create New Note"
-			bind:showMenu={newNoteMenuIsOpen}
 			closeMenuOnClick
 		>
-			<svelte:fragment slot="button"><svg style={`width: 24px; height: 24px;`}>
+			{#snippet button()}<svg style={`width: 24px; height: 24px;`}>
 				<use href="file.svg#document"/>
 				<use href="file.svg#plus"/>
-			</svg></svelte:fragment>
-			<div class="popUpButtonList newNotes">
-				<h1>New Note</h1>
-				<div class="buttonGroup vertical">
-					{#each workspace.workspaceSettings.value.creationRules.value.filter(r => r.showInMenu.value) as rule}
-						<button
-							class="no-callout"
-							use:command={{
-								command: workspace.commands.createNewFile,
-								context: { rule },
-								tooltipShortcut: false,
-							}}
-						>
-							<span class="creation-rule-name"><CreationRuleName {rule}/></span>
-							{#if rule.shortcut.value}
-								<span class="shortcut">{shortcutDisplayString(rule.shortcut.value)}</span>
-							{/if}
-						</button>
-					{/each}
+			</svg>{/snippet}
+			{#snippet menu()}
+				<div class="popUpButtonList newNotes">
+					<h1>New Note</h1>
+					<div class="buttonGroup vertical">
+						{#each workspace.workspaceSettings.value.creationRules.value.filter(r => r.showInMenu.value) as rule}
+							<button
+								class="no-callout"
+								use:command={{
+									command: workspace.commands.createNewFile,
+									context: { rule },
+									tooltipShortcut: false,
+								}}
+							>
+								<span class="creation-rule-name"><CreationRuleName {rule}/></span>
+								{#if rule.shortcut.value}
+									<span class="shortcut">{shortcutDisplayString(rule.shortcut.value)}</span>
+								{/if}
+							</button>
+						{/each}
 
-					<!-- svelte-ignore a11y-invalid-attribute -->
-					<a href="#" class="local deemphasized manageRules" on:click={openCreationRules}>Manage Rules</a>
+						<!-- svelte-ignore a11y_invalid_attribute -->
+						<a href="#" class="local deemphasized manageRules" onclick={openCreationRules}>Manage Rules</a>
+					</div>
 				</div>
-			</div>
+			{/snippet}
 		</PopUpButton>
 
 		<div class="spacer"></div>
@@ -311,40 +323,44 @@ function onViewContextMenu(event: MouseEvent) {
 				command={workspace.commands.shiftHistoryBack}
 				menuMode="low-profile"
 				placement="bottom-start"
-				hidePopUpIndicator
+				showPopUpIndicator={false}
 				closeMenuOnClick
-				bind:showMenu={backMenuIsOpen}
 			>
-				<SvgIcon slot="button" ref="arrows.svg#back"></SvgIcon>	
-				<ThreadHistoryListView
-					session={workspace.viewState.tangent.activeSession.value}
-					direction={-1}
-				>
-				</ThreadHistoryListView>
+				{#snippet button()}
+					<SvgIcon ref="arrows.svg#back"></SvgIcon>
+				{/snippet}
+				{#snippet menu()}
+					<ThreadHistoryListView
+						session={workspace.viewState.tangent.activeSession.value}
+						direction={-1}
+					/>
+				{/snippet}
 			</PopUpButton>
 			<PopUpButton
 				buttonClass="subtle"
 				command={workspace.commands.shiftHistoryForward}
 				menuMode="low-profile"
 				placement="bottom-start"
-				hidePopUpIndicator
+				showPopUpIndicator={false}
 				closeMenuOnClick
-				bind:showMenu={forwardMenuIsOpen}
 			>
-				<SvgIcon slot="button" ref="arrows.svg#forward"></SvgIcon>	
-				<ThreadHistoryListView
-					session={workspace.viewState.tangent.activeSession.value}
-					direction={1}
-				>
-				</ThreadHistoryListView>
+				{#snippet button()}
+					<SvgIcon ref="arrows.svg#forward"></SvgIcon>
+				{/snippet}
+				{#snippet menu()}
+					<ThreadHistoryListView
+						session={workspace.viewState.tangent.activeSession.value}
+						direction={1}
+					/>
+				{/snippet}
 			</PopUpButton>
 		</span>
 
 		<div class="spacer"></div>
 
-		<!-- svelte-ignore a11y-no-static-element-interactions -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<span class="buttonGroup"
-			on:contextmenu={onViewContextMenu}
+			oncontextmenu={onViewContextMenu}
 		>
 			<button class="subtle"
 				use:command={{
@@ -369,35 +385,36 @@ function onViewContextMenu(event: MouseEvent) {
 				commandContext = {{ toggle: false }}
 				placement={'bottom-start'}
 				menuMode="low-profile"
-				bind:showMenu={focusMenuIsOpen}
 				closeMenuOnClick
 			>
-				<svelte:fragment slot="button">
+				{#snippet button()}
 					<FocusLevelIcon focusLevel={$targetFocusModeLevel}/>
-				</svelte:fragment>
-				<div class="popUpButtonList">
-					<h1>Focus Mode</h1>
-					<div class="buttonGroup vertical"> 
-						{#each FocusLevel.focusModeFocusLevels as level}
-							
-							<button
-								class="no-callout"
-								use:command={{
-									command: workspace.commands.setFocusLevel,
-									context: { targetFocusLevel: level },
-									tooltip: FocusLevel.describeFocusLevel(level),
-								}}
-							>
-								<FocusLevelIcon focusLevel={level}/>
-								<div>{FocusLevel.getShortName(level)}</div>
-							</button>
-						{/each}
+				{/snippet}
+				{#snippet menu()}
+					<div class="popUpButtonList">
+						<h1>Focus Mode</h1>
+						<div class="buttonGroup vertical"> 
+							{#each FocusLevel.focusModeFocusLevels as level}
+								
+								<button
+									class="no-callout"
+									use:command={{
+										command: workspace.commands.setFocusLevel,
+										context: { targetFocusLevel: level },
+										tooltip: FocusLevel.describeFocusLevel(level),
+									}}
+								>
+									<FocusLevelIcon focusLevel={level}/>
+									<div>{FocusLevel.getShortName(level)}</div>
+								</button>
+							{/each}
+						</div>
 					</div>
-				</div>
+				{/snippet}
 			</PopUpButton>
 		</span>
 	</nav>
-	<nav class="buttonBar" slot="right">
+	<nav class="buttonBar" slot="right" use:countPopUps={topBarPopupCount}>
 
 		<PopUpButton
 			buttonClass="subtle"
@@ -406,59 +423,61 @@ function onViewContextMenu(event: MouseEvent) {
 			menuMode="low-profile"
 			closeMenuOnClick
 		>
-			<svelte:fragment slot="button">
+			{#snippet button()}
 				<SvgIcon ref={[
 					"query.svg#query"
 				]} />
-			</svelte:fragment>
-			<div class="popUpButtonList">
-				<!-- svelte-ignore a11y_consider_explicit_label -->
-				<button class="subtle"
-					use:command={{
-						command: workspace.commands.goTo
-					}}
-				>
-					<SvgIcon ref={[
-						"query.svg#query"
-					]} />
-					<div>Files</div>
-				</button>
-				<!-- svelte-ignore a11y_consider_explicit_label -->
-				<button class="subtle"
-					use:command={{
-						command: workspace.commands.search
-					}}
-				>
-					<SvgIcon ref={[
-						"file.svg#document",
-						"commandPalette.svg#magnifying-glass"
-					]} />
-					<div>Content</div>
-				</button>
-				<!-- svelte-ignore a11y_consider_explicit_label -->
-				<button class="subtle"
-					use:command={{
-						command: workspace.commands.do
-					}}
-				>
-					<SvgIcon ref={[
-						"commandPalette.svg#command"
-					]} />
-					<div>Commands</div>
-				</button>
-				<!-- svelte-ignore a11y_consider_explicit_label -->
-				<button class="subtle"
-					use:command={{
-						command: workspace.commands.openQueryPane
-					}}
-				>
-					<SvgIcon ref={[
-						"query.svg#query-small",
-						"query.svg#plus"
-					]} />
-					<div>New Query</div>
-				</button>
-			</div>
+			{/snippet}
+			{#snippet menu()}
+				<div class="popUpButtonList">
+					<!-- svelte-ignore a11y_consider_explicit_label -->
+					<button class="subtle"
+						use:command={{
+							command: workspace.commands.goTo
+						}}
+					>
+						<SvgIcon ref={[
+							"query.svg#query"
+						]} />
+						<div>Files</div>
+					</button>
+					<!-- svelte-ignore a11y_consider_explicit_label -->
+					<button class="subtle"
+						use:command={{
+							command: workspace.commands.search
+						}}
+					>
+						<SvgIcon ref={[
+							"file.svg#document",
+							"commandPalette.svg#magnifying-glass"
+						]} />
+						<div>Content</div>
+					</button>
+					<!-- svelte-ignore a11y_consider_explicit_label -->
+					<button class="subtle"
+						use:command={{
+							command: workspace.commands.do
+						}}
+					>
+						<SvgIcon ref={[
+							"commandPalette.svg#command"
+						]} />
+						<div>Commands</div>
+					</button>
+					<!-- svelte-ignore a11y_consider_explicit_label -->
+					<button class="subtle"
+						use:command={{
+							command: workspace.commands.openQueryPane
+						}}
+					>
+						<SvgIcon ref={[
+							"query.svg#query-small",
+							"query.svg#plus"
+						]} />
+						<div>New Query</div>
+					</button>
+				</div>
+			{/snippet}
 		</PopUpButton>
 
 		<div class="spacer"></div>

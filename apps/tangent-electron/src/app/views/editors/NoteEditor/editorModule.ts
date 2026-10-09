@@ -23,6 +23,7 @@ import { TangentLink } from './t-link'
 import TangentCheckbox from './t-checkbox'
 import TangentCodePreview from './t-code-preview' // No deletey
 import TangentMath from './t-math' // No deletey
+import TangentFurigana from './t-furigana' // No deletey
 import { ListDefinition, listMatcher } from 'common/markdownModel/list'
 import type { Workspace } from 'app/model'
 import { getEditInfo, getLineRangeWhile, getRangeWhile, lineToText } from 'common/typewriterUtils'
@@ -57,6 +58,9 @@ if (!TangentMath) {
 }
 if (!TangentCodePreview) {
 	console.error('I don\'t have code preview!')
+}
+if (!TangentFurigana) {
+	console.error('I don\'t have furigana!')
 }
 
 export function revealContentAroundRange(doc: TextDocument, range: EditorRange, change: TextChange) {
@@ -186,6 +190,7 @@ export function revealContentAroundRange(doc: TextDocument, range: EditorRange, 
 
 export default function editorModule(editor: Editor, options: {
 	workspace: Workspace
+	filepath?: string
 }) {
 	// `editorModule` is allowed to do this as its the primary module and can know about
 	// all default modules in MarkdownEditor
@@ -198,7 +203,7 @@ export default function editorModule(editor: Editor, options: {
 	let updateSelectionReveal = true
 	let smartParagraphBreaks = false
 
-	let filepath = ''
+	let filepath = options.filepath ?? ''
 
 	let fallback = false
 	
@@ -885,6 +890,9 @@ export default function editorModule(editor: Editor, options: {
 		},
 		setNotePath(path) {
 			filepath = path
+		},
+		getNotePath() {
+			return filepath
 		},
 		setSmartParagraphBreaks(value) {
 			smartParagraphBreaks = value

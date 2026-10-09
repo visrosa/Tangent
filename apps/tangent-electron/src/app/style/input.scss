@@ -11,8 +11,6 @@ input, button, select, textarea, .button {
 	box-sizing: border-box;
 	border: 1px solid var(--borderColor);
 	border-radius: var(--inputBorderRadius);
-
-	outline: none;
 }
 
 input {
@@ -21,10 +19,6 @@ input {
 
 	&:disabled {
 		color: #ccc;
-	}
-
-	&:focus {
-		outline: none;
 	}
 }
 
@@ -77,14 +71,17 @@ input[type="checkbox"] {
 		transition: left .125s;
 		box-shadow: -1px 1px 1px 1px rgba(0, 0, 0, .1);
 	}
+	&:hover {
+		background-color: var(--buttonHoverColor);
+	}
 	&:checked {
 		background-color: var(--accentActiveBackgroundColor);
 		&::after {
 			left: 1.6em;
 		}
-	}
-	&:hover {
-		background-color: var(--accentBackgroundColor);
+		&:hover {
+			background-color: var(--accentBackgroundColor);
+		}
 	}
 }
 
@@ -140,12 +137,11 @@ button, .button, select {
 	color: inherit; // This allows context colors to easily apply.
 	background-color: var(--buttonBackgroundColor);
 	transition: background-color .2s, border-color .2s, outline-color .2s, color .2s;
-	outline: none;
 	outline-color: transparent; // Prevents wonky transitions
 	border: none;
 
 	&:focus {
-		outline: none;
+		outline-color: transparent;
 	}
 
 	&:disabled {
@@ -211,8 +207,8 @@ button, .button {
 	}
 }
 
-input, button, select, textarea, .button {
-	&.focusable {
+[data-input-mode="keyboard"] {
+	input, button, select, textarea, .button {
 		outline: 2px solid transparent;
 
 		&.focused:not(:focus):not(:hover) {

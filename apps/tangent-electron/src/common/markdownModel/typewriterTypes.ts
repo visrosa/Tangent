@@ -6,9 +6,11 @@ import { isLargeList, type ListDefinition } from './list'
 import type { TagSectionData } from './tag'
 import type { CodeData } from './code'
 import type { MathData } from './math'
+import type { FuriganaData } from './furigana'
+import { hiddenGroupEmbedFormat } from './hiddenGroupEmbed'
+import { getHiddenGroupAttributes } from './inline'
 import { hasCollapsedChildren, isCollapsed } from './sections'
-import type { HrefFormedLink } from 'common/indexing/indexTypes'
-import { getMediaCustomizationsFromText } from './links'
+import { getMediaCustomizationsFromText, type LinkAttribute } from './links'
 
 const defaultOptions = {}
 
@@ -552,7 +554,7 @@ const noteTypeset:TypesetTypes = {
 					className += ' revealed'
 				}
 
-				let link = attributes.t_link as HrefFormedLink
+				let link = attributes.t_link as LinkAttribute
 
 				let embedClassname = 'output'
 				const customizations = getMediaCustomizationsFromText(link.text)
@@ -571,6 +573,7 @@ const noteTypeset:TypesetTypes = {
 					'span',
 					{
 						class: className,
+						...getHiddenGroupAttributes(attributes)
 					},
 					children
 				) as any
@@ -604,7 +607,8 @@ const noteTypeset:TypesetTypes = {
 					't-link',
 					{
 						...attributes.t_link,
-						className: className
+						className: className,
+						...getHiddenGroupAttributes(attributes)
 					},
 					children)
 			}
@@ -733,44 +737,43 @@ const noteTypeset:TypesetTypes = {
 			}
 		},
 
-		{
+		hiddenGroupEmbedFormat<MathData>({
 			name: 'math',
-			selector: 'span.math-source',
-			render: (attributes, children) => {
-
-				let containerAttr = {
-					className: 'inline-math-container'
-				}
-
-				let sourceAttr = {
-					className: 'math-source hidden'
-				}
-				
+			renderOutput: (math, attributes) => {
 				let tMathAttr = {
-					'math-source': attributes.math.source,
+					'math-source': math.source
 				} as any
 
 				if (attributes.revealed) {
-					containerAttr.className += ' revealed'
-					sourceAttr.className += ' revealed'
 					tMathAttr.className = 'revealed'
 				}
 
-				if (attributes.math.isBlock) {
+				if (math.isBlock) {
 					tMathAttr.block = ''
 				}
 
 				if (attributes.decoration?.focus) {
 					// Inject the focus decoration onto the shadow root.
-					tMathAttr.className += ' ' + attributes.decoration.focus.class
+					tMathAttr.className = [tMathAttr.className, attributes.decoration.focus.class].filter(Boolean).join(' ')
 				}
 
-				return h('span', containerAttr, [
-					h('span', sourceAttr, children),
-					h('t-math', tMathAttr, [])
-				])
+				return h('t-math', tMathAttr, [])
 			}
-		},
+		}),
+
+		hiddenGroupEmbedFormat<FuriganaData>({
+			name: 'furigana',
+			renderOutput: (furigana, attributes) => {
+				const tFuriganaAttr = { base: furigana.base, reading: furigana.reading } as any
+
+				if (attributes.decoration?.focus) {
+					// Inject the focus decoration onto the shadow root, as math does.
+					tFuriganaAttr.className = attributes.decoration.focus.class
+				}
+
+				return h('t-furigana', tFuriganaAttr, [])
+			}
+		}),
 
 		{
 			name: 'templateToken',

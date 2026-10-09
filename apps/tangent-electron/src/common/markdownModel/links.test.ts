@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { StructureType } from 'common/indexing/indexTypes'
-import { createContentIdMatcher, matchMarkdownLink, matchWikiLink } from './links'
+import { createContentIdMatcher, linkTextFromLink, matchMarkdownLink, matchWikiLink } from './links'
 import { safeHeaderLine } from './header'
 
 describe('Wiki Links', () => {
@@ -360,6 +360,32 @@ describe('Markdown Links', () => {
 	})
 })
 
+describe('Link Text From Link', () => {
+	describe('Markdown', () => {
+		it('Does the basics', () => {
+			expect(linkTextFromLink({
+				form: 'md',
+				text: 'text',
+				href: 'href'
+			})).toEqual('[text](href)')
+		})
+		it('Wraps hrefs with spaces in <>', () => {
+			expect(linkTextFromLink({
+				form: 'md',
+				text: 'text',
+				href: 'my cool/place to go'
+			})).toEqual('[text](<my cool/place to go>)')
+
+			expect(linkTextFromLink({
+				form: 'md',
+				text: 'text',
+				href: 'href',
+				content_id: 'id with space'
+			})).toEqual('[text](<href#id with space>)')
+		})
+	})
+})
+
 describe('Content ID Matching', () => {
 	it('Can use varying header id forms to match header text', () => {
 		expect('My Header'.match(createContentIdMatcher('My Header'))).toBeTruthy()
@@ -388,5 +414,9 @@ describe('Content ID Matching', () => {
 		expect('My Header'.match(createContentIdMatcher('My'))).toBeFalsy()
 		expect('My'.match(createContentIdMatcher('My-header'))).toBeFalsy()
 		expect(' My Header '.match(createContentIdMatcher('My Header'))).toBeFalsy()
+	})
+
+	it('Can select ids with parenthesis', () => {
+		expect('My (Parenthetical) Header'.match(createContentIdMatcher('My (Parenthetical) Header'))).toBeTruthy()
 	})
 })
