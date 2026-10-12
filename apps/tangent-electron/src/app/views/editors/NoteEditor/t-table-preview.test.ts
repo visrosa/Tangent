@@ -127,7 +127,13 @@ describe('Table source and editor offsets', () => {
 		change.apply()
 		expect(editor.root.querySelector('figure').classList.contains('revealed')).toBe(true)
 		expect(editor.root.querySelector('pre').getBoundingClientRect().height).toBeGreaterThan(before)
-		expect(editor.root.querySelector('t-table-preview').getBoundingClientRect().height).toBeGreaterThan(0)
+		const preview = editor.root.querySelector('t-table-preview')
+		const bounds = preview.getBoundingClientRect()
+		const style = getComputedStyle(preview)
+		expect(bounds.height).toBeGreaterThan(0)
+		// The output outline extends beyond its box; it must clear the source too.
+		const outline = parseFloat(style.outlineOffset) + parseFloat(style.outlineWidth)
+		expect(bounds.top - outline).toBeGreaterThanOrEqual(editor.root.querySelector('pre').getBoundingClientRect().bottom - 1)
 	})
 
 	it('exports readable Markdown source without a live preview dependency', () => {
