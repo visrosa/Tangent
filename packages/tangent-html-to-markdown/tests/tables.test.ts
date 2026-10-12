@@ -37,4 +37,24 @@ describe('Pipe tables', () => {
 		expect(htmlToMarkdown('<table><tr><td><p>A</p><p>B</p></td><td>C</td></tr></table>'))
 			.toBe('| A  B | C |')
 	})
+
+	it('expands column and row spans without duplicating their content', () => {
+		expect(htmlToMarkdown('<table><thead><tr><th colspan="2">Range</th></tr></thead><tbody><tr><td rowspan="2">Place</td><td>A</td></tr><tr><td>B</td></tr></tbody></table>'))
+			.toBe('| Range |  |\n| --- | --- |\n| Place | A |\n|  | B |')
+	})
+
+	it('keeps empty spanned cells and limits rowspan zero to its row group', () => {
+		expect(htmlToMarkdown('<table><thead><tr><th rowspan="0">A</th><th>B</th></tr><tr><th>C</th></tr></thead><tbody><tr><td colspan="2"></td></tr></tbody></table>'))
+			.toBe('| A | B |\n|  | C |\n| --- | --- |\n|  |  |')
+	})
+
+	it('pads uneven rows to keep later cells in the output', () => {
+		expect(htmlToMarkdown('<table><tr><td>A</td></tr><tr><td>B</td><td>C</td></tr></table>'))
+			.toBe('| A |  |\n| B | C |')
+	})
+
+	it('flattens a nested table inside its cell rather than introducing outer rows', () => {
+		expect(htmlToMarkdown('<table><tr><td>outer<table><tr><td>inner</td></tr></table></td><td>next</td></tr></table>'))
+			.toBe('| outer  \\| inner \\| | next |')
+	})
 })

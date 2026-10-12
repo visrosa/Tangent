@@ -26,18 +26,55 @@ function cleanPlaceholders(text: string) {
 }
 
 let turndown = null
+const tableRows = new WeakMap<HTMLTableElement, Map<HTMLElement, string>>()
 
-function tableRowToMarkdown(node: HTMLElement): string {
-	const cells = Array.from(node.children).filter(cell => cell.matches('th, td'))
-	const content = cells.map(cell => getTurndown().turndown(cell.innerHTML)
+function tableCellToMarkdown(cell: Element): string {
+	return getTurndown().turndown(cell.innerHTML)
 		.replace(/\r?\n/g, ' ')
 		.replace(/(\\*)\|/g, (match, backslashes) => backslashes + (backslashes.length % 2 === 0 ? '\\' : '') + '|')
-		.trim())
-	let row = '| ' + content.join(' | ') + ' |\n'
-	if (node.parentElement?.nodeName === 'THEAD' && !node.nextElementSibling) {
-		row += '| ' + cells.map(() => '---').join(' | ') + ' |\n'
+		.trim()
+}
+
+function getTableRows(table: HTMLTableElement): Map<HTMLElement, string> {
+	let result = tableRows.get(table)
+	if (result) return result
+	const rows = Array.from(table.rows)
+	const grid: string[][] = rows.map(() => [])
+	for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+		const row = rows[rowIndex]
+		let groupEnd = rowIndex + 1
+		while (groupEnd < rows.length && rows[groupEnd].parentElement === row.parentElement) groupEnd++
+		let column = 0
+		for (const cell of Array.from(row.cells)) {
+			while (grid[rowIndex][column] !== undefined) column++
+			const rowSpan = cell.rowSpan === 0 ? groupEnd - rowIndex : Math.min(cell.rowSpan, groupEnd - rowIndex)
+			// Pipe syntax has no spans: reserve covered coordinates without duplicating content.
+			for (let rowOffset = 0; rowOffset < rowSpan; rowOffset++) {
+				for (let columnOffset = 0; columnOffset < cell.colSpan; columnOffset++) {
+					grid[rowIndex + rowOffset][column + columnOffset] = ''
+				}
+			}
+			grid[rowIndex][column] = tableCellToMarkdown(cell)
+			column += cell.colSpan
+		}
 	}
-	return row
+	const width = Math.max(1, ...grid.map(row => row.length))
+	result = new Map()
+	for (let index = 0; index < rows.length; index++) {
+		const cells = Array.from({ length: width }, (_, column) => grid[index][column] ?? '')
+		let markdown = '| ' + cells.join(' | ') + ' |\n'
+		if (rows[index].parentElement?.nodeName === 'THEAD' && !rows[index].nextElementSibling) {
+			markdown += '| ' + cells.map(() => '---').join(' | ') + ' |\n'
+		}
+		result.set(rows[index], markdown)
+	}
+	tableRows.set(table, result)
+	return result
+}
+
+function tableRowToMarkdown(node: HTMLElement): string {
+	const table = node.closest('table')
+	return table ? getTableRows(table).get(node) ?? '' : ''
 }
 
 function getTurndown() {
@@ -50,7 +87,7 @@ function getTurndown() {
 				// Blank-node handling precedes rules, including rows of empty cells.
 				if (node.nodeName === 'TR') return tableRowToMarkdown(node)
 				if (node.nodeName === 'TABLE') {
-					const rows = Array.from(node.querySelectorAll('tr')).map(tableRowToMarkdown).join('')
+					const rows = Array.from(getTableRows(node as HTMLTableElement).values()).join('')
 					return '\n\n' + rows + '\n\n'
 				}
 				if (node.nodeName === 'THEAD' || node.nodeName === 'TBODY' || node.nodeName === 'TFOOT') return content

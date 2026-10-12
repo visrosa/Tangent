@@ -25,4 +25,12 @@ describe('HTML table paste and reopen', () => {
 		expect(typewriterToText(doc)).toBe(markdown)
 		expect(doc.lines[0].attributes.table.model.head).toHaveLength(0)
 	})
+
+	it('reopens a pasted spanning table with covered cells preserved as empty coordinates', () => {
+		const markdown = htmlToMarkdown('<table><tr><td rowspan="2">A</td><td>B</td></tr><tr><td>C</td></tr></table>')
+		expect(markdown).toBe('| A | B |\n|  | C |')
+		const reopened = markdownToTextDocument(typewriterToText(markdownToTextDocument(markdown)))
+		expect(reopened.lines[0].attributes.table.model.body.map(row => row.cells.map(cell => cell.markdown)))
+			.toEqual([['A', 'B'], ['', 'C']])
+	})
 })
