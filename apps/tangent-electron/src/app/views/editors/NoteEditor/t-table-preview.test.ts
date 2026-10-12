@@ -105,6 +105,50 @@ describe('Table preview', () => {
 })
 
 describe('Table source and editor offsets', () => {
+	it('renders parsed grid blocks, spans, foot and caption with verbatim source and offsets', () => {
+		const source = ': A **caption**\n\n+----------------+-------+\n| **Heading**            |\n+================+=======+\n| - one          | right |\n| - two          |       |\n|                +-------+\n| more           | next  |\n+================+=======+\n| footer                 |\n+================+=======+'
+		const editor = editorWithSource(source)
+		const element = editor.root.querySelector('t-table-preview')
+		const shadow = element.shadowRoot
+		expect(shadow.querySelector('thead th').getAttribute('colspan')).toBe('2')
+		expect(shadow.querySelector('thead strong:not(.hidden)').textContent).toBe('Heading')
+		expect(shadow.querySelector('tbody td').getAttribute('rowspan')).toBe('2')
+		expect(shadow.querySelectorAll('tbody p.list')).toHaveLength(2)
+		expect(shadow.querySelector('tfoot td').getAttribute('colspan')).toBe('2')
+		expect(shadow.querySelector('caption strong:not(.hidden)').textContent).toBe('caption')
+		expect(Array.from(editor.root.querySelectorAll('div.tableLine')).map(line => line.textContent).join('\n')).toBe(source)
+		expect(element.textContent).toBe('')
+		expect(typewriterToText(new TextDocument(deltaFromDom(editor, { root: editor.root, collapseWhitespace: false })))).toBe(source)
+		for (let index = 0; index < source.length; index++) {
+			if (source[index] === '\n') continue
+			const [node, offset] = getNodesForRange(editor, [index, index])
+			expect(getIndexFromNodeAndOffset(editor, node, offset)).toBe(index)
+		}
+		const change = editor.change
+		revealContentAroundRange(editor.doc, [2, 2], change)
+		change.apply()
+		const emptyLine = editor.root.querySelectorAll('div.tableLine')[1]
+		expect(emptyLine.getBoundingClientRect().height).toBeGreaterThan(0)
+	})
+
+	it('updates grid previews through edits and undo without altering border text', async () => {
+		const source = '+-----+\n| old |\n+-----+'
+		const editor = new MarkdownEditor(null, { doc: markdownToTextDocument(source) })
+		const root = document.createElement('div')
+		document.body.appendChild(root)
+		editor.setRoot(root)
+		cleanups.push(() => { editor.destroy(); root.remove() })
+		const start = source.indexOf('old')
+		editor.change.delete([start, start + 3]).insert(start, 'new').apply()
+		await wait(20)
+		expect(root.querySelector('t-table-preview').shadowRoot.querySelector('td').textContent).toBe('new')
+		expect(typewriterToText(editor.doc)).toBe(source.replace('old', 'new'))
+		editor.modules.history.undo()
+		await wait(20)
+		expect(typewriterToText(editor.doc)).toBe(source)
+		expect(root.querySelector('t-table-preview').shadowRoot.querySelector('td').textContent).toBe('old')
+	})
+
 	it('keeps all source lines and separator text byte-identical while preview text is excluded', () => {
 		const source = 'before\n  | **A** | B |\n  | --- | ---: |\n  | a\\|b |  | excess |\nafter'
 		const editor = editorWithSource(source)

@@ -309,7 +309,7 @@ const noteTypeset:TypesetTypes = {
 					props.key = id
 					props['data-table-id'] = table.id
 					// Preformatted source needs no inline renderer's space-to-NBSP substitution.
-					return h('div', props, physicalLines[index])
+					return h('div', props, physicalLines[index] || h('br'))
 				})
 				return h('figure', {
 					className: 'table-block-container output-container' + (revealed ? ' revealed' : '')
