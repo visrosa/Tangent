@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import htmlToMarkdown from '../src'
 
-describe('Pipe tables', () => {
+describe('HTML tables', () => {
 	it('converts header and body rows', () => {
 		expect(htmlToMarkdown('<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td>a</td><td>b</td></tr></tbody></table>'))
 			.toBe('| A | B |\n| --- | --- |\n| a | b |')
@@ -33,19 +33,19 @@ describe('Pipe tables', () => {
 			.toBe('before\n\n| A |\n\n| B |\n\nafter')
 	})
 
-	it('keeps multiline cell content within one pipe row', () => {
+	it('preserves multiline cell paragraphs in grid syntax', () => {
 		expect(htmlToMarkdown('<table><tr><td><p>A</p><p>B</p></td><td>C</td></tr></table>'))
-			.toBe('| A  B | C |')
+			.toBe('+---+---+\n| A | C |\n|   |   |\n| B |   |\n+---+---+')
 	})
 
-	it('expands column and row spans without duplicating their content', () => {
+	it('represents column and row spans without duplicating their content', () => {
 		expect(htmlToMarkdown('<table><thead><tr><th colspan="2">Range</th></tr></thead><tbody><tr><td rowspan="2">Place</td><td>A</td></tr><tr><td>B</td></tr></tbody></table>'))
-			.toBe('| Range |  |\n| --- | --- |\n| Place | A |\n|  | B |')
+			.toBe('+-----------+\n| Range     |\n+=======+===+\n| Place | A |\n|       +---+\n|       | B |\n+-------+---+')
 	})
 
 	it('keeps empty spanned cells and limits rowspan zero to its row group', () => {
 		expect(htmlToMarkdown('<table><thead><tr><th rowspan="0">A</th><th>B</th></tr><tr><th>C</th></tr></thead><tbody><tr><td colspan="2"></td></tr></tbody></table>'))
-			.toBe('| A | B |\n|  | C |\n| --- | --- |\n|  |  |')
+			.toBe('+---+---+\n| A | B |\n|   +---+\n|   | C |\n+===+===+\n|       |\n+-------+')
 	})
 
 	it('pads uneven rows to keep later cells in the output', () => {
@@ -53,8 +53,23 @@ describe('Pipe tables', () => {
 			.toBe('| A |  |\n| B | C |')
 	})
 
-	it('flattens a nested table inside its cell rather than introducing outer rows', () => {
+	it('preserves a nested table as block cell Markdown', () => {
 		expect(htmlToMarkdown('<table><tr><td>outer<table><tr><td>inner</td></tr></table></td><td>next</td></tr></table>'))
-			.toBe('| outer  \\| inner \\| | next |')
+			.toBe('+-----------+------+\n| outer     | next |\n|           |      |\n| | inner | |      |\n+-----------+------+')
+	})
+
+	it('uses grid syntax for a single block cell and explicit line breaks', () => {
+		expect(htmlToMarkdown('<table><tr><td><p>A</p></td></tr></table>')).toBe('+---+\n| A |\n+---+')
+		expect(htmlToMarkdown('<table><tr><td>A<br>B</td></tr></table>')).toBe('+---+\n| A |\n| B |\n+---+')
+	})
+
+	it('pads grid borders by display width around wide and combining characters', () => {
+		expect(htmlToMarkdown('<table><tr><td><p>漢</p></td><td>e\u0301</td></tr></table>'))
+			.toBe('+----+---+\n| 漢 | e\u0301 |\n+----+---+')
+	})
+
+	it('preserves an empty spanning cell through the blank-node path', () => {
+		expect(htmlToMarkdown('<table><tr><td colspan="2"></td></tr><tr><td></td><td></td></tr></table>'))
+			.toBe('+---+---+\n|       |\n+---+---+\n|   |   |\n+---+---+')
 	})
 })
