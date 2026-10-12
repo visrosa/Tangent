@@ -59,7 +59,7 @@ describe('Table parsing', () => {
 
 	it('leaves cell formatting literal and code blocks unaffected', () => {
 		const doc = markdownToTextDocument('| **a** |\n```\n| code |\n```')
-		expect(doc.lines[0].content.ops).toEqual([{ insert: '| **a** |', attributes: {} }])
+		expect(doc.lines[0].content.ops).toEqual([{ insert: '| **a** |', attributes: { hidden: true, line_format: 'table' } }])
 		expect(doc.lines[2].attributes.table).toBeUndefined()
 		expect(doc.lines[2].attributes.code).toBeDefined()
 	})

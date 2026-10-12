@@ -7,6 +7,7 @@ import type { TagSectionData } from './tag'
 import type { CodeData } from './code'
 import type { MathData } from './math'
 import type { FuriganaData } from './furigana'
+import type { TableData } from './table'
 import { hiddenGroupEmbedFormat } from './hiddenGroupEmbed'
 import { getHiddenGroupAttributes } from './inline'
 import { hasCollapsedChildren, isCollapsed } from './sections'
@@ -278,6 +279,52 @@ const noteTypeset:TypesetTypes = {
 				}
 
 				return h('blockquote', { className, style }, children)
+			}
+		},
+		{
+			name: 'table',
+			selector: 'figure.table-block-container div.tableLine',
+			defaultFollows: true,
+			fromDom(node: HTMLElement) {
+				const figure = node.closest('figure.table-block-container')
+				const source = Array.from(figure.querySelectorAll('div.tableLine')).map(line => line.textContent).join('\n')
+				const model = JSON.parse(figure.querySelector('t-table-preview')?.getAttribute('model') ?? 'null')
+				const attributes: AttributeMap = {
+					table: { id: Number(node.dataset.tableId), source, model },
+					hidden: true
+				}
+				extractCoreLineProperties(node, attributes)
+				return attributes
+			},
+			shouldCombine: (prev, next) => prev.table.id === next.table.id,
+			renderMultiple: (lineData, editor, forHTML) => {
+				const table = lineData[0][0].table as TableData
+				if (forHTML) return h('pre', { className: 'table-source' }, h('code', null, table.source))
+				const revealed = lineData.some(([attributes]) => attributes.revealed)
+				const collapsed = lineData.some(([attributes]) => isCollapsed(attributes.collapsed))
+				const physicalLines = table.source.split('\n')
+				const sourceLines = lineData.map(([attributes, children, id], index) => {
+					const props = getCoreLineProperties(attributes, 'tableLine')
+					props.key = id
+					props['data-table-id'] = table.id
+					// Preformatted source needs no inline renderer's space-to-NBSP substitution.
+					return h('div', props, physicalLines[index])
+				})
+				return h('figure', {
+					className: 'table-block-container output-container' + (revealed ? ' revealed' : '')
+				}, [
+					h('pre', {
+						className: 'table-source hidden' + (revealed ? ' revealed' : ''),
+						spellcheck: false
+					}, h('code', null, sourceLines)),
+					h('t-table-preview', {
+						className: 'output',
+						model: JSON.stringify(table.model),
+						'data-table-id': table.id,
+						contentEditable: 'false',
+						style: collapsed && !revealed ? 'display: none;' : ''
+					})
+				])
 			}
 		},
 		{

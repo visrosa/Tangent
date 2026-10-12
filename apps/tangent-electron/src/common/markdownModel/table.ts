@@ -109,8 +109,9 @@ function parseTableRow(char: string, parser: NoteParser, context: TableParsingCo
 	const rawContent = feed.getLineText(parser.lineStart)
 	context.rows.push(rawContent)
 	parser.lineData.table = context.data
+	parser.lineData.hidden = true
 	feed.getLineText(feed.index, true)
-	parser.commitSpan(null, 0)
+	parser.commitSpan({ hidden: true, line_format: 'table' }, 0)
 	// Leave the feed on the last character so the outer loop commits the newline.
 	feed.next(-1)
 	return true
