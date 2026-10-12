@@ -26,12 +26,36 @@ function cleanPlaceholders(text: string) {
 }
 
 let turndown = null
+
+function tableRowToMarkdown(node: HTMLElement): string {
+	const cells = Array.from(node.children).filter(cell => cell.matches('th, td'))
+	const content = cells.map(cell => getTurndown().turndown(cell.innerHTML)
+		.replace(/\r?\n/g, ' ')
+		.replace(/(\\*)\|/g, (match, backslashes) => backslashes + (backslashes.length % 2 === 0 ? '\\' : '') + '|')
+		.trim())
+	let row = '| ' + content.join(' | ') + ' |\n'
+	if (node.parentElement?.nodeName === 'THEAD' && !node.nextElementSibling) {
+		row += '| ' + cells.map(() => '---').join(' | ') + ' |\n'
+	}
+	return row
+}
+
 function getTurndown() {
 	if (turndown === null) {
 		turndown = new TurndownService({
 			headingStyle: 'atx',
 			hr: '---',
-			codeBlockStyle: 'fenced'
+			codeBlockStyle: 'fenced',
+			blankReplacement: function (content: string, node: HTMLElement & { isBlock: boolean }) {
+				// Blank-node handling precedes rules, including rows of empty cells.
+				if (node.nodeName === 'TR') return tableRowToMarkdown(node)
+				if (node.nodeName === 'TABLE') {
+					const rows = Array.from(node.querySelectorAll('tr')).map(tableRowToMarkdown).join('')
+					return '\n\n' + rows + '\n\n'
+				}
+				if (node.nodeName === 'THEAD' || node.nodeName === 'TBODY' || node.nodeName === 'TFOOT') return content
+				return node.isBlock ? '\n\n' : ''
+			}
 		})
 
 		// Copy/pasted so that headers don't have trailing blank lines
@@ -179,35 +203,30 @@ function getTurndown() {
 			}
 		})
 
-		/**
-		 * The table elements are brought in as tab-delineated rows.
-		 * If Tangent ever supports something like the GitHub table syntax,
-		 * that would be the time to convert this over.
-		 */
 		turndown.addRule('table', {
 			filter: 'table',
 			replacement: function (content: string, node: HTMLElement, options) {
-				return content + '\n'
+				return '\n\n' + content.trim() + '\n\n'
 			}
 		})
 
 		turndown.addRule('table-row', {
 			filter: 'tr',
 			replacement: function (content: string, node: HTMLElement, options) {
-				if (!content.trim()) {
-					return '<br>\n'
-				}
-				return content + '\n'
+				return tableRowToMarkdown(node)
+			}
+		})
+
+		turndown.addRule('table-section', {
+			filter: ['thead', 'tbody', 'tfoot'],
+			replacement: function (content: string) {
+				return content
 			}
 		})
 
 		turndown.addRule('table-header', {
 			filter: 'th',
 			replacement: function (content: string, node: HTMLElement, options) {
-				content = options.strongDelimiter + content + options.strongDelimiter
-				if (node.previousElementSibling) {
-					return '\t' + content
-				}
 				return content
 			}
 		})
@@ -215,9 +234,6 @@ function getTurndown() {
 		turndown.addRule('table-cell', {
 			filter: 'td',
 			replacement: function (content: string, node: HTMLElement, options) {
-				if (node.previousElementSibling) {
-					return '\t' + content
-				}
 				return content
 			}
 		})
