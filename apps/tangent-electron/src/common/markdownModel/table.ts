@@ -2,15 +2,19 @@ import type NoteParser from './NoteParser'
 import DocumentFeeder from './DocumentFeeder'
 import { lineToText } from 'common/typewriterUtils'
 import { type ParsingContext, ParsingContextType } from './parsingContext'
+import type { TableModel, TableRow } from './tableModel'
+
+export type { TableModel, TableRow, TableCell, TableAlignment } from './tableModel'
 
 export type TableData = {
 	id: number
-	rowType: 'data' | 'separator'
-	rawContent: string
+	source: string
+	model: TableModel
 }
 
 export type TableParsingContext = ParsingContext & {
-	id: number
+	data: TableData
+	rows: string[]
 }
 
 export function matchTableRow(line: string): string[] | null {
@@ -46,14 +50,47 @@ export function parseColumnAlignment(cells: string[]): ('left' | 'center' | 'rig
 		: cell.endsWith(':') ? 'right' : null)
 }
 
+export function parsePipeTable(source: string): TableModel | null {
+	const rows = source.split('\n').map(matchTableRow)
+	if (!rows.length || rows.some(row => row === null)) return null
+	const separator = rows.findIndex(isSeparatorRow)
+	const width = rows[0].length
+	const alignment = separator === -1 ? [] : parseColumnAlignment(rows[separator])
+	const toRow = (cells: string[]): TableRow => ({
+		cells: Array.from({ length: width }, (_, column) => ({
+			// Pipe escapes belong to the table syntax, including inside code spans.
+			markdown: (cells[column] ?? '').replace(/(\\+)\|/g, (match, slashes) =>
+				(slashes.length % 2 ? slashes.slice(1) : slashes) + '|'),
+			contentType: 'inline',
+			rowSpan: 1,
+			columnSpan: 1
+		}))
+	})
+	return {
+		columns: Array.from({ length: width }, (_, column) => ({ alignment: alignment[column] ?? null })),
+		head: separator === -1 ? [] : rows.slice(0, separator).map(toRow),
+		body: rows.slice(separator + 1).map(toRow),
+		foot: []
+	}
+}
+
 export function parseTableBlock(char: string, parser: NoteParser): boolean {
 	if (char !== '|' || !parser.isStartOfContent) return false
 	const { feed, builder } = parser
 	const context: TableParsingContext = {
 		type: ParsingContextType.Block,
 		indent: parser.getCurrentIndent().indent,
-		id: builder.lines.length + (feed instanceof DocumentFeeder ? feed.startLine : 0),
-		programs: [parseTableRow]
+		data: {
+			id: builder.lines.length + (feed instanceof DocumentFeeder ? feed.startLine : 0),
+			source: '',
+			model: null
+		},
+		rows: [],
+		programs: [parseTableRow],
+		exit: (lastIndex, context: TableParsingContext) => {
+			context.data.source = context.rows.join('\n')
+			context.data.model = parsePipeTable(context.data.source)
+		}
 	}
 	if (feed instanceof DocumentFeeder) {
 		feed.injectAdjacentLinesWhile(line => matchTableRow(lineToText(line)) !== null)
@@ -70,12 +107,8 @@ function parseTableRow(char: string, parser: NoteParser, context: TableParsingCo
 		return parser.contexts.at(-1).programs.some(program => program(char, parser, parser.contexts.at(-1)))
 	}
 	const rawContent = feed.getLineText(parser.lineStart)
-	const cells = matchTableRow(rawContent)
-	parser.lineData.table = {
-		id: context.id,
-		rowType: isSeparatorRow(cells) ? 'separator' : 'data',
-		rawContent
-	} satisfies TableData
+	context.rows.push(rawContent)
+	parser.lineData.table = context.data
 	feed.getLineText(feed.index, true)
 	parser.commitSpan(null, 0)
 	// Leave the feed on the last character so the outer loop commits the newline.

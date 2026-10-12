@@ -13,8 +13,9 @@ describe('HTML table paste and reopen', () => {
 		const saved = typewriterToText(pasted)
 		const reopened = markdownToTextDocument(saved)
 		expect(typewriterToText(reopened)).toBe(markdown)
-		expect(reopened.lines.map(line => line.attributes.table.rowType)).toEqual(['data', 'separator', 'data'])
-		expect(matchTableRow(reopened.lines[2].attributes.table.rawContent)).toEqual(['a\\|b', ''])
+		expect(reopened.lines[0].attributes.table.model.head).toHaveLength(1)
+		expect(reopened.lines[0].attributes.table.model.body[0].cells.map(cell => cell.markdown)).toEqual(['a|b', ''])
+		expect(matchTableRow(reopened.lines[2].attributes.table.source.split('\n')[2])).toEqual(['a\\|b', ''])
 	})
 
 	it('preserves a headerless spreadsheet table and literal inline formatting', () => {
@@ -22,6 +23,6 @@ describe('HTML table paste and reopen', () => {
 		expect(markdown).toBe('| **A** | B |\n|  |  |')
 		const doc = markdownToTextDocument(typewriterToText(markdownToTextDocument(markdown)))
 		expect(typewriterToText(doc)).toBe(markdown)
-		expect(doc.lines.every(line => line.attributes.table.rowType === 'data')).toBe(true)
+		expect(doc.lines[0].attributes.table.model.head).toHaveLength(0)
 	})
 })

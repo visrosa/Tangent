@@ -64,7 +64,8 @@ describe('Document-based parsing', () => {
 		const [start] = doc.getLineRange(doc.lines[1])
 		const edited = doc.apply(doc.change.insert(start, '|'))
 		const result = parser.parseMarkdown(edited, { documentStartLine: 1, documentEndLine: 1 })
-		expect(result.lines[0].attributes.table).toEqual({ id: 1, rowType: 'data', rawContent: '|' })
+		expect(result.lines[0].attributes.table).toMatchObject({ id: 1, source: '|' })
+		expect(result.lines[0].attributes.table.model.body).toHaveLength(1)
 	})
 
 	it('continues a table when a row is inserted', () => {
@@ -80,7 +81,8 @@ describe('Document-based parsing', () => {
 		const range = doc.getLineRange(doc.lines[1])
 		const edited = doc.apply(doc.change.delete(range))
 		const result = parser.parseMarkdown(edited, { documentStartLine: 1, documentEndLine: 1 })
-		expect(result.lines.map(line => line.attributes.table.rowType)).toEqual(['data', 'data'])
+		expect(result.lines[0].attributes.table.model.head).toHaveLength(0)
+		expect(result.lines[0].attributes.table.model.body).toHaveLength(2)
 		expect(typewriterToText(new TextDocument(result.lines))).toBe('| A |\n| a |')
 	})
 

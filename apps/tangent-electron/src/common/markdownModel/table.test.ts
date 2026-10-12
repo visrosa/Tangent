@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { TextDocument } from '@typewriter/document'
 import { typewriterToText } from 'common/typewriterUtils'
 import { markdownToTextDocument, parseMarkdown } from './parser'
-import { isSeparatorRow, matchTableRow, parseColumnAlignment } from './table'
+import { isSeparatorRow, matchTableRow, parseColumnAlignment, parsePipeTable, type TableModel } from './table'
 
 describe('Table rows', () => {
 	it.each([
@@ -45,7 +45,7 @@ describe('Table parsing', () => {
 		expect(typewriterToText(doc)).toBe(text)
 		for (const line of doc.lines) {
 			const raw = typewriterToText(new TextDocument([line]))
-			if (matchTableRow(raw)) expect(line.attributes.table.rawContent).toBe(raw)
+			if (matchTableRow(raw)) expect(line.attributes.table.source.split('\n')).toContain(raw)
 			else expect(line.attributes.table).toBeUndefined()
 		}
 	})
@@ -53,7 +53,7 @@ describe('Table parsing', () => {
 	it('groups adjacent rows and separates distinct tables', () => {
 		const doc = markdownToTextDocument('| A |\n| --- |\n| a |\n\n| B |')
 		expect(doc.lines.slice(0, 3).map(line => line.attributes.table.id)).toEqual([0, 0, 0])
-		expect(doc.lines[1].attributes.table.rowType).toBe('separator')
+		expect(doc.lines[1].attributes.table.model.head).toHaveLength(1)
 		expect(doc.lines[4].attributes.table.id).toBe(4)
 	})
 
@@ -69,5 +69,38 @@ describe('Table parsing', () => {
 		const result = parseMarkdown(doc, { documentStartLine: 2, documentEndLine: 2 })
 		expect(result.startLineIndex).toBe(1)
 		expect(result.lines.map(line => line.attributes.table.id)).toEqual([1, 1, 1])
+	})
+})
+
+describe('Table model', () => {
+	it('normalizes pipe cells independently of source rows', () => {
+		const model = parsePipeTable('| A | B |\n| :--- | ---: |\n| `a\\|b` |\n| x | y | excess |')
+		expect(model.columns).toEqual([{ alignment: 'left' }, { alignment: 'right' }])
+		expect(model.head[0].cells.map(cell => cell.markdown)).toEqual(['A', 'B'])
+		expect(model.body.map(row => row.cells.map(cell => cell.markdown))).toEqual([['`a|b`', ''], ['x', 'y']])
+		expect(model.body[0].cells[0]).toMatchObject({ contentType: 'inline', rowSpan: 1, columnSpan: 1 })
+		expect(parsePipeTable('paragraph')).toBeNull()
+	})
+
+	it('accepts multiline block cells, spans, several header rows, foot and caption', () => {
+		const cell = (markdown: string, rowSpan = 1, columnSpan = 1) => ({
+			markdown, contentType: 'block' as const, rowSpan, columnSpan
+		})
+		const model: TableModel = {
+			columns: [{ alignment: 'left' }, { alignment: 'center' }, { alignment: 'right' }],
+			head: [
+				{ cells: [cell('Location', 2), cell('Temperature\n\nin °C', 1, 2)] },
+				{ cells: [cell('min'), cell('max')] }
+			],
+			body: [
+				{ cells: [cell('Earth\n\n- inhabited\n- blue', 2), cell('cold'), cell('hot')] },
+				{ cells: [cell('```\ncode\n```', 1, 2)] }
+			],
+			foot: [{ cells: [cell('Summary', 1, 3)] }],
+			caption: { markdown: 'A **grid-shaped** model', contentType: 'inline' }
+		}
+		expect(JSON.parse(JSON.stringify(model))).toEqual(model)
+		expect(model.head).toHaveLength(2)
+		expect(model.body[0].cells[0].markdown.split('\n')).toHaveLength(4)
 	})
 })
