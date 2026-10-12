@@ -24,7 +24,7 @@ import TangentCheckbox from './t-checkbox'
 import TangentCodePreview from './t-code-preview' // No deletey
 import TangentMath from './t-math' // No deletey
 import TangentFurigana from './t-furigana' // No deletey
-import TangentTablePreview from './t-table-preview'
+import './t-table-preview'
 import { ListDefinition, listMatcher } from 'common/markdownModel/list'
 import type { Workspace } from 'app/model'
 import { getEditInfo, getLineRangeWhile, getRangeWhile, lineToText } from 'common/typewriterUtils'
@@ -62,9 +62,6 @@ if (!TangentCodePreview) {
 }
 if (!TangentFurigana) {
 	console.error('I don\'t have furigana!')
-}
-if (!TangentTablePreview) {
-	console.error('I don\'t have table preview!')
 }
 
 export function revealContentAroundRange(doc: TextDocument, range: EditorRange, change: TextChange) {

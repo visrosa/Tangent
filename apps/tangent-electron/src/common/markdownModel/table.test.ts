@@ -3,6 +3,7 @@ import { TextDocument } from '@typewriter/document'
 import { typewriterToText } from 'common/typewriterUtils'
 import { markdownToTextDocument, parseMarkdown } from './parser'
 import { isSeparatorRow, matchTableRow, parseColumnAlignment, parsePipeTable, type TableModel } from './table'
+import { StructureType } from 'common/indexing/indexTypes'
 
 describe('Table rows', () => {
 	it.each([
@@ -69,6 +70,15 @@ describe('Table parsing', () => {
 		const result = parseMarkdown(doc, { documentStartLine: 2, documentEndLine: 2 })
 		expect(result.startLineIndex).toBe(1)
 		expect(result.lines.map(line => line.attributes.table.id)).toEqual([1, 1, 1])
+	})
+
+	it('indexes links and tags in cells with offsets into their original source', () => {
+		const source = '  | [[note\\|alias]] | [site](./other.md) | #tag |'
+		const result = parseMarkdown(source, { filepath: '/workspace/source.md', detailedLinks: true })
+		const links = result.structure.filter(entry => entry.type === StructureType.Link)
+		expect(links.map(link => source.slice(link.start, link.end))).toEqual(['[[note\\|alias]]', '[site](./other.md)'])
+		expect(links.map(link => link.href)).toEqual(['note', './other.md'])
+		expect(result.structure.some(entry => entry.type === StructureType.Tag && entry.href === 'tag')).toBe(true)
 	})
 })
 

@@ -289,8 +289,9 @@ const noteTypeset:TypesetTypes = {
 				const figure = node.closest('figure.table-block-container')
 				const source = Array.from(figure.querySelectorAll('div.tableLine')).map(line => line.textContent).join('\n')
 				const model = JSON.parse(figure.querySelector('t-table-preview')?.getAttribute('model') ?? 'null')
+				const filepath = figure.querySelector('t-table-preview')?.getAttribute('filepath') ?? undefined
 				const attributes: AttributeMap = {
-					table: { id: Number(node.dataset.tableId), source, model },
+					table: { id: Number(node.dataset.tableId), source, model, filepath },
 					hidden: true
 				}
 				extractCoreLineProperties(node, attributes)
@@ -320,6 +321,7 @@ const noteTypeset:TypesetTypes = {
 					h('t-table-preview', {
 						className: 'output',
 						model: JSON.stringify(table.model),
+						filepath: table.filepath,
 						'data-table-id': table.id,
 						contentEditable: 'false',
 						style: collapsed && !revealed ? 'display: none;' : ''

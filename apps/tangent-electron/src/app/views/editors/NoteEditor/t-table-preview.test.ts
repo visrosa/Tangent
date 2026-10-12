@@ -95,6 +95,13 @@ describe('Table preview', () => {
 		expect((event as any).tLink).toBe(link)
 		expect(eventHasSelectionRequest(event)).toBeUndefined()
 	})
+
+	it('retains the containing note as the origin of relative links', () => {
+		const element = preview(parsePipeTable('| [relative](./other.md) | [[note]] |'))
+		element.setAttribute('filepath', '/workspace/folder/source.md')
+		const links = Array.from(element.shadowRoot.querySelectorAll('t-link'))
+		expect(links.map(link => link.getAttribute('from'))).toEqual(['/workspace/folder/source.md', '/workspace/folder/source.md'])
+	})
 })
 
 describe('Table source and editor offsets', () => {
@@ -159,5 +166,23 @@ describe('Table source and editor offsets', () => {
 		const link = root.querySelector('t-table-preview').shadowRoot.querySelector('t-link')
 		link.dispatchEvent(new MouseEvent('click', { bubbles: true, composed: true, cancelable: true, ctrlKey: true }))
 		expect(href).toBe('note')
+	})
+
+	it('clicks a visible preview to reveal and select its own source block', () => {
+		const editor = new MarkdownEditor(null, { doc: markdownToTextDocument('before\n| A |\n| --- |\n| a |\nafter') })
+		const article = document.createElement('article')
+		article.className = 'note'
+		const root = document.createElement('div')
+		article.appendChild(root)
+		document.body.appendChild(article)
+		editor.setRoot(root)
+		cleanups.push(() => { editor.destroy(); article.remove() })
+		const cell = root.querySelector('t-table-preview').shadowRoot.querySelector('td')
+		const bounds = cell.getBoundingClientRect()
+		const options = { bubbles: true, composed: true, cancelable: true, clientX: bounds.x + bounds.width / 2, clientY: bounds.y + bounds.height / 2 }
+		cell.dispatchEvent(new MouseEvent('click', options))
+		expect(editor.doc.getLineAt(editor.doc.selection[0]).attributes.table.id).toBe(1)
+		cell.dispatchEvent(new MouseEvent('dblclick', options))
+		expect(editor.doc.getText(editor.doc.selection)).toContain('| --- |')
 	})
 })
