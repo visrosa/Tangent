@@ -10,7 +10,12 @@ function characterGrid(line: string, offset: number): GridCharacter[] {
 	let pending = ''
 	let pendingOffset = offset
 	for (const char of line) {
-		if (/^[\p{Mark}\p{Cf}]$/u.test(char)) {
+		if (char === '\t') {
+			const width = 4 - result.length % 4
+			for (let index = 0; index < width; index++) result.push({ text: index === 0 ? pending + ' ' : ' ', offset })
+			pending = ''
+		}
+		else if (/^[\p{Mark}\p{Cf}]$/u.test(char)) {
 			if (!pending) pendingOffset = offset
 			pending += char
 		}

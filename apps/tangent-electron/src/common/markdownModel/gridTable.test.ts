@@ -73,6 +73,12 @@ describe('Grid tables', () => {
 		expect(parseGridTable(source).body[0].cells.map(cell => cell.markdown)).toEqual(['漢', 'e\u0301'])
 	})
 
+	it('expands source tabs at Pandoc display tab stops without changing source text', () => {
+		const source = '+-------+-----+\n|\ta\t| b   |\n+-------+-----+'
+		expect(parseGridTable(source).body[0].cells.map(cell => cell.markdown)).toEqual(['  a', 'b'])
+		expect(typewriterToText(markdownToTextDocument(source))).toBe(source)
+	})
+
 	it('follows Pandoc when an internal pipe shifts or the last border is short', () => {
 		expect(parseGridTable('+-----+-----+\n| a    | b  |\n+-----+-----+').body[0].cells[0]).toMatchObject({ markdown: 'a    | b', columnSpan: 2 })
 		expect(parseGridTable('+-----+-----+\n| a   | b  |\n+-----+-----+').body[0].cells[1].markdown).toBe('b  |')
