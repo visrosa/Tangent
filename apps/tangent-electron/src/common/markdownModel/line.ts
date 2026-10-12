@@ -30,7 +30,8 @@ export function lineIsMultiLineFormat(line: Line) {
 	if ('code' in line.attributes ||
 		'front_matter' in line.attributes ||
 		'math' in line.attributes ||
-		'html' in line.attributes
+		'html' in line.attributes ||
+		'table' in line.attributes
 	) {
 		return true
 	}

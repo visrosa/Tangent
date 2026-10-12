@@ -59,6 +59,37 @@ test('Ending in italics', () => {
 })
 
 describe('Document-based parsing', () => {
+	it('starts a table when a pipe is inserted on a blank line', () => {
+		const doc = ensureRoundTrip('before\n\nafter')
+		const [start] = doc.getLineRange(doc.lines[1])
+		const edited = doc.apply(doc.change.insert(start, '|'))
+		const result = parser.parseMarkdown(edited, { documentStartLine: 1, documentEndLine: 1 })
+		expect(result.lines[0].attributes.table).toEqual({ id: 1, rowType: 'data', rawContent: '|' })
+	})
+
+	it('continues a table when a row is inserted', () => {
+		const doc = ensureRoundTrip('| A |\n| --- |')
+		const edited = doc.apply(doc.change.insert(doc.length - 1, '\n| a |'))
+		const result = parser.parseMarkdown(edited, { documentStartLine: 2, documentEndLine: 2 })
+		expect(result.lines.map(line => line.attributes.table.id)).toEqual([0, 0, 0])
+		expect(typewriterToText(new TextDocument(result.lines))).toBe('| A |\n| --- |\n| a |')
+	})
+
+	it('preserves data rows when the separator is deleted', () => {
+		const doc = ensureRoundTrip('| A |\n| --- |\n| a |')
+		const range = doc.getLineRange(doc.lines[1])
+		const edited = doc.apply(doc.change.delete(range))
+		const result = parser.parseMarkdown(edited, { documentStartLine: 1, documentEndLine: 1 })
+		expect(result.lines.map(line => line.attributes.table.rowType)).toEqual(['data', 'data'])
+		expect(typewriterToText(new TextDocument(result.lines))).toBe('| A |\n| a |')
+	})
+
+	it('joins a newly edited pipe row to following table rows', () => {
+		const doc = ensureRoundTrip('\n| B |')
+		const edited = doc.apply(doc.change.insert(0, '| A |'))
+		const result = parser.parseMarkdown(edited, { documentStartLine: 0, documentEndLine: 0 })
+		expect(result.lines.map(line => line.attributes.table.id)).toEqual([0, 0])
+	})
 
 	test('Inserting code characters on blank line', () => {
 		// This was created for an infinite loop bug

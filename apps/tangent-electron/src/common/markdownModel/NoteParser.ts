@@ -7,6 +7,7 @@ import { parseBackslashEscape, parseComment, parseEmojiHighlight, parseEmphasis,
 import { parseHeader } from './header'
 import { type IndentDefinition, parseBlockquote, parseHorizontalRule } from './line'
 import { parseListItem } from './list'
+import { parseTableBlock } from './table'
 import { parseInlineMath, parseMathBlock } from './math'
 import { parseInlineFurigana } from './furigana'
 import { parseLink, parseRawLink } from './links'
@@ -22,6 +23,7 @@ const blockPrograms: ParsingProgram[] = [
 	parseHorizontalRule,
 	parseBlockquote,
 	parseListItem,
+	parseTableBlock,
 	parseCodeBlock,
 	parseMathBlock
 ]
