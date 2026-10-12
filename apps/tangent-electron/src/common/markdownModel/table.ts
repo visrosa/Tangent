@@ -4,8 +4,10 @@ import DocumentFeeder from './DocumentFeeder'
 import { lineToText } from 'common/typewriterUtils'
 import { type ParsingContext, ParsingContextType } from './parsingContext'
 import type { TableModel, TableRow } from './tableModel'
+import { readGridTable } from './gridTable'
 
 export type { TableModel, TableRow, TableCell, TableAlignment } from './tableModel'
+export { parseGridTable } from './gridTable'
 
 export type TableData = {
 	id: number
@@ -109,6 +111,51 @@ export function parsePipeTable(source: string): TableModel | null {
 }
 
 export function parseTableBlock(char: string, parser: NoteParser): boolean {
+	if (parser.isStartOfContent && (char === '+' || char === ':' || char === 'T')) {
+		const { feed } = parser
+		const firstLine = feed.getLineText(parser.lineStart)
+		if (!/^\s*(?:\+(?::?-+:?\+)+\s*$|(?::|Table:)\s+\S)/.test(firstLine)) return false
+		if (feed instanceof DocumentFeeder) {
+			// A newly inserted opening border may precede unformatted grid source.
+			let index = feed.endLine
+			const captionBefore = /^\s*(?::|Table:)\s+/.test(firstLine)
+			feed.injectAdjacentLinesWhile(line => {
+				index++
+				const text = lineToText(line)
+				if (/^\s*[+|]|^\s*(?::|Table:)\s+/.test(text)) return true
+				if (text.trim()) return false
+				let next = index + 1
+				while (next < feed.doc.lines.length && !lineToText(feed.doc.lines[next]).trim()) next++
+				const after = feed.doc.lines[next] && lineToText(feed.doc.lines[next])
+				return !!after && (/^\s*(?::|Table:)\s+/.test(after) || (captionBefore && /^\s*\+/.test(after) && !/(?:^|\n)\s*\+/.test(feed.text)))
+			})
+		}
+		const sourceStart = parser.lineStart
+		const grid = readGridTable(feed.text.slice(sourceStart))
+		if (grid) {
+			const source = feed.text.slice(sourceStart).split('\n').slice(0, grid.lineCount).join('\n')
+			const data: TableData = {
+				id: parser.builder.lines.length + (feed instanceof DocumentFeeder ? feed.startLine : 0),
+				source, model: grid.model, filepath: parser.filepath
+			}
+			for (const fragment of grid.fragments) {
+				const parsed = new NoteParser(new CharacterFeeder(fragment.markdown), { ...parser.options, inlineOnly: fragment.contentType === 'inline', asFormatting: false })
+				parsed.parse()
+				for (const structure of parsed.structure) {
+					parser.pushStructure({ ...structure, start: sourceStart + fragment.offsets[structure.start], end: sourceStart + fragment.offsets[structure.end] })
+				}
+			}
+			for (let index = 0; index < grid.lineCount; index++) {
+				parser.lineData.table = data
+				parser.lineData.hidden = true
+				feed.getLineText(feed.index, true)
+				parser.commitSpan({ hidden: true, line_format: 'table' }, 0)
+				if (index < grid.lineCount - 1) parser.moveNext()
+			}
+			feed.next(-1)
+			return true
+		}
+	}
 	if (char !== '|' || !parser.isStartOfContent) return false
 	const { feed, builder } = parser
 	const context: TableParsingContext = {
