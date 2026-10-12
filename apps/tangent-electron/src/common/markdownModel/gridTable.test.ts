@@ -42,6 +42,14 @@ describe('Grid tables', () => {
 		expect(model.body).toHaveLength(1)
 	})
 
+	it('accepts a closed empty row and excludes four-space-indented grids', () => {
+		expect(parseGridTable('+---+\n+---+').body[0].cells[0].markdown).toBe('')
+		const source = basic.split('\n').map(line => '    ' + line).join('\n')
+		expect(parseGridTable(source)).toBeNull()
+		expect(markdownToTextDocument(source).lines[0].attributes.table).toBeUndefined()
+		expect(typewriterToText(markdownToTextDocument(source))).toBe(source)
+	})
+
 	it('discovers column boundaries and row spans below a combined heading', () => {
 		const model = parseGridTable('+-----+-----------+\n| H   | Group     |\n|     +-----+-----+\n|     | min | max |\n+=====+=====+=====+\n| a   | b   | c   |\n+-----+-----+-----+')
 		expect(model.columns).toHaveLength(3)

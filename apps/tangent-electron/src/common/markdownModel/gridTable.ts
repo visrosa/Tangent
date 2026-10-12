@@ -92,6 +92,7 @@ export function readGridTable(source: string): { model: TableModel, fragments: T
 	const top = sourceLines[first]?.trimEnd()
 	if (!top) return null
 	const indent = top.length - top.trimStart().length
+	if (indent > 3 || top.slice(0, indent).includes('\t')) return null
 	const firstBorder = border(top.slice(indent), '-')
 	if (!firstBorder) return null
 	const raw: string[] = []
@@ -106,7 +107,7 @@ export function readGridTable(source: string): { model: TableModel, fragments: T
 		offset += line.length + 1
 		end++
 	}
-	if (grid.length < 3) return null
+	if (grid.length < 2) return null
 	const width = Math.max(...grid.map(line => line.length))
 	const separators = raw.flatMap((line, index) => {
 		const match = border(line, '=')
