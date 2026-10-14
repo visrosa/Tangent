@@ -10,6 +10,7 @@ import type { FuriganaData } from './furigana'
 import { hiddenGroupEmbedFormat } from './hiddenGroupEmbed'
 import { getHiddenGroupAttributes } from './inline'
 import { hasCollapsedChildren, isCollapsed } from './sections'
+import { keyboardFormat, withKeyboardHTMLExport } from './keyboardFormat'
 import { getMediaCustomizationsFromText, type LinkAttribute } from './links'
 
 const defaultOptions = {}
@@ -787,9 +788,12 @@ const noteTypeset:TypesetTypes = {
 		},
 
 		hideableFormat('link_internal'),
+		keyboardFormat,
 		hideableFormat('tag_internal')
 	]
 }
+
+noteTypeset.lines = noteTypeset.lines.map(line => typeof line === 'string' ? line : withKeyboardHTMLExport(line))
 
 // Initialize with the attributes not directly attached to types
 let formatClearSet = {
