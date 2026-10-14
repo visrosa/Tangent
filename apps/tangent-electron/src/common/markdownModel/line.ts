@@ -3,6 +3,7 @@ import noteTypeset from './typewriterTypes'
 import { getDelimiterForGlyph, getGlyphForNumber, ListForm, matchList } from './list'
 import { indentMatcher } from './matches'
 import NoteParser from './NoteParser'
+import { matchDlValueMarker } from './dl'
 
 export interface IndentDefinition {
 	indent: string,
@@ -59,6 +60,9 @@ export function getLineFormattingPrefix(line: Line, forNextLine = false): string
 			if (!result.endsWith(' ')) {
 				result += ' '
 			}
+			if (attr.dl?.role === 'value' && matchDlValueMarker(lineString.slice(match[0].length))) {
+				result += ': '
+			}
 			return result
 		}
 	}
@@ -78,6 +82,10 @@ export function getLineFormattingPrefix(line: Line, forNextLine = false): string
 
 			// Reconstruct list start
 			return match.indent + nextGlyph + ' '
+		}
+		if (attr.dl) {
+			const indent = attr.indent?.indent ?? ''
+			return indent + (matchDlValueMarker(lineString) ? ': ' : '')
 		}
 	}
 	else {

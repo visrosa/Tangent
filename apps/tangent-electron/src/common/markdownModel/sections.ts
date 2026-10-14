@@ -20,6 +20,10 @@ export function compareSectionDepth(lineA: Line, lineB: Line): number | true {
 	if (indentA !== indentB) {
 		return indentA - indentB
 	}
+	const dlA = attrA.dl as DlLineData | undefined
+	const dlB = attrB.dl as DlLineData | undefined
+	if (dlA?.role === 'term' && dlB?.role === 'value' && dlB.termIndent === (attrA.indent?.indent ?? '')) return -1
+	if (dlB?.role === 'term' && dlA?.role === 'value' && dlA.termIndent === (attrB.indent?.indent ?? '')) return 1
 	
 	// Headers beat out everything
 	const headerA = attrA?.header

@@ -21,3 +21,12 @@
 	- Terrestrial planets ::
 		- Mercury :: The innermost planet
 		- Venus :: The second planet
+
+Earth ::
+Terra ::
+: The third planet from the Sun
+: Our home
+
+Solar System ::
+	Terrestrial planets ::
+	: Rocky planets closer to the Sun

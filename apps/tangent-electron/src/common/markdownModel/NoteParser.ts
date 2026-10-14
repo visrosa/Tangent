@@ -10,7 +10,7 @@ import { parseListItem } from './list'
 import { parseInlineMath, parseMathBlock } from './math'
 import { parseInlineFurigana } from './furigana'
 import { parseInlineGloss } from './gloss'
-import { parseDlSeparator } from './dl'
+import { parseDlBlock, parseDlSeparator } from './dl'
 import { parseLink, parseRawLink } from './links'
 import { type ParsingContext, ParsingContextType, type ParsingProgram } from './parsingContext'
 import { parseTag } from './tag'
@@ -25,7 +25,8 @@ const blockPrograms: ParsingProgram[] = [
 	parseBlockquote,
 	parseListItem,
 	parseCodeBlock,
-	parseMathBlock
+	parseMathBlock,
+	parseDlBlock
 ]
 
 const inlineObjectPrograms = [

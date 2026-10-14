@@ -30,6 +30,19 @@ Indent child terms to nest an Association List. Its first row starts beside the 
 
 Spaces or tabs can provide the indentation. Collapsing a parent summarizes its descendants; expanding restores the nested layout. If the last term in a shared group has an inline description, that description stays on its own term's row.
 
+An alternative form uses a plain term line ending in ` ::` and descriptions beginning with `: ` at the same indentation:
+
+```markdown
+Earth ::
+Terra ::
+: The third planet from the Sun
+: Our home
+```
+
+The trailing `::` identifies each term immediately; it does not depend on a later description line. A plain term must have no description after its first separator, so prose such as `name :: value` remains ordinary text. Colon descriptions need a preceding bare term with no intervening blank line or unrelated paragraph. `::` and `:::` at the start of a line are not description markers.
+
+Plain and list-marked terms can mix. A colon description may also be indented under a bare term, and plain terms can use indented list items for descriptions. Nested plain terms and their colon descriptions follow the same layout, collapse, and export rules as list-marked terms. Enter continues `: ` descriptions; pressing Enter again on an empty description exits the list.
+
 Terms use the normal note font and text color, with a subtly lighter background in dark themes. Descriptions are slightly smaller and muted. Ordinary extra spacing collapses when rendered; entering a line reveals its exact Markdown and spacing for editing. Explicit code spacing and authored nonbreaking spaces retain their meaning.
 
 Use the gutter chevron to collapse a term. Its descriptions remain as a single-line summary, clipped with an ellipsis when needed. Inline code retains its spacing without wrapping in a collapsed description. Expanding restores their layout, and moving the caret into a folded region reveals its source. Collapsing does not change the note text.

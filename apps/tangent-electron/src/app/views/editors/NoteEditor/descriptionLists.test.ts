@@ -201,6 +201,89 @@ describe('description-list HTML', () => {
 	})
 
 	test.each([
+		['plain', 'uses ::\nrequires ::\n: electron\n: npm\nplain', ['1', '2', '1', '2']],
+		['mixed', '- uses ::\nrequires ::\n: electron\n: npm\nplain', ['1', '2', '1', '2']],
+		['nested', 'System ::\n\tPlanet ::\n\t: A nested description\nplain', ['1', '1', '1']],
+		['quoted', '> uses ::\n> requires ::\n> : electron\n> : npm\nplain', ['1', '2', '1', '2']],
+	])('renders, edits and collapses %s portable forms', async (_name, source, rows) => {
+		const { editor, root } = createMarkdownEditor(source)
+		const article = mountInNote(root)
+		const lines = () => Array.from(root.querySelectorAll('.dl-line')) as HTMLElement[]
+		const owner = rows.length === 4 ? 1 : 0
+		try {
+			expect(lines().map(line => line.style.gridRow)).toEqual(rows)
+			expect(lines().map(line => (line as any).key)).toEqual(editor.doc.lines.slice(0, -1).map(line => line.id))
+			expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+			editor.collapsingSections.toggleLineCollapsed(owner)
+			await wait()
+			expect(lines()[owner].querySelector('.dl-summary')).not.toBeNull()
+			expect(lines().slice(owner + 1).every(line => getComputedStyle(line).display === 'none')).toBe(true)
+			editor.select(source.indexOf('::') + 1)
+			await wait()
+			expect(root.querySelector('.dl_sep-source.revealed')).not.toBeNull()
+			expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+			editor.select(source.length)
+			editor.collapsingSections.toggleLineCollapsed(owner)
+			await wait()
+			expect(lines().map(line => line.style.gridRow)).toEqual(rows)
+		} finally {
+			editor.destroy()
+			article.remove()
+		}
+	})
+
+	test('exports portable and list forms as equivalent semantic groups', () => {
+		const source = 'uses ::\nrequires ::\n: electron\n: npm'
+		const list = '- uses ::\n- requires ::\n\t- electron\n\t- npm'
+		expect(structure(render(source).querySelector('dl.description-list')))
+			.toEqual(structure(render(list).querySelector('dl.description-list')))
+		const editor = new Editor({ types: noteTypeset })
+		editor.setRoot(document.createElement('div'))
+		const original = markdownToTextDocument(source)
+		const restored = docFromHTML(editor, docToHTML(editor, original))
+		expect(restored.lines.map(line => line.attributes.dl))
+			.toEqual(original.lines.map(line => ({ ...line.attributes.dl, glyph: undefined })))
+		editor.destroy()
+	})
+
+	test('continues colon descriptions on Enter and clears an empty marker', async () => {
+		const { userEvent } = await import('vitest/browser')
+		const source = 'term ::\n: value'
+		const { editor, root } = createMarkdownEditor(source)
+		const article = mountInNote(root)
+		try {
+			editor.select(source.length)
+			root.focus()
+			await userEvent.keyboard('{Enter}')
+			expect(editor.getText()).toBe(source + '\n: ')
+			await userEvent.keyboard('{Enter}')
+			expect(editor.getText()).toBe(source + '\n\n')
+		} finally {
+			editor.destroy()
+			article.remove()
+		}
+	})
+
+	test('types a portable term and description without changing source', async () => {
+		const source = 'term ::\n: value\nplain'
+		const { editor, root } = createMarkdownEditor('')
+		const article = mountInNote(root)
+		try {
+			editor.select(0)
+			for (let index = 0; index < source.length; index++) {
+				editor.insert(source[index])
+				await wait()
+				expect(editor.getText()).toBe(source.slice(0, index + 1))
+			}
+			expect(editor.doc.lines.map(line => line.attributes.dl?.role)).toEqual(['term', 'value', undefined])
+			expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+		} finally {
+			editor.destroy()
+			article.remove()
+		}
+	})
+
+	test.each([
 		['more terms', '- first ::\n- second ::\n- third ::\n\t- value one\n\t- value two\n- next :: final', ['1', '2', '3', '1', '2 / span 2', '4']],
 		['more values', '- first ::\n- second ::\n\t- value one\n\t- value two\n\t- value three\n- next :: final', ['1', '2 / span 2', '1', '2', '3', '4']],
 		['nested shared terms', '- parent ::\n\t- first ::\n\t- second ::\n\t\t- value\n- next :: final', ['1 / span 2', '1', '2', '1 / span 2', '3']],

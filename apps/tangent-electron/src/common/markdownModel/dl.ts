@@ -1,10 +1,12 @@
 import type NoteParser from './NoteParser'
 import type { ListDefinition } from './list'
 import { getInlineId } from './inline'
+import DocumentFeeder from './DocumentFeeder'
+import { lineToText } from '../typewriterUtils'
 
 export type DlLineData = {
 	role: 'term' | 'value'
-	glyph: ListDefinition
+	glyph?: ListDefinition
 	hasDef?: boolean
 	rootIndent?: string
 	termIndent?: string
@@ -142,19 +144,55 @@ export function setDlTermSeparator(parser: NoteParser, feedIndex: number) {
 	termSeparatorIndices.set(parser, feedIndex)
 }
 
+export function isStartOfBlockContent(parser: NoteParser) {
+	return parser.isStartOfContent || (parser.lineData.blockquote
+		&& /^[ \t]*(> ?)+$/.test(parser.feed.text.slice(parser.lineStart, parser.feed.index)))
+}
+
+export function setDlLineData(parser: NoteParser, dl: DlLineData) {
+	// Typewriter selects the first registered line attribute. Move blockquote
+	// behind dl so the composite dl renderer can preserve both structures.
+	const blockquote = parser.lineData.blockquote
+	if (blockquote !== undefined) delete parser.lineData.blockquote
+	parser.lineData.dl = dl
+	if (blockquote !== undefined) parser.lineData.blockquote = blockquote
+}
+
+export function matchDlValueMarker(line: string) {
+	return /^[ \t]*:[ \t]/.exec(line)
+}
+
+export function injectDlChildren(parser: NoteParser) {
+	const { feed } = parser
+	if (!(feed instanceof DocumentFeeder)) return
+	const indent = parser.getCurrentIndent().indent
+	feed.injectAdjacentLinesWhile(line => {
+		const nextIndent = line.attributes.indent?.indent ?? ''
+		if ((line.attributes.blockquote ?? 0) !== (parser.lineData.blockquote ?? 0)) return false
+		const marker = matchDlValueMarker(lineToText(line).replace(/^[ \t]*(> ?)+/, ''))
+		return (nextIndent.length > indent.length && !!(line.attributes.list || line.attributes.dl || marker))
+			|| (nextIndent === indent && !!marker)
+	})
+}
+
 export function findParentDlTerm(
 	parser: NoteParser,
 	currentIndent: string,
-	requireBare = true
+	requireBare = true,
+	allowSameIndent = false
 ): ParentDlTerm | null {
 	for (let index = parser.builder.lines.length - 1; index >= 0; index--) {
 		const previous = parser.builder.lines[index]
 		if (previous.attributes.empty || previous.attributes.whitespace) return null
+		if ((previous.attributes.blockquote ?? 0) !== (parser.lineData.blockquote ?? 0)) return null
 
 		const previousIndent = previous.attributes.indent?.indent ?? ''
-		if (previousIndent.length >= currentIndent.length) continue
-
 		const dl = previous.attributes.dl as DlLineData | undefined
+		if (previousIndent.length > currentIndent.length) continue
+		if (previousIndent === currentIndent) {
+			if (!allowSameIndent || dl?.role === 'value') continue
+		}
+		else if (previousIndent.length === currentIndent.length) return null
 		if (dl?.role === 'term' && (!requireBare || dl.hasDef === false)) {
 			return {
 				rootIndent: dl.rootIndent ?? previousIndent,
@@ -165,6 +203,34 @@ export function findParentDlTerm(
 	}
 
 	return null
+}
+
+export function parseDlBlock(_char: string, parser: NoteParser): boolean {
+	if (!isStartOfBlockContent(parser)) return false
+	const { feed } = parser
+	const line = feed.getLineText()
+	const indent = parser.getCurrentIndent().indent
+	const marker = matchDlValueMarker(line)
+	if (marker) {
+		const parent = findParentDlTerm(parser, indent, true, true)
+		if (!parent) return false
+		setDlLineData(parser, { role: 'value', ...parent })
+		feed.nextByLength(marker[0].length - 1)
+		parser.commitSpan({ line_format: 'dl', hidden: true })
+		return true
+	}
+
+	const separator = findDlSeparator(line)
+	if (separator < 0 || !line.slice(0, separator).trim() || line.slice(separator + 3).trim()) return false
+	const parent = findParentDlTerm(parser, indent, false)
+	setDlLineData(parser, {
+		role: 'term', hasDef: false,
+		rootIndent: parent?.rootIndent ?? indent,
+		termIndent: parent?.termIndent
+	})
+	setDlTermSeparator(parser, feed.index + separator)
+	injectDlChildren(parser)
+	return false
 }
 
 export function parseDlSeparator(char: string, parser: NoteParser): boolean {

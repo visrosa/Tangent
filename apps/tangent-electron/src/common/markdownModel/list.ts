@@ -1,8 +1,7 @@
 import { StructureType, type TodoState } from 'common/indexing/indexTypes'
 import NoteParser from './NoteParser'
 import { escapeRegExp } from '@such-n-such/core'
-import { findParentDlTerm, matchDlSeparator, setDlTermSeparator, type DlLineData } from './dl'
-import DocumentFeeder from './DocumentFeeder'
+import { findParentDlTerm, injectDlChildren, isStartOfBlockContent, matchDlSeparator, setDlLineData, setDlTermSeparator } from './dl'
 
 // Unordered glyphs are split by visual weight because large glyphs get extra
 // vertical spacing via ListForm.UnorderedLarge / .largeList styling.
@@ -260,9 +259,7 @@ export function isLargeList(definition: ListDefinition) {
 }
 
 export function parseListItem(char: string, parser: NoteParser): boolean {
-	const followsBlockquotePrefix = parser.lineData.blockquote
-		&& /^[ \t]*(> ?)+$/.test(parser.feed.text.slice(parser.lineStart, parser.feed.index))
-	if (!parser.isStartOfContent && !followsBlockquotePrefix) return false
+	if (!isStartOfBlockContent(parser)) return false
 	const line = parser.feed.getLineText()
 	const listDetail = matchList(line)
 	if (!listDetail) return false
@@ -296,14 +293,7 @@ export function parseListItem(char: string, parser: NoteParser): boolean {
 			termIndent: parentDlTerm?.termIndent
 		})
 
-		if (feed instanceof DocumentFeeder) {
-			const termIndent = currentIndent
-			feed.injectAdjacentLinesWhile(nextLine => {
-				const nextIndent = nextLine.attributes.indent?.indent ?? ''
-				return nextIndent.length > termIndent.length
-					&& !!(nextLine.attributes.list || nextLine.attributes.dl)
-			})
-		}
+		injectDlChildren(parser)
 	}
 	else {
 		const parentDlTerm = findParentDlTerm(parser, currentIndent)
@@ -341,15 +331,6 @@ export function parseListItem(char: string, parser: NoteParser): boolean {
 	}
 
 	return true
-}
-
-function setDlLineData(parser: NoteParser, dl: DlLineData) {
-	// Typewriter selects the first registered line attribute. Move blockquote
-	// behind dl so the composite dl renderer can preserve both structures.
-	const blockquote = parser.lineData.blockquote
-	if (blockquote !== undefined) delete parser.lineData.blockquote
-	parser.lineData.dl = dl
-	if (blockquote !== undefined) parser.lineData.blockquote = blockquote
 }
 
 export function getAutoChild(listData: ListDefinition) {
