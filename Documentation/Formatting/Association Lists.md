@@ -43,6 +43,6 @@ The trailing `::` identifies each term immediately; it does not depend on a late
 
 Plain and list-marked terms can mix. A colon description may also be indented under a bare term, and plain terms can use indented list items for descriptions. Nested plain terms and their colon descriptions follow the same layout, collapse, and export rules as list-marked terms. Enter continues `: ` descriptions; pressing Enter again on an empty description exits the list.
 
-Terms use the normal note font and text color, with a subtly lighter background in dark themes. Descriptions are slightly smaller and muted. Ordinary extra spacing collapses when rendered; entering a line reveals its exact Markdown and spacing for editing. Explicit code spacing and authored nonbreaking spaces retain their meaning.
+Terms use the normal note font and text color. Descriptions are slightly smaller and muted. Ordinary extra spacing collapses when rendered; entering a line reveals its exact Markdown and spacing for editing. Explicit code spacing and authored nonbreaking spaces retain their meaning.
 
 Use the gutter chevron to collapse a term. Its descriptions remain as a single-line summary, clipped with an ellipsis when needed. Inline code retains its spacing without wrapping in a collapsed description. Expanding restores their layout, and moving the caret into a folded region reveals its source. Collapsing does not change the note text.

@@ -287,11 +287,6 @@ article.note {
 			padding-inline-end: var(--dlTermGap);
 			// Keeps the box at its content width so it can be measured for alignment
 			justify-self: start;
-
-			:where(.dark) & {
-				background-color: color-mix(in srgb, var(--noteBackgroundColor) 90%, white);
-				border-radius: .12em;
-			}
 		}
 
 		// Line a nested term up with its parent's definition text
