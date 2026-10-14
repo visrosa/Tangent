@@ -8,6 +8,9 @@ glossStyleSheet.replaceSync(`
 		background: color-mix(in srgb, var(--noteBackgroundColor) 88%, black);
 		border-radius: .12em;
 	}
+	:host-context(.dark) .base {
+		background: color-mix(in srgb, var(--noteBackgroundColor) 90%, white);
+	}
 	.indicator {
 		margin-inline-start: .18em;
 		font-size: .62em;

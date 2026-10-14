@@ -32,14 +32,23 @@ describe('t-gloss', () => {
 		expect(tooltips.value).toHaveLength(0)
 	})
 
-	test('shades the base without underlining it or changing its font', () => {
+	test.each(['light', 'dark'])('shades the base in %s themes without underlining it or changing its font', mode => {
+		const container = document.createElement('div')
+		container.className = mode
+		document.body.appendChild(container)
 		const el = createGloss('term', 'description')
+		container.appendChild(el)
+		const expected = document.createElement('span')
+		expected.style.backgroundColor = mode === 'dark'
+			? 'color-mix(in srgb, var(--noteBackgroundColor) 90%, white)'
+			: 'color-mix(in srgb, var(--noteBackgroundColor) 88%, black)'
+		container.appendChild(expected)
 		const base = el.shadowRoot.querySelector('.base')
 		const style = getComputedStyle(base)
 		expect(style.textDecorationLine).toBe('none')
-		expect(style.backgroundColor).not.toBe('rgba(0, 0, 0, 0)')
+		expect(style.backgroundColor).toBe(getComputedStyle(expected).backgroundColor)
 		expect(style.fontFamily).toBe(getComputedStyle(el).fontFamily)
-		el.remove()
+		container.remove()
 	})
 	test('renders the base and indicator inside its shadow root only', () => {
 		const el = createGloss('SGR', 'Select Graphic Rendition')
