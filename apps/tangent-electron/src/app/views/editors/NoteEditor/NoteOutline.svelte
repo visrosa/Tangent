@@ -106,7 +106,7 @@ onDestroy(() => {
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<div class="outline-anchor" style:top={`${extraTop}px`} on:mousedown|stopPropagation on:mouseup|stopPropagation on:mousemove|stopPropagation on:keydown|stopPropagation={onKeyDown}>
+<div class="outline-anchor" style:top={`${extraTop}px`} on:mousedown|stopPropagation on:mouseup|stopPropagation on:keydown|stopPropagation={onKeyDown}>
 	<nav aria-label="Note outline" class:expanded class:inTitleBar={titleBarVisible} class:overlay={narrow && expanded} style:height={`${availableHeight}px`}>
 		{#if !titleBarVisible}
 		<button class="toggle" type="button" aria-label={expanded ? 'Collapse outline' : 'Expand outline'} aria-expanded={expanded} on:click={toggle} title={expanded ? 'Collapse outline' : 'Expand outline'}>

@@ -54,6 +54,38 @@ function setup(source: string, width = 800, titleSidebar = false) {
 }
 
 describe('note outline', () => {
+	it.each([800, 500])('lets window-edge mouse movement reach the workspace at %ipx without leaking editing events', async width => {
+		const { container, editor } = setup('# Title\n## Child', width)
+		await wait(40)
+		const moves: number[] = []
+		const editingEvents: string[] = []
+		const onMove = (event: MouseEvent) => moves.push(event.clientX)
+		const onEditingEvent = (event: Event) => editingEvents.push(event.type)
+		document.body.addEventListener('mousemove', onMove)
+		for (const type of ['mousedown', 'mouseup', 'keydown']) document.body.addEventListener(type, onEditingEvent)
+		try {
+			const source = editor.getText()
+			const selection = editor.doc.selection
+			for (let state = 0; state < 2; state++) {
+				const toggle = container.querySelector<HTMLButtonElement>('.toggle')
+				const target = container.querySelector('.headings button') ?? toggle
+				target.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 1, clientY: 100 }))
+				expect(moves).toEqual(Array(state + 1).fill(1))
+				target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+				target.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
+				target.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowDown' }))
+				expect(editingEvents).toEqual([])
+				expect(editor.doc.selection).toEqual(selection)
+				expect(editor.getText()).toBe(source)
+				toggle.click()
+				await wait(30)
+			}
+		} finally {
+			document.body.removeEventListener('mousemove', onMove)
+			for (const type of ['mousedown', 'mouseup', 'keydown']) document.body.removeEventListener(type, onEditingEvent)
+		}
+	})
+
 	it('uses live headings, readable labels, hierarchy and distinct duplicate positions', async () => {
 		const source = '# **First**\n### Child\n# First\n```md\n# Inert\n```\n[^a]: note\n    # Footnote'
 		const { editor } = setup(source)
