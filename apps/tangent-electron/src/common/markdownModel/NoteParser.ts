@@ -16,8 +16,10 @@ import { parseCodeBlock, parseInlineCode, readCodeLines } from './code'
 import { getLanguage } from './codeSyntax'
 import { parseHtml } from './html'
 import { parseTemplateTokens } from './templates'
+import { continueFootnoteDefinition, parseFootnoteDefinition, parseFootnoteReference } from './footnotes'
 
 const blockPrograms: ParsingProgram[] = [
+	parseFootnoteDefinition,
 	parseHeader,
 	parseHorizontalRule,
 	parseBlockquote,
@@ -27,6 +29,7 @@ const blockPrograms: ParsingProgram[] = [
 ]
 
 const inlineObjectPrograms = [
+	parseFootnoteReference,
 	parseInlineMath,
 	parseInlineFurigana,
 	parseLink,
@@ -140,6 +143,7 @@ export default class NoteParser {
 			if (this._isStartOfLine) {
 				// Parse indentation
 				parseIndent(this.feed.currentChar, this)
+				continueFootnoteDefinition(this)
 				this._isStartOfContent = true
 			}
 

@@ -7,6 +7,7 @@ import type { TagSectionData } from './tag'
 import type { CodeData } from './code'
 import type { MathData } from './math'
 import type { FuriganaData } from './furigana'
+import type { FootnoteData } from './footnotes'
 import { hiddenGroupEmbedFormat } from './hiddenGroupEmbed'
 import { getHiddenGroupAttributes } from './inline'
 import { hasCollapsedChildren, isCollapsed } from './sections'
@@ -473,6 +474,14 @@ const noteTypeset:TypesetTypes = {
 		revealableLine('horizontal_rule', 'p')
 	],
 	formats: [
+		hiddenGroupEmbedFormat<FootnoteData>({
+			name: 'footnote',
+			renderOutput: (data, attributes) => h('t-footnote', {
+				'footnote-key': data.key,
+				'footnote-definition': data.definition ? '' : null,
+				className: attributes.revealed ? 'revealed' : ''
+			}, [])
+		}),
 		// Formatting that starts a line
 		{
 			name: 'line_format',
