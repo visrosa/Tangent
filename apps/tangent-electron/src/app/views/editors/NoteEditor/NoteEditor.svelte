@@ -62,6 +62,7 @@ import YamlTooltip from './YamlTooltip.svelte';
 import TemplateTokenTooltip from './TemplateTokenTooltip.svelte';
 import TemplateTokenAutocompleter from '../autocomplete/TemplateTokenAutocompleter';
 import TemplateTokenAutocompleteMenu from '../autocomplete/TemplateTokenAutocompleteMenu.svelte';
+import NoteOutline from './NoteOutline.svelte'
 
 // Technically, this just needs to exist _somewhere_. Putting it here because of the svelte dependency
 // Force the use of the variable so that it is included in the bundle
@@ -110,6 +111,8 @@ export let onScrollRequest: ScrollToCallback = null
 export let onKeyboardExit: KeyboardExitCallback = null
 
 let container: HTMLElement
+let outlineWidth = 28
+$: outlineInfo = state.noteViewInfo
 
 let _lastFile: NoteFile
 let _lastFileLoadState: FileLoadState = null
@@ -1447,7 +1450,13 @@ function updateCodeBlockSizing(pre: HTMLElement, context: CodeBlockSizingContext
 	class:typewriter={focusLevel >= FocusLevel.Typewriter}
 	style={`--noteWidthMax: ${$maxWidth}px;`}
 	style:--extraTop={extraTop + 'px'}
+	style:--outlineWidth={`${layout === 'fill' ? outlineWidth : 0}px`}
 >
+	{#if container && layout === 'fill'}
+		<NoteOutline {editor} {container} info={$outlineInfo} {extraTop}
+			onWidth={width => outlineWidth = width}
+			onNavigate={position => { editor.select(position); editor.root.focus({ preventScroll: true }); tick().then(() => ensureRangeInView([position, position])); }} />
+	{/if}
 	<div class="extraTop" style={`height: ${effectiveExtraTop}px;`}></div>
 	<WorkspaceFileHeader
 		node={$note}
@@ -1471,6 +1480,7 @@ function updateCodeBlockSizing(pre: HTMLElement, context: CodeBlockSizingContext
 		class="note"
 		class:focusing={$focusing}
 		spellcheck={showSpellCheck}
+		on:note-position-request|preventDefault={event => tick().then(() => ensureRangeInView([event.detail, event.detail]))}
 	></article>
 	{#if (!editorIsFocused || !editable) && virtual}
 		<div
@@ -1529,6 +1539,7 @@ function updateCodeBlockSizing(pre: HTMLElement, context: CodeBlockSizingContext
 
 <style lang="scss">
 main {
+	padding-left: var(--outlineWidth, 0px);
 	position: relative;
 
 	text-align: unset;
