@@ -6,8 +6,10 @@ import type { ResolvedFootnote } from 'common/markdownModel/footnotes'
 const styles = new CSSStyleSheet()
 styles.replaceSync(`
 	:host(.revealed) { display: none; }
-	button { font: inherit; font-size: .75em; vertical-align: super; line-height: 1; color: var(--linkColor, var(--textColor)); border: 0; padding: 0 .15em; background: none; cursor: pointer; }
+	button { font: inherit; font-size: .75em; vertical-align: super; line-height: 1; color: var(--accentTextColor); border: 0; padding: 0 .15em; background: none; cursor: pointer; }
 	button.definition { vertical-align: baseline; }
+	button:hover { text-decoration: underline; }
+	button:focus-visible { outline: 2px solid var(--accentColor); outline-offset: 2px; }
 `)
 
 export default class TangentFootnote extends HTMLElement {
@@ -58,9 +60,11 @@ export default class TangentFootnote extends HTMLElement {
 		if (note?.number) {
 			const button = document.createElement('button')
 			button.type = 'button'
-			button.textContent = String(note.number) + (definition ? ' ↩' : '')
+			const key = this.getAttribute('footnote-key') ?? note.key
+			const label = /^\p{Decimal_Number}+$/u.test(key) ? String(note.number) : key
+			button.textContent = label + (definition ? ' ↩' : '')
 			button.className = definition ? 'definition' : ''
-			button.setAttribute('aria-label', definition ? `Return from footnote ${note.number}` : `Go to footnote ${note.number}: ${note.text}`)
+			button.setAttribute('aria-label', definition ? `Return from footnote ${label}` : `Go to footnote ${label}: ${note.text}`)
 			this.output.replaceChildren(button)
 		}
 		else {

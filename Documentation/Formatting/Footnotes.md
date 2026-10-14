@@ -11,7 +11,7 @@ An observation[^source], mentioned again[^source].
     Another paragraph, indented by four spaces.
 ```
 
-References display as superscript numbers, ordered by their first appearance in the note. Repeated references share a number. Keys stay exactly as written in your Markdown; names such as `source` work as well as numeric keys. Matching ignores case.
+References with a name, such as `[^source]` or `[^uax15]`, display that literal key in superscript. Digit-only keys display their assigned number, ordered by first reference in the note. Repeated references resolve to the same definition. References use the color and hover underline of internal links. Keys stay exactly as written in your Markdown, and matching ignores case.
 
 Hover over a reference to preview its definition. Click it to jump to the definition; click the definition's return marker to go back to the reference you followed. Move the text cursor into a marker to edit its original syntax. A folded destination becomes visible when you navigate to it.
 

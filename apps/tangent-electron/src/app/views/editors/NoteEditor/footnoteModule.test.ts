@@ -7,6 +7,7 @@ import { wait } from '@such-n-such/core'
 import MarkdownView from './MarkdownView'
 import { tooltips } from 'app/utils/tooltips'
 import type TangentFootnote from './t-footnote'
+import type { TangentLink } from './t-link'
 import 'app/style/note.scss'
 import '../../../../../static/global.css'
 
@@ -27,6 +28,23 @@ afterEach(() => editors.splice(0).forEach(editor => { const root = editor.root; 
 function elements(editor: MarkdownEditor) { return Array.from(editor.root.querySelectorAll<TangentFootnote>('t-footnote')) }
 
 describe('footnote rendering', () => {
+	it('uses literal mnemonic keys and assigned numbers only for decimal-only keys', async () => {
+		const source = 'A[^MiXeD][^x2][^字][^42][^٣]\n[^mixed]: Alpha\n[^x2]: Beta\n[^字]: Gamma\n[^42]: Delta\n[^٣]: Epsilon'
+		const editor = mount(source)
+		await wait()
+		const buttons = elements(editor).map(el => el.shadowRoot.querySelector('button'))
+		expect(buttons.slice(0, 5).map(button => button.textContent)).toEqual(['MiXeD', 'x2', '字', '4', '5'])
+		expect(buttons[0].getAttribute('aria-label')).toBe('Go to footnote MiXeD: Alpha')
+		expect(buttons[5].textContent).toBe('mixed ↩')
+		expect(getComputedStyle(buttons[0]).verticalAlign).toBe('super')
+		const link = document.createElement('t-link') as TangentLink
+		editor.root.append(link)
+		link.setLinkState('resolved', null)
+		expect(getComputedStyle(buttons[0]).color).toBe(getComputedStyle(link).color)
+		link.remove()
+		expect(docFromDom(editor, editor.root).getText()).toBe(source)
+	})
+
 	it('resolves references inside a preview shadow root in the containing note', async () => {
 		const source = 'text[^a]\n[^a]: citation'
 		const editor = mount(source)
@@ -36,7 +54,7 @@ describe('footnote rendering', () => {
 		marker.setAttribute('footnote-key', 'a')
 		preview.append(marker)
 		await wait()
-		expect(marker.shadowRoot.querySelector('button').textContent).toBe('1')
+		expect(marker.shadowRoot.querySelector('button').textContent).toBe('a')
 		marker.shadowRoot.querySelector<HTMLButtonElement>('button').click()
 		await wait()
 		expect(editor.doc.selection[0]).toBe(source.indexOf('[^a]:'))
@@ -53,14 +71,14 @@ describe('footnote rendering', () => {
 		expect(preview).toContain('&lt;img')
 		expect(preview).not.toContain('<img')
 	})
-	it('renders numbered references in read-only views', async () => {
+	it('renders literal mnemonic keys in read-only views', async () => {
 		const root = document.createElement('article')
 		document.body.append(root)
 		const view = new MarkdownView()
 		view.setRoot(root)
 		view.set(markdownToTextDocument('text[^a]\n[^a]: definition'), Source.api)
 		await wait()
-		expect(root.querySelector('t-footnote').shadowRoot.querySelector('button').textContent).toBe('1')
+		expect(root.querySelector('t-footnote').shadowRoot.querySelector('button').textContent).toBe('a')
 		root.querySelector('t-footnote').shadowRoot.querySelector<HTMLButtonElement>('button').click()
 		expect(view.doc.selection[0]).toBe(9)
 		view.destroy()
@@ -70,7 +88,7 @@ describe('footnote rendering', () => {
 		const source = 'A[^a][^a] Z\n\n[^a]: **Bold** text'
 		const editor = mount(source)
 		await wait()
-		expect(elements(editor).map(el => el.shadowRoot.textContent.trim().slice(-1))).toEqual(['1', '1', '↩'])
+		expect(elements(editor).map(el => el.shadowRoot.textContent.trim().slice(-1))).toEqual(['a', 'a', '↩'])
 		expect(editor.root.textContent).toBe(source.replaceAll('\n', ''))
 		expect(docFromDom(editor, editor.root).getText()).toBe(source)
 		expect(editor.getText()).toBe(source)
@@ -98,12 +116,12 @@ describe('footnote rendering', () => {
 		expect(elements(editor)[0].shadowRoot.textContent).toContain('[^a]')
 		editor.modules.history.undo()
 		await wait()
-		expect(elements(editor)[0].shadowRoot.querySelector('button').textContent).toBe('1')
+		expect(elements(editor)[0].shadowRoot.querySelector('button').textContent).toBe('a')
 	})
-	it('renumbers following references when an earlier one is inserted', async () => {
-		const editor = mount('A[^a]\n[^a]: Alpha\n[^b]: Beta')
+	it('renumbers digit-only references when an earlier one is inserted', async () => {
+		const editor = mount('A[^42]\n[^42]: Alpha\n[^8]: Beta')
 		await wait()
-		editor.change.insert(0, '[^b] ').apply()
+		editor.change.insert(0, '[^8] ').apply()
 		await wait()
 		expect(elements(editor).slice(0, 2).map(el => el.shadowRoot.querySelector('button').textContent)).toEqual(['1', '2'])
 	})
@@ -114,7 +132,7 @@ it.runIf(!!markdownToTextDocument('| Label |').lines[0].attributes.table)('resol
  const editor = mount(source)
  await wait()
  const marker = editor.root.querySelector('t-table-preview').shadowRoot.querySelector('t-footnote')
- expect(marker.shadowRoot.querySelector('button').textContent).toBe('1')
+ expect(marker.shadowRoot.querySelector('button').textContent).toBe('a')
  marker.shadowRoot.querySelector<HTMLButtonElement>('button').click()
  await wait()
  expect(editor.doc.selection[0]).toBe(source.indexOf('[^a]:'))
