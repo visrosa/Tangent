@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { wait } from '@such-n-such/core'
-import { Editor, docFromHTML, docToHTML } from 'typewriter-editor'
+import { Editor, deltaFromDom, docFromHTML, docToHTML } from 'typewriter-editor'
 import { markdownToTextDocument } from 'common/markdownModel/parser'
 import noteTypeset from 'common/markdownModel/typewriterTypes'
 import type { DlLineData } from 'common/markdownModel/dl'
@@ -245,7 +245,8 @@ describe('description-list HTML', () => {
 		expect(lines().map(line => line.style.gridRow)).toEqual(['1', '', '', '2'])
 		expect(lines()[0].classList.contains('dl-description-collapsed')).toBe(true)
 		expect(lines().slice(1, 3).every(line => getComputedStyle(line).display === 'none')).toBe(true)
-		expect(getComputedStyle(lines()[0], '::after').content).toBe('"\u22ef"')
+		expect(lines()[0].querySelector('.dl-summary').getAttribute('data-summary')).toBe('Terra or Earth · Alchemical symbol for antimony')
+		expect(getComputedStyle(lines()[0].querySelector('.dl-summary')).whiteSpace).toBe('nowrap')
 		expect(lines()[0].getBoundingClientRect().height).toBeLessThan(expandedHeight)
 		article.remove()
 	})
@@ -268,7 +269,7 @@ describe('description-list HTML', () => {
 		article.remove()
 	})
 
-	test('hides an inline definition while its term is collapsed', async () => {
+	test('keeps an inline definition on one clipped line while its term is collapsed', async () => {
 		const { editor, root } = createMarkdownEditor('- 🜨 :: Terra or Earth\nplain')
 		const article = mountInNote(root)
 		const line = () => root.querySelector('.dl-inline') as HTMLElement
@@ -277,8 +278,9 @@ describe('description-list HTML', () => {
 
 		editor.collapsingSections.toggleLineCollapsed(0)
 		await wait()
-		expect(getComputedStyle(line().querySelector('.dl-definition')).display).toBe('none')
-		expect(getComputedStyle(line(), '::after').content).toBe('"\u22ef"')
+		expect(getComputedStyle(line().querySelector('.dl-definition')).display).not.toBe('none')
+		expect(getComputedStyle(line().querySelector('.dl-definition')).whiteSpace).toBe('nowrap')
+		expect(getComputedStyle(line().querySelector('.dl-definition')).textOverflow).toBe('ellipsis')
 
 		editor.collapsingSections.toggleLineCollapsed(0)
 		await wait()
@@ -506,4 +508,48 @@ describe('description-list alignment', () => {
 		expect(definitionLeft('one')).toBeCloseTo(aligned, 0)
 		article.remove()
 	})
+	test('normalizes rendered whitespace without changing source', async () => {
+		const source = '- alpha   beta    ::   one   two\n\n- alpha beta :: one two'
+		const { editor, root } = createMarkdownEditor(source)
+		const article = mountInNote(root)
+		await wait(30)
+		const terms = Array.from(root.querySelectorAll('.dl-term-content')) as HTMLElement[]
+		expect(terms[0].getBoundingClientRect().width).toBeCloseTo(terms[1].getBoundingClientRect().width, 0)
+		const definitions = Array.from(root.querySelectorAll('.dl-definition'))
+		expect(textLeft(definitions[0], 'one')).toBeCloseTo(textLeft(definitions[1], 'one'), 0)
+		expect(getComputedStyle(terms[0]).color).toBe(getComputedStyle(root).color)
+		expect(parseFloat(getComputedStyle(definitions[0]).fontSize)).toBeLessThan(parseFloat(getComputedStyle(terms[0]).fontSize))
+		const restored = deltaFromDom(editor, { collapseWhitespace: false })
+		expect(restored.ops.map(op => op.insert).join('')).toBe(source + '\n')
+		editor.select(source.indexOf('alpha'))
+		await wait()
+		expect(getComputedStyle(root.querySelector('.dl-term')).whiteSpace).toBe('pre-wrap')
+		expect(editor.doc.lines.map(line => line.content.ops.map(op => op.insert).join('')).join('\n')).toBe(source)
+		article.remove()
+	})
+
+	test('summarizes folded descendants without extra source text and restores their rows', async () => {
+		const source = '- term ::\n  - **first** value\n  - second value $x$\nplain'
+		const { editor, root } = createMarkdownEditor(source)
+		const article = mountInNote(root)
+		editor.collapsingSections.toggleLineCollapsed(0)
+		await wait()
+		const summary = root.querySelector('.dl-summary')
+		expect(summary.getAttribute('data-summary')).toBe('first value · second value x')
+		expect(summary.textContent).toBe('')
+		expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+		editor.collapsingSections.toggleLineCollapsed(0)
+		await wait()
+		expect(root.querySelector('.dl-summary')).toBeNull()
+		expect(Array.from(root.querySelectorAll('.dl-value')).every(line => getComputedStyle(line).display !== 'none')).toBe(true)
+		article.remove()
+	})
+
+	test('preserves an authored nonbreaking space in the rendered term and document', () => {
+		const source = '- non\u00a0breaking :: value'
+		const { editor, root } = createEditor(source)
+		expect(root.querySelector('.dl-term-content').textContent).toContain('non\u00a0breaking')
+		expect(editor.doc.lines[0].content.ops.map(op => op.insert).join('')).toBe(source)
+	})
+
 })

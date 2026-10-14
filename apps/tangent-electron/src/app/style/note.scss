@@ -249,18 +249,20 @@ article.note {
 
 	.editor-description-list {
 		// Grid columns and line placement are set inline by the renderer
-		--dlBarWidth: .125em;
-		--dlBarPadding: .7em;
-		--dlTermGap: .55em;
+		--dlBarWidth: calc(var(--fontSize) * .125);
+		--dlBarPadding: calc(var(--fontSize) * .5);
+		--dlTermGap: .45em;
 
 		margin: 0;
 		display: grid;
-		grid-auto-rows: minmax(rhythmUnit(1), auto);
-		row-gap: .125em;
+		grid-auto-rows: minmax(1.3em, auto);
+		row-gap: 0;
 
 		.dl-line {
-			min-height: rhythmUnit(1);
-			line-height: rhythmUnit(1);
+			min-height: 1.3em;
+			line-height: 1.3em;
+			white-space: normal;
+			&.revealed { white-space: pre-wrap; }
 		}
 
 		.dl-term {
@@ -293,9 +295,6 @@ article.note {
 		}
 
 		.dl-inline {
-			&:not(.revealed) .dl-term-content {
-				color: var(--accentTextColor);
-			}
 
 			.dl-term-content {
 				grid-column: 1;
@@ -308,7 +307,7 @@ article.note {
 				display: block;
 				font-weight: 400;
 				min-width: 0;
-				min-height: rhythmUnit(1);
+				min-height: 0;
 				padding-inline-start: var(--dlBarPadding);
 				border-inline-start: var(--dlBarWidth) solid var(--accentDeemphasizedBackgroundColor);
 				transition: border-color .12s ease;
@@ -319,8 +318,10 @@ article.note {
 				border-inline-start-color: var(--accentTextColor);
 			}
 
-			&.dl-description-collapsed .dl-definition {
-				display: none;
+			&.dl-description-collapsed:not(.revealed) .dl-definition {
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
 			}
 		}
 
@@ -339,15 +340,27 @@ article.note {
 			content: none;
 		}
 
-		.dl-term.dl-description-collapsed::after {
-			content: "\22EF";
-			grid-column: 3 / -1;
-			align-self: center;
-			padding-inline-start: var(--dlBarPadding);
-			border-inline-start: var(--dlBarWidth) solid transparent;
-			font-weight: 400;
-			line-height: inherit;
+		.dl-value, .dl-definition, .dl-summary {
+			font-size: .9em;
+			color: color-mix(in srgb, var(--textColor) 85%, var(--noteBackgroundColor));
+			line-height: 1.3em;
 		}
+
+		.dl-definition { min-height: 0; }
+
+		.dl-summary {
+			grid-column: 3 / -1;
+			min-width: 0;
+			padding-inline-start: var(--dlBarPadding);
+			border-inline-start: var(--dlBarWidth) solid var(--accentDeemphasizedBackgroundColor);
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			font-weight: 400;
+			&::before { content: attr(data-summary); }
+		}
+
+		code.inline_code { white-space: pre-wrap; }
 
 		.inline-dl_sep-container {
 			display: inline-flex;

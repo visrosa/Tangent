@@ -229,6 +229,40 @@ function withoutDlSourceFormatting(children: any[]) {
 	return visible
 }
 
+// Typewriter substitutes NBSPs before typesetting. Restore only substituted
+// ordinary spaces so CSS can collapse them without changing authored NBSPs.
+function restoreDlSpaces(children: any[], source: string) {
+	let offset = 0
+	const visit = child => {
+		if (typeof child === 'string') {
+			const text = Array.from({ length: child.length }, (_, index) =>
+				child[index] === '\u00a0' && source[offset + index] === ' ' ? ' ' : child[index]).join('')
+			offset += child.length
+			return text
+		}
+		if (!child?.children) return child
+		return { ...child, children: child.children.map(visit) }
+	}
+	return children.map(visit)
+}
+
+function dlSummaryText(children: any[]): string {
+	return children.map(child => {
+		if (typeof child === 'string') return child
+		const classes = (child?.props?.className ?? child?.props?.class ?? '').split(/\s+/)
+		if (classes.includes('hidden') || classes.includes('line_format')) return ''
+		if (child?.props?.base) return child.props.base
+		if (child?.props?.['math-source']) return child.props['math-source']
+		return child?.children ? dlSummaryText(child.children) : ''
+	}).join('').replace(/[ \t\u00a0]+/g, ' ').trim()
+}
+
+function collapsedDlSummary(lineData: DlLineEntry[], index: number, hidden: boolean[]) {
+	const nextVisible = lineData.findIndex((_entry, next) => next > index && !hidden[next])
+	return lineData.slice(index + 1, nextVisible < 0 ? undefined : nextVisible)
+		.map(([_attributes, content]) => dlSummaryText(content)).filter(Boolean).join(' · ')
+}
+
 function appendStyle(props: AttributeMap, declaration: string) {
 	const style = props.style as string ?? ''
 	props.style = `${style}${style && !style.endsWith(';') ? ';' : ''}${declaration}`
@@ -443,6 +477,11 @@ const noteTypeset:TypesetTypes = {
 					}
 
 					const lines = lineData.map(([attributes, children, id], index) => {
+						const sourceLine = editor.doc.getLineBy(id)
+						if (sourceLine) {
+							const source = sourceLine.content.ops.map(op => typeof op.insert === 'string' ? op.insert : '\ufffc').join('')
+							children = restoreDlSpaces(children, source)
+						}
 						const dl = attributes.dl as DlLineData
 						if (attributes.revealed) revealed = true
 
@@ -467,7 +506,11 @@ const noteTypeset:TypesetTypes = {
 								else {
 									lineChildren = [
 										h('span', { className: 'dl-term-content' }, split.term),
-										separator
+										separator,
+										...(definitionCollapsed[index] ? [h('span', {
+											className: 'dl-summary',
+											'data-summary': collapsedDlSummary(lineData, index, hidden)
+										}, [])] : [])
 									]
 								}
 							}
