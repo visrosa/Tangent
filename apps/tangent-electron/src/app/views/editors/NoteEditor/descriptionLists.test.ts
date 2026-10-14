@@ -288,6 +288,35 @@ describe('description-list HTML', () => {
 		article.remove()
 	})
 
+	test.each(['', '> '])('keeps inline code on the collapsed description line with prefix %j', async prefix => {
+		const source = prefix + '- term :: A reference entry in `sample  catalog.txt`[^catalog] explains how several related examples are grouped together.\n[^catalog]: A synthetic reference.\nplain'
+		const { editor, root } = createMarkdownEditor(source)
+		const article = mountInNote(root)
+		article.style.width = '320px'
+		const definition = () => root.querySelector('.dl-definition') as HTMLElement
+		const code = () => definition().querySelector('code.inline_code:not(.hidden)') as HTMLElement
+		try {
+			expect(definition().getBoundingClientRect().height).toBeGreaterThan(parseFloat(getComputedStyle(definition()).lineHeight) * 1.5)
+			editor.collapsingSections.toggleLineCollapsed(0)
+			await wait()
+			expect(definition().getBoundingClientRect().height).toBeLessThan(parseFloat(getComputedStyle(definition()).lineHeight) * 1.5)
+			expect(definition().scrollWidth).toBeGreaterThan(definition().clientWidth)
+			expect(code().textContent.replace(/\u00a0/g, ' ')).toBe('sample  catalog.txt')
+			expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+			editor.select(source.indexOf('sample') + 1)
+			expect(getComputedStyle(code()).whiteSpace).toBe('pre-wrap')
+			expect(definition().getBoundingClientRect().height).toBeGreaterThan(parseFloat(getComputedStyle(definition()).lineHeight) * 1.5)
+			editor.select(source.length)
+			editor.collapsingSections.toggleLineCollapsed(0)
+			await wait()
+			expect(getComputedStyle(code()).whiteSpace).toBe('pre-wrap')
+			expect(definition().getBoundingClientRect().height).toBeGreaterThan(parseFloat(getComputedStyle(definition()).lineHeight) * 1.5)
+		} finally {
+			editor.destroy()
+			article.remove()
+		}
+	})
+
 	test('renders text after the first separator as one inline definition', () => {
 		const { root } = createEditor('- 🜨 :: Terra or Earth :: Alchemical symbol for antimony')
 		const line = root.querySelector('.dl-inline') as HTMLElement
