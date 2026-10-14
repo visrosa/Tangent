@@ -4,15 +4,54 @@ import { markdownToTextDocument, parseMarkdown } from './parser'
 import { scanKeyboardSpan } from './keyboard'
 
 describe('keyboard syntax', () => {
-	it.each(['[+N+]', '[-N-]'])('accepts interchangeable spelling %s', source => {
+	it.each(['[+N+]', '[-N-]', '⁅N⁆', '⹕N⹖'])('accepts interchangeable spelling %s', source => {
 		expect(scanKeyboardSpan(source)).toEqual({ end: source.length, keyboard: { children: ['N'] } })
 	})
 
-	it.each(['[+[+⎇+][+N+]+]', '[-[-⎇-][-N-]-]', '[+[-⎇-][+N+]+]'])('preserves nested structure in %s', source => {
+	it.each([
+		'[+[+⎇+][+N+]+]', '[-[-⎇-][-N-]-]', '[+[-⎇-][+N+]+]',
+		'⁅⹕⎇⹖⹕N⹖⁆', '⹕⁅⎇⁆[-N-]⹖', '[+⹕⎇⹖⁅N⁆+]',
+	])('preserves nested structure in %s', source => {
 		expect(scanKeyboardSpan(source)).toEqual({
 			end: source.length,
 			keyboard: { children: [{ children: ['⎇'] }, { children: ['N'] }] }
 		})
+	})
+
+	it('requires a matched pair for every source spelling', () => {
+		const pairs = [['[+', '+]'], ['[-', '-]'], ['⁅', '⁆'], ['⹕', '⹖']]
+		for (const [openIndex, [opener]] of pairs.entries()) {
+			for (const [closeIndex, [, closer]] of pairs.entries()) {
+				const source = opener + 'N' + closer
+				const result = scanKeyboardSpan(source)
+				expect(result).toEqual({ end: source.length, keyboard: openIndex === closeIndex ? { children: ['N'] } : null })
+				expect(typewriterToText(markdownToTextDocument(source))).toBe(source)
+			}
+		}
+	})
+
+	it('unescapes glyph delimiters inside a label while retaining source bytes', () => {
+		const source = String.raw`⁅\⹕N\⹖ \⁅M\⁆⁆`
+		expect(scanKeyboardSpan(source)).toEqual({ end: source.length, keyboard: { children: ['⹕N⹖ ⁅M⁆'] } })
+		expect(typewriterToText(markdownToTextDocument(source))).toBe(source)
+	})
+
+	it.each(['⁅⁆', '⹕ ⹖', '⁅N', '⹕N\n⹖', '⁅⹕N⁆⁆', '⁅⹕⹖⁆'])('leaves malformed glyph source %j literal', source => {
+		const document = markdownToTextDocument(source)
+		expect(typewriterToText(document)).toBe(source)
+		expect(document.lines.flatMap(line => line.content.ops).some(op => op.attributes?.keyboard)).toBe(false)
+	})
+
+	it.each(['⁅N⁆', '⹕N⹖'])('stays inactive in protected contexts for %s', span => {
+		for (const source of [
+			'`' + span + '`', '```\n' + span + '\n```', '\\' + span, '$' + span + '$',
+			'[[note|' + span + ']]', '[label](https://example.org/' + span + ')',
+			'---\nkeys: "' + span + '"\n---',
+		]) {
+			const document = markdownToTextDocument(source)
+			expect(typewriterToText(document)).toBe(source)
+			expect(document.lines.flatMap(line => line.content.ops).some(op => op.attributes?.keyboard)).toBe(false)
+		}
 	})
 
 	it('keeps whitespace, Markdown punctuation, Unicode and non-syntax backslashes literal', () => {

@@ -7,14 +7,24 @@ export type KeyboardData = {
 
 export type KeyboardScanResult = { end: number, keyboard: KeyboardData | null } | false
 
-const escapedCharacters = new Set(['[', ']', '+', '-', '\\'])
+const delimiterPairs = new Map([
+	['[+', '+]'], ['[-', '-]'], ['⁅', '⁆'], ['⹕', '⹖']
+])
+const closingDelimiters = new Set(delimiterPairs.values())
+const escapedCharacters = new Set(['[', ']', '+', '-', '\\', '⁅', '⁆', '⹕', '⹖'])
 const maxDepth = 64
 
+function openingDelimiter(text: string, index: number): string | undefined {
+	const candidate = text[index] === '[' ? text.slice(index, index + 2) : text[index]
+	return delimiterPairs.has(candidate) ? candidate : undefined
+}
+
 export function scanKeyboardSpan(text: string, start = 0): KeyboardScanResult {
-	if (text[start] !== '[' || !isSign(text[start + 1])) return false
+	const opener = openingDelimiter(text, start)
+	if (!opener) return false
 
 	const root: KeyboardData = { children: [] }
-	const stack = [{ sign: text[start + 1], node: root }]
+	const stack = [{ opener, node: root }]
 	let valid = true
 
 	function appendText(value: string) {
@@ -24,7 +34,7 @@ export function scanKeyboardSpan(text: string, start = 0): KeyboardScanResult {
 		else children.push(value)
 	}
 
-	for (let index = start + 2; index < text.length; index++) {
+	for (let index = start + opener.length; index < text.length; index++) {
 		const char = text[index]
 		if (char === '\n' || char === '\r') return { end: index, keyboard: null }
 
@@ -33,20 +43,23 @@ export function scanKeyboardSpan(text: string, start = 0): KeyboardScanResult {
 			continue
 		}
 
-		if (char === '[' && isSign(text[index + 1])) {
+		const nestedOpener = openingDelimiter(text, index)
+		if (nestedOpener) {
 			const node: KeyboardData = { children: [] }
 			stack[stack.length - 1].node.children.push(node)
-			stack.push({ sign: text[++index], node })
+			stack.push({ opener: nestedOpener, node })
+			index += nestedOpener.length - 1
 			if (stack.length > maxDepth) valid = false
 			continue
 		}
 
-		if (isSign(char) && text[index + 1] === ']') {
+		const closer = char === '+' || char === '-' ? text.slice(index, index + 2) : char
+		if (closingDelimiters.has(closer)) {
 			const frame = stack.pop()
-			if (char !== frame.sign || !frame.node.children.some(child => typeof child !== 'string' || child.trim())) {
+			if (closer !== delimiterPairs.get(frame.opener) || !frame.node.children.some(child => typeof child !== 'string' || child.trim())) {
 				valid = false
 			}
-			index++
+			index += closer.length - 1
 			if (!stack.length) return { end: index + 1, keyboard: valid ? root : null }
 			continue
 		}
@@ -57,12 +70,8 @@ export function scanKeyboardSpan(text: string, start = 0): KeyboardScanResult {
 	return { end: text.length, keyboard: null }
 }
 
-function isSign(char: string) {
-	return char === '+' || char === '-'
-}
-
 export function parseInlineKeyboard(char: string, parser: NoteParser): boolean {
-	if (char !== '[') return false
+	if (char !== '[' && char !== '⁅' && char !== '⹕') return false
 
 	const { feed } = parser
 	const result = scanKeyboardSpan(feed.text, feed.index)

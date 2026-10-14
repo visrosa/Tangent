@@ -37,11 +37,51 @@ afterEach(() => {
 })
 
 describe('keyboard input rendering', () => {
-	it.each(['[+[+⎇+][+N+]+]', '[-[-⎇-][-N-]-]', '[+[-⎇-][+N+]+]'])('selects brackets by depth for %s', source => {
+	it.each([
+		'[+[+⎇+][+N+]+]', '[-[-⎇-][-N-]-]', '[+[-⎇-][+N+]+]',
+		'⁅⹕⎇⹖⹕N⹖⁆', '⹕⁅⎇⁆[-N-]⹖', '[+⹕⎇⹖⁅N⁆+]',
+	])('selects brackets by depth for %s', source => {
 		const editor = makeEditor(source)
 		expect(preview(editor).textContent).toBe('⁅⹕⎇⹖⹕N⹖⁆')
 		expect(preview(editor).querySelectorAll('kbd')).toHaveLength(3)
 		expect(editor.root.textContent).toBe(source)
+	})
+
+	it('preserves Unicode source through reveal, DOM reconstruction and caret mapping', () => {
+		const source = 'Before ⁅⹕👩‍💻⹖[+N+]⁆⹕M⹖ after'
+		const editor = makeEditor(source)
+		const change = editor.doc.change
+		const offset = source.indexOf('👩')
+		revealContentAroundRange(editor.doc, [offset, offset], change)
+		editor.set(editor.doc.apply(change))
+		expect(editor.root.querySelector('.keyboard-source').textContent).toBe('⁅⹕👩‍💻⹖[+N+]⁆')
+		const delta = deltaFromDom(editor, { root: editor.root, collapseWhitespace: false })
+		expect(typewriterToText(new TextDocument(delta))).toBe(source)
+		for (const offset of [0, source.indexOf('after'), source.length]) {
+			const range = getBrowserRange(editor, [offset, offset])
+			expect(getIndexFromNodeAndOffset(editor, range.startContainer, range.startOffset)).toBe(offset)
+		}
+	})
+
+	it('rerenders after substituting delimiters individually and undoing', async () => {
+		const editor = makeEditor('Before [+N+] after', true) as MarkdownEditor
+		editor.select(0)
+		const start = editor.getText().indexOf('[+')
+		editor.change.delete([start, start + 2]).insert(start, '⁅').apply()
+		await wait(20)
+		expect(editor.root.querySelector('t-keyboard')).toBeNull()
+		const close = editor.getText().indexOf('+]')
+		editor.change.delete([close, close + 2]).insert(close, '⁆').apply()
+		await wait(20)
+		expect(preview(editor).textContent).toBe('⁅N⁆')
+		editor.modules.history.undo()
+		await wait(20)
+		expect(editor.getText()).toBe('Before ⁅N+] after')
+		expect(editor.root.querySelector('t-keyboard')).toBeNull()
+		editor.modules.history.undo()
+		await wait(20)
+		expect(editor.getText()).toBe('Before [+N+] after')
+		expect(preview(editor).textContent).toBe('⁅N⁆')
 	})
 
 	it('keeps adjacent outer spans separate and uses quills at every inner depth', () => {
@@ -121,7 +161,10 @@ describe('keyboard input rendering', () => {
 		expect(preview(editor).textContent).toBe('⁅⹕⎇⹖⹕N⹖⁆')
 	})
 
-	it.each(['[+[-⎇-][+N+]+]', '# [+[-⎇-][+N+]+]', '- [+[-⎇-][+N+]+]', '> [+[-⎇-][+N+]+]'])('exports nested semantic HTML from %s', source => {
+	it.each([
+		'[+[-⎇-][+N+]+]', '# [+[-⎇-][+N+]+]', '- [+[-⎇-][+N+]+]', '> [+[-⎇-][+N+]+]',
+		'⁅⹕⎇⹖⹕N⹖⁆', '⹕⁅⎇⁆[+N+]⹖',
+	])('exports nested semantic HTML from %s', source => {
 		const editor = makeEditor(source)
 		const exported = document.createElement('div')
 		exported.innerHTML = docToHTML(editor, editor.doc)

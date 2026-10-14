@@ -1,6 +1,8 @@
 # Keyboard Input
 
-Both spellings: [+Enter+] [-Enter-]
+All spellings: [+Enter+] [-Enter-] ⁅Enter⁆ ⹕Enter⹖
+
+Substitutions: type `[+` or `[-` for ⁅ and ⹕; `+]` or `-]` for ⹖ and ⁆.
 
 Adjacent inputs: [+⎇+][+N+]
 
@@ -11,6 +13,12 @@ Nested groups:
 [-[-⎇-][-N-]-]
 
 [+[-⎇-][+N+]+]
+
+⁅⹕⎇⹖⹕N⹖⁆
+
+[+⹕⎇⹖⁅N⁆+]
+
+⹕⁅⎇⁆[-N-]⹖
 
 Three levels: [+[-[+N+]-]+]
 
@@ -26,9 +34,13 @@ Inactive math: $[+N+]$
 
 Inactive link text: [[Keyboard Input|[+N+]]]
 
-Literal opener: \[+N+]
+Literal openers: \[+N+] \⁅N⁆ \⹕N⹖
+
+Literal glyph labels: ⁅\⹕N\⹖⁆
 
 Malformed: [++] [- -] [+N-] [+[-N+]+]
+
+Mismatched glyphs and mixed pairs: ⁅N⹖ ⹕N⁆ ⁅N+] [+N⁆
 
 Incomplete:
 
