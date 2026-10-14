@@ -1,11 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { TextDocument } from '@typewriter/document'
+import { TextDocument, Line, Delta } from '@typewriter/document'
 import { StructureType } from 'common/indexing/indexTypes'
 import { parseMarkdown } from './parser'
 import { resolveFootnotes } from './footnotes'
 import { typewriterToText } from 'common/typewriterUtils'
 
 describe('footnotes', () => {
+	it('includes Markdown references from table models without counting code markers', () => {
+		const table = { model: {
+			head: [], foot: [],
+			body: [{ cells: [{ markdown: 'value[^a] and `[^code]`', contentType: 'inline' }] }]
+		} }
+		const lines = [Line.create(new Delta().insert('| value[^a] |'), { table }), ...parseMarkdown('[^a]: citation\n[^code]: unused').lines]
+		const notes = resolveFootnotes(lines)
+		expect(notes.get('a')).toMatchObject({ number: 1, references: [0] })
+		expect(notes.get('code').number).toBeUndefined()
+	})
 	it('numbers by first use, shares repeated references, and preserves source', () => {
 		const source = 'Text[^B] and [^a] again[^b].\n\n[^a]: Alpha\n[^B]: Beta'
 		const result = parseMarkdown(source)

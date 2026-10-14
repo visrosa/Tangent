@@ -27,6 +27,20 @@ afterEach(() => editors.splice(0).forEach(editor => { const root = editor.root; 
 function elements(editor: MarkdownEditor) { return Array.from(editor.root.querySelectorAll<TangentFootnote>('t-footnote')) }
 
 describe('footnote rendering', () => {
+	it('resolves references inside a preview shadow root in the containing note', async () => {
+		const source = 'text[^a]\n[^a]: citation'
+		const editor = mount(source)
+		const host = editor.root.querySelector<HTMLElement>('.line')
+		const preview = host.attachShadow({ mode: 'open' })
+		const marker = document.createElement('t-footnote')
+		marker.setAttribute('footnote-key', 'a')
+		preview.append(marker)
+		await wait()
+		expect(marker.shadowRoot.querySelector('button').textContent).toBe('1')
+		marker.shadowRoot.querySelector<HTMLButtonElement>('button').click()
+		await wait()
+		expect(editor.doc.selection[0]).toBe(source.indexOf('[^a]:'))
+	})
 	it('keeps unused and duplicate definitions literal and escapes the preview', async () => {
 		const editor = mount('A[^a]\n[^a]: `<img src=x onerror=alert(1)>`\n[^a]: Duplicate\n[^spare]: Unused')
 		await wait()
@@ -93,4 +107,19 @@ describe('footnote rendering', () => {
 		await wait()
 		expect(elements(editor).slice(0, 2).map(el => el.shadowRoot.querySelector('button').textContent)).toEqual(['1', '2'])
 	})
+})
+
+it.runIf(!!markdownToTextDocument('| Label |').lines[0].attributes.table)('resolves a table-only reference and returns to retained table source', async () => {
+ const source = '| Label |\n| --- |\n| value[^a] |\n\n[^a]: citation'
+ const editor = mount(source)
+ await wait()
+ const marker = editor.root.querySelector('t-table-preview').shadowRoot.querySelector('t-footnote')
+ expect(marker.shadowRoot.querySelector('button').textContent).toBe('1')
+ marker.shadowRoot.querySelector<HTMLButtonElement>('button').click()
+ await wait()
+ expect(editor.doc.selection[0]).toBe(source.indexOf('[^a]:'))
+ elements(editor).at(-1).shadowRoot.querySelector<HTMLButtonElement>('button').click()
+ await wait()
+ expect(editor.doc.selection[0]).toBe(0)
+ expect(editor.getText()).toBe(source)
 })

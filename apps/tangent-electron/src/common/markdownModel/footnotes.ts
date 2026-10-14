@@ -3,6 +3,7 @@ import { lineToText } from 'common/typewriterUtils'
 import DocumentFeeder from './DocumentFeeder'
 import { getInlineId } from './inline'
 import type NoteParser from './NoteParser'
+import { parseMarkdown, type MarkdownParsingOptions } from './parser'
 
 export type FootnoteData = { key: string, definition?: boolean }
 export type FootnoteDefinition = { key: string, indent: number, start: boolean }
@@ -89,18 +90,41 @@ export function resolveFootnotes(lines: Line[]): Map<string, ResolvedFootnote> {
 	}
 	let number = 0
 	offset = 0
+	const tables = new Set<object>()
+	function reference(key: string, start: number) {
+		const note = notes.get(normalizeFootnoteKey(key))
+		if (note) {
+			note.number ??= ++number
+			note.references.push(start)
+		}
+	}
 	for (const line of lines) {
+		const table = line.attributes.table
+		if (table?.model && !tables.has(table.model)) {
+			tables.add(table.model)
+			const model = table.model
+			const fragments = [model.caption, ...[...model.head, ...model.body, ...(model.foot ?? [])].flatMap(row => row.cells)].filter(Boolean)
+			for (const fragment of fragments) {
+				const parsed = parseMarkdown(fragment.markdown, { inlineOnly: fragment.contentType === 'inline' } as MarkdownParsingOptions)
+				for (const fragmentLine of parsed.lines) {
+					let lastGroup: string = null
+					for (const op of fragmentLine.content.ops) {
+						const data = op.attributes?.footnote as FootnoteData
+						const group = op.attributes?.hiddenGroup
+						// Table previews select the retained source block, not an editable cell.
+						if (data && !data.definition && group !== lastGroup) reference(data.key, offset)
+						lastGroup = group
+					}
+				}
+			}
+		}
 		let position = offset
 		let lastGroup: string = null
 		for (const op of line.content.ops) {
 			const data = op.attributes?.footnote as FootnoteData
 			const group = op.attributes?.hiddenGroup
 			if (data && !data.definition && (group !== lastGroup || !group)) {
-				const note = notes.get(normalizeFootnoteKey(data.key))
-				if (note) {
-					note.number ??= ++number
-					note.references.push(position)
-				}
+				reference(data.key, position)
 			}
 			lastGroup = group
 			position += typeof op.insert === 'string' ? op.insert.length : op.retain ?? 1

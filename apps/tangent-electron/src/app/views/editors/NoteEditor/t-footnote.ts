@@ -26,7 +26,7 @@ export default class TangentFootnote extends HTMLElement {
 				event.preventDefault()
 				event.stopPropagation()
 				dropTooltip(this, false)
-				this.dispatchEvent(new CustomEvent('footnote-navigate', { bubbles: true, detail: { element: this } }))
+				this.dispatchEvent(new CustomEvent('footnote-navigate', { bubbles: true, composed: true, detail: { element: this } }))
 			}
 			else {
 				const group = this.closest('[data-hidden-group]')?.getAttribute('data-hidden-group')
@@ -49,7 +49,7 @@ export default class TangentFootnote extends HTMLElement {
 	connectedCallback() { this.requestResolution() }
 	disconnectedCallback() { dropTooltip(this, false) }
 	private requestResolution() {
-		this.dispatchEvent(new CustomEvent('footnote-resolve', { bubbles: true }))
+		this.dispatchEvent(new CustomEvent('footnote-resolve', { bubbles: true, composed: true }))
 	}
 
 	update(note: ResolvedFootnote) {
