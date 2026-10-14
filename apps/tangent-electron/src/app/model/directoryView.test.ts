@@ -11,7 +11,7 @@ function fixture() {
 	const hidden: TreeNode = { name: '.hidden', path: '/vault/.hidden', fileType: 'folder', children: [
 		{ name: 'Inside', path: '/vault/.hidden/Inside', fileType: 'folder', children: [] }
 	] }
-	const virtual: TreeNode = { name: 'Virtual', path: '/vault/Virtual', fileType: 'folder', children: [], meta: { virtual: true } }
+	const virtual: TreeNode = { name: 'Virtual', path: '/vault/Virtual', fileType: 'folder', children: [], meta: { uuid: 'virtual', virtual: true } }
 	const root: TreeNode = { name: 'Vault', path: '/vault', fileType: 'folder', children: [a, b, hidden, virtual] }
 	const store = new IndexTreeStore({ files: root, tags: { name: '', path: '', fileType: 'tag', names: [], children: [] } })
 	const view = new DirectoryView(store, root)
