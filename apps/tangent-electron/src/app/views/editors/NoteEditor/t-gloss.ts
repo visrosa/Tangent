@@ -5,10 +5,8 @@ import { requestTooltip, tooltip } from 'app/utils/tooltips'
 const glossStyleSheet = new CSSStyleSheet()
 glossStyleSheet.replaceSync(`
 	.base {
-		text-decoration-line: underline;
-		text-decoration-color: var(--accentTextColor);
-		text-decoration-thickness: .1em;
-		text-underline-offset: .12em;
+		background: color-mix(in srgb, var(--noteBackgroundColor) 88%, black);
+		border-radius: .12em;
 	}
 	.indicator {
 		margin-inline-start: .18em;
@@ -92,7 +90,8 @@ class TangentGloss extends HTMLElement {
 		return {
 			tooltip: escapeHtml(this.getAttribute('description') ?? ''),
 			placement: 'top' as const,
-			maxWidth: '32rem'
+			maxWidth: '32rem',
+			delay: 0
 		}
 	}
 

@@ -1,4 +1,6 @@
-import { describe, test, expect } from 'vitest'
+import { afterEach, describe, test, expect } from 'vitest'
+import { dropAllTooltips, requestTooltip, tooltips } from 'app/utils/tooltips'
+import '../../../../../static/global.css'
 import { Editor, inlineToHTML } from 'typewriter-editor'
 import { Delta } from '@typewriter/delta'
 import type { AttributeMap } from '@typewriter/document'
@@ -16,6 +18,29 @@ function createGloss(base: string, description: string) {
 }
 
 describe('t-gloss', () => {
+	afterEach(() => dropAllTooltips())
+
+	test('opens on hover immediately while ordinary tooltips retain their delay', () => {
+		const ordinary = document.createElement('button')
+		requestTooltip(ordinary, 'ordinary tooltip')
+		expect(tooltips.value).toHaveLength(0)
+		const el = createGloss('term', 'description')
+		el.dispatchEvent(new MouseEvent('mouseenter'))
+		expect(tooltips.value).toHaveLength(1)
+		expect(tooltips.value[0].origin).toBe(el)
+		el.remove()
+		expect(tooltips.value).toHaveLength(0)
+	})
+
+	test('shades the base without underlining it or changing its font', () => {
+		const el = createGloss('term', 'description')
+		const base = el.shadowRoot.querySelector('.base')
+		const style = getComputedStyle(base)
+		expect(style.textDecorationLine).toBe('none')
+		expect(style.backgroundColor).not.toBe('rgba(0, 0, 0, 0)')
+		expect(style.fontFamily).toBe(getComputedStyle(el).fontFamily)
+		el.remove()
+	})
 	test('renders the base and indicator inside its shadow root only', () => {
 		const el = createGloss('SGR', 'Select Graphic Rendition')
 
