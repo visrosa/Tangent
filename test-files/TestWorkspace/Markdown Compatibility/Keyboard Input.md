@@ -2,6 +2,12 @@
 
 All spellings: [+Enter+] [-Enter-] ⁅Enter⁆ ⹕Enter⹖
 
+Please press [+[+Ctrl+][+Shift+][+R+]+] to redraw the page.
+
+Glyph-source equivalent: Please press ⁅⹕Ctrl⹖⹕Shift⹖⹕R⹖⁆ to redraw the page.
+
+Each chord should show three individual keycaps inside one surrounding keycap, without visible source brackets. Compare the same note in light and dark themes.
+
 Substitutions: type `[+` or `[-` for ⁅ and ⹕; `+]` or `-]` for ⹖ and ⁆.
 
 Adjacent inputs: [+⎇+][+N+]

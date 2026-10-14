@@ -4,15 +4,12 @@ import type { KeyboardData } from './keyboard'
 import { hiddenGroupEmbedFormat } from './hiddenGroupEmbed'
 import { getHiddenGroupAttributes } from './inline'
 
-export function renderKeyboardTree(data: KeyboardData, depth = 0, delimiters = false): VNode {
+export function renderKeyboardTree(data: KeyboardData): VNode {
 	const children = data.children.map(child => typeof child === 'string'
 		? child
-		: renderKeyboardTree(child, depth + 1, delimiters))
-	if (delimiters) {
-		children.unshift(depth === 0 ? '⁅' : '⹕')
-		children.push(depth === 0 ? '⁆' : '⹖')
-	}
-	return h('kbd', { className: 'keyboard-input' }, children)
+		: renderKeyboardTree(child))
+	const grouped = data.children.some(child => typeof child !== 'string')
+	return h('kbd', { className: grouped ? 'keyboard-input keyboard-input-group' : 'keyboard-input' }, children)
 }
 
 const keyboardEmbedFormat = hiddenGroupEmbedFormat<KeyboardData>({

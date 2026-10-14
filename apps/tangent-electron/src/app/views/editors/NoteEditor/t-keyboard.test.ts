@@ -10,11 +10,13 @@ import './t-embed'
 import MarkdownEditor from './MarkdownEditor'
 import { revealContentAroundRange } from './editorModule'
 import './t-keyboard'
+import '../../../../../static/global.css'
+import 'app/style/note.scss'
 
 const editors: Editor[] = []
 
 function makeEditor(source: string, markdown = false) {
-	const root = document.createElement('div')
+	const root = document.createElement('article')
 	root.style.whiteSpace = 'pre-wrap'
 	document.body.appendChild(root)
 	const editor = markdown ? new MarkdownEditor(null) : new Editor({ types: noteTypeset })
@@ -40,11 +42,54 @@ describe('keyboard input rendering', () => {
 	it.each([
 		'[+[+⎇+][+N+]+]', '[-[-⎇-][-N-]-]', '[+[-⎇-][+N+]+]',
 		'⁅⹕⎇⹖⹕N⹖⁆', '⹕⁅⎇⁆[-N-]⹖', '[+⹕⎇⹖⁅N⁆+]',
-	])('selects brackets by depth for %s', source => {
+	])('renders nested keycaps for %s', source => {
 		const editor = makeEditor(source)
-		expect(preview(editor).textContent).toBe('⁅⹕⎇⹖⹕N⹖⁆')
+		expect(preview(editor).textContent).toBe('⎇N')
 		expect(preview(editor).querySelectorAll('kbd')).toHaveLength(3)
 		expect(editor.root.textContent).toBe(source)
+	})
+
+	it.each(['light', 'dark'])('styles nested keycaps within the %s theme without shrinking inner labels', theme => {
+		const editor = makeEditor('Please press [+[+Ctrl+][+Shift+][+R+]+] to redraw the page.')
+		editor.root.className = `note ${theme}`
+		editor.root.style.color = 'var(--textColor)'
+		editor.root.style.width = '400px'
+		const keys = Array.from(preview(editor).querySelectorAll('kbd'))
+		expect(keys).toHaveLength(4)
+		expect(keys[0].classList.contains('keyboard-input-group')).toBe(true)
+		const outer = keys[0].getBoundingClientRect()
+		for (const key of keys) {
+			const style = getComputedStyle(key)
+			expect(style.borderTopStyle).toBe('solid')
+			expect(style.boxShadow).not.toBe('none')
+			expect(style.fontSize).toBe(getComputedStyle(keys[0]).fontSize)
+		}
+		for (const key of keys.slice(1)) {
+			const rect = key.getBoundingClientRect()
+			expect(rect.left).toBeGreaterThan(outer.left)
+			expect(rect.right).toBeLessThan(outer.right)
+			expect(rect.top).toBeGreaterThan(outer.top)
+			expect(rect.bottom).toBeLessThan(outer.bottom)
+		}
+		const face = getComputedStyle(keys[1]).backgroundColor
+		editor.root.className = `note ${theme === 'light' ? 'dark' : 'light'}`
+		expect(getComputedStyle(keys[1]).backgroundColor).not.toBe(face)
+		expect(editor.root.querySelector('.keyboard-source').getBoundingClientRect().width).toBe(0)
+	})
+
+	it('keeps deep labels at one font size and fits a long keycap within a narrow note', () => {
+		const editor = makeEditor('[+[-⁅⹕N⹖⁆-]+] [+A deliberately long label for a narrow note with wrapping+]')
+		editor.root.className = 'note light'
+		editor.root.style.width = '240px'
+		const outputs = Array.from(editor.root.querySelectorAll('t-keyboard'))
+		const nested = Array.from(outputs[0].shadowRoot.querySelectorAll('kbd'))
+		expect(nested).toHaveLength(4)
+		expect(new Set(nested.map(key => getComputedStyle(key).fontSize)).size).toBe(1)
+		const longKey = outputs[1].shadowRoot.querySelector('kbd')
+		const noteStyle = getComputedStyle(editor.root)
+		const contentWidth = editor.root.clientWidth - parseFloat(noteStyle.paddingLeft) - parseFloat(noteStyle.paddingRight)
+		expect(longKey.getBoundingClientRect().width).toBeLessThanOrEqual(contentWidth)
+		expect(longKey.getBoundingClientRect().height).toBeGreaterThan(nested[3].getBoundingClientRect().height)
 	})
 
 	it('preserves Unicode source through reveal, DOM reconstruction and caret mapping', () => {
@@ -73,7 +118,7 @@ describe('keyboard input rendering', () => {
 		const close = editor.getText().indexOf('+]')
 		editor.change.delete([close, close + 2]).insert(close, '⁆').apply()
 		await wait(20)
-		expect(preview(editor).textContent).toBe('⁅N⁆')
+		expect(preview(editor).textContent).toBe('N')
 		editor.modules.history.undo()
 		await wait(20)
 		expect(editor.getText()).toBe('Before ⁅N+] after')
@@ -81,19 +126,19 @@ describe('keyboard input rendering', () => {
 		editor.modules.history.undo()
 		await wait(20)
 		expect(editor.getText()).toBe('Before [+N+] after')
-		expect(preview(editor).textContent).toBe('⁅N⁆')
+		expect(preview(editor).textContent).toBe('N')
 	})
 
-	it('keeps adjacent outer spans separate and uses quills at every inner depth', () => {
+	it('keeps adjacent outer inputs separate and retains every nested group', () => {
 		const editor = makeEditor('[+N+][-N-][+[-[+A+]-]+]')
 		const outputs = Array.from(editor.root.querySelectorAll('t-keyboard'))
-		expect(outputs.map(el => el.shadowRoot.textContent)).toEqual(['⁅N⁆', '⁅N⁆', '⁅⹕⹕A⹖⹖⁆'])
+		expect(outputs.map(el => el.shadowRoot.textContent)).toEqual(['N', 'N', 'A'])
 	})
 
 	it('keeps literal markup safe and preserves label whitespace and Unicode', () => {
 		const source = '[+<img src=x onerror=alert(1)> **N**  👩‍💻 e\u0301+]'
 		const editor = makeEditor(source)
-		expect(preview(editor).textContent).toBe('⁅<img src=x onerror=alert(1)> **N**  👩‍💻 e\u0301⁆')
+		expect(preview(editor).textContent).toBe('<img src=x onerror=alert(1)> **N**  👩‍💻 e\u0301')
 		expect(preview(editor).querySelector('img')).toBeNull()
 	})
 
@@ -103,10 +148,10 @@ describe('keyboard input rendering', () => {
 		const index = editor.getText().indexOf('N')
 		editor.change.delete([index, index + 1]).insert(index, 'M').apply()
 		await wait(20)
-		expect(preview(editor).textContent).toBe('⁅⹕M⹖⁆')
+		expect(preview(editor).textContent).toBe('M')
 		editor.modules.history.undo()
 		await wait(20)
-		expect(preview(editor).textContent).toBe('⁅⹕N⹖⁆')
+		expect(preview(editor).textContent).toBe('N')
 		expect(editor.getText()).toBe('Before [+[-N-]+] after')
 	})
 
@@ -134,7 +179,7 @@ describe('keyboard input rendering', () => {
 		const containers = Array.from(editor.root.querySelectorAll('.inline-keyboard-container'))
 		expect(containers.map(el => el.classList.contains('revealed'))).toEqual([true, false])
 		expect(containers[0].querySelector('.keyboard-source').textContent).toBe('[+N+]')
-		expect(containers[0].querySelector('t-keyboard').shadowRoot.textContent).toBe('⁅N⁆')
+		expect(containers[0].querySelector('t-keyboard').shadowRoot.textContent).toBe('N')
 	})
 
 	it.each(['click', 'dblclick', 'mousedown', 'contextmenu'])('%s on a nested key requests the exact source group', eventType => {
@@ -158,7 +203,7 @@ describe('keyboard input rendering', () => {
 		const editor = makeEditor('')
 		editor.set(new TextDocument(delta))
 		expect(editor.root.querySelectorAll('t-keyboard')).toHaveLength(1)
-		expect(preview(editor).textContent).toBe('⁅⹕⎇⹖⹕N⹖⁆')
+		expect(preview(editor).textContent).toBe('⎇N')
 	})
 
 	it.each([

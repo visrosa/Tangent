@@ -1,6 +1,6 @@
 # Keyboard Input
 
-Write `[+N+]`, `[-N-]`, `⁅N⁆`, or `⹕N⹖` to mark keyboard input. All four spellings display as ⁅N⁆ and have the same meaning. Tangent preserves the spelling you typed when saving or copying Markdown.
+Write `[+N+]`, `[-N-]`, `⁅N⁆`, or `⹕N⹖` to mark keyboard input. All four spellings display as a keycap labelled N and have the same meaning. Keycaps have rounded borders and raised edges, with colours following the note's theme. Tangent preserves the spelling you typed when saving or copying Markdown; source delimiters appear when editing rather than around the rendered label.
 
 Typing `[+` or `[-` offers `⁅` and `⹕` in the Unicode completion menu; typing `+]` or `-]` offers `⹖` and `⁆`. Use the arrow keys to choose and Enter or Tab to substitute, or Escape to keep the ASCII source. Substitutions replace the stored text only when accepted. Choose the matching closing bracket: partially substituted pairs such as `⁅N+]` remain literal until both delimiters match.
 
@@ -16,9 +16,15 @@ Enclose individual keys in another input span to group them:
 [+⹕⎇⹖⁅N⁆+]
 ```
 
-All five display as ⁅⹕⎇⹖⹕N⹖⁆. Outermost spans use `⁅…⁆`; every nested span uses `⹕…⹖`, including nesting beyond two levels. The brackets are a Tangent display convention. Every spelling works at any depth, and different spellings may nest. Each opening delimiter requires its own matching closer: `[+` with `+]`, `[-` with `-]`, `⁅` with `⁆`, and `⹕` with `⹖`.
+All five display as two individual keycaps, ⎇ and N, inside a surrounding group keycap. Further nesting adds another surrounding keycap without shrinking the labels. Every spelling works at any depth, and different spellings may nest. Each opening delimiter requires its own matching closer: `[+` with `+]`, `[-` with `-]`, `⁅` with `⁆`, and `⹕` with `⹖`.
 
-Adjacent spans stay separate: `[+⎇+][+N+]` displays as ⁅⎇⁆⁅N⁆. Tangent preserves the grouping you write without interpreting key names, simultaneous presses, or sequences.
+Adjacent spans stay separate: `[+⎇+][+N+]` displays as two keycaps without a surrounding group. Tangent preserves the grouping you write without interpreting key names, simultaneous presses, or sequences.
+
+For a chord inside prose:
+
+```md
+Please press [+[+Ctrl+][+Shift+][+R+]+] to redraw the page.
+```
 
 ## Editing and Literal Text
 

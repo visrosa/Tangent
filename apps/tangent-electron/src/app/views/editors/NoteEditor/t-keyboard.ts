@@ -6,8 +6,33 @@ import type { KeyboardData } from 'common/markdownModel/keyboard'
 
 const keyboardStyleSheet = new CSSStyleSheet()
 keyboardStyleSheet.replaceSync(`
-	:host { white-space: pre-wrap; }
-	kbd { font: inherit; }
+	:host {
+		display: inline-block;
+		font-family: var(--codeFontFamily, monospace);
+		font-size: .85em;
+		max-inline-size: 100%;
+		white-space: pre-wrap;
+	}
+	kbd {
+		display: inline-block;
+		box-sizing: border-box;
+		max-inline-size: 100%;
+		padding: .06em .3em;
+		border: 1px solid color-mix(in srgb, currentColor 40%, var(--noteBackgroundColor, white));
+		border-bottom-color: color-mix(in srgb, currentColor 60%, var(--noteBackgroundColor, white));
+		border-radius: .25em;
+		background-color: var(--buttonBackgroundColor, #e9e9e9);
+		box-shadow: 0 .1em .1em rgb(0 0 0 / .18), inset 0 .05em 0 rgb(255 255 255 / .2);
+		font: inherit;
+		line-height: 1.2;
+		overflow-wrap: anywhere;
+		vertical-align: baseline;
+	}
+	.keyboard-input-group {
+		padding: .14em;
+		background-color: var(--embossedBackgroundColor, #f7f7f7);
+	}
+	kbd + kbd { margin-inline-start: .12em; }
 `)
 
 class TangentKeyboard extends HTMLElement {
@@ -32,7 +57,7 @@ class TangentKeyboard extends HTMLElement {
 	attributeChangedCallback(name: string, oldValue: string, newValue: string) {
 		if (oldValue === newValue) return
 		const keyboard = newValue ? JSON.parse(newValue) as KeyboardData : null
-		patch(this.outputRoot, keyboard ? [renderKeyboardTree(keyboard, 0, true)] : [])
+		patch(this.outputRoot, keyboard ? [renderKeyboardTree(keyboard)] : [])
 	}
 
 	onClick(event: MouseEvent) {
