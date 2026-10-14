@@ -3,17 +3,21 @@ import { mount, unmount } from 'svelte'
 import TangentEmbed from './t-embed'
 import MarkdownEditor from './MarkdownEditor'
 import NoteOutline from './NoteOutline.svelte'
+import ThreadViewVerticalTitleBar from '../../Tangent/ThreadViewVerticalTitleBar.svelte'
+import { WritableStore } from 'common/stores'
+import type { NoteOutlineControl } from './outline'
 import NoteViewInfo from 'common/dataTypes/NoteViewInfo'
 import { markdownToTextDocument } from 'common/markdownModel'
 import { getOutlineHeadings } from './outline'
 import { wait } from '@such-n-such/core'
 import 'app/style/note.scss'
+import 'app/style/input.scss'
 import '../../../../../static/global.css'
 
 const cleanups: (() => Promise<void>)[] = []
 afterEach(async () => { for (const cleanup of cleanups.splice(0)) await cleanup() })
 
-function setup(source: string, width = 800) {
+function setup(source: string, width = 800, titleSidebar = false) {
 	void TangentEmbed
 	const container = document.createElement('main')
 	container.style.cssText = `width:${width}px;height:300px;overflow:auto;box-sizing:border-box;position:relative;`
@@ -21,7 +25,17 @@ function setup(source: string, width = 800) {
 	root.className = 'note'
 	root.style.whiteSpace = 'pre-wrap'
 	container.append(root)
-	document.body.append(container)
+	const thread = document.createElement('div')
+	thread.className = 'ThreadView' + (titleSidebar ? ' multiple' : '')
+	thread.style.cssText = 'position:relative;height:300px;'
+	thread.append(container)
+	document.body.append(thread)
+	const control = new WritableStore<NoteOutlineControl>(null)
+	const title = titleSidebar ? mount(ThreadViewVerticalTitleBar, {
+		target: thread,
+		context: new Map([['workspace', { commands: {} }]]),
+		props: { node: { name: 'Example note', path: '/Example.md' }, tangent: null, outlineControl: control }
+	}) : null
 	const editor = new MarkdownEditor(null)
 	editor.setRoot(root)
 	editor.set(markdownToTextDocument(source))
@@ -30,12 +44,13 @@ function setup(source: string, width = 800) {
 		target: container, anchor: root,
 		props: {
 			editor, container, info,
+			onControl: value => control.set(value),
 			onWidth: width => { container.style.setProperty('--outlineWidth', width + 'px'); container.style.paddingLeft = width + 'px' },
 			onNavigate: position => editor.select(position)
 		}
 	})
-	cleanups.push(async () => { await unmount(component); editor.destroy(); container.remove() })
-	return { container, editor, info }
+	cleanups.push(async () => { await unmount(component); if (title) await unmount(title); editor.destroy(); thread.remove() })
+	return { container, editor, info, thread, control }
 }
 
 describe('note outline', () => {
@@ -92,4 +107,51 @@ describe('note outline', () => {
 		const restored = new NoteViewInfo({ json: info.getRawValues('file') })
 		expect(restored.outlineExpanded.value).toBe(false)
 	})
+	it('places the shared outline toggle below close and before the side controls and title', async () => {
+		const { container, thread, info } = setup('# Title\n## Child', 800, true)
+		await wait(40)
+		const buttons = Array.from(thread.querySelectorAll<HTMLButtonElement>('.verticalTitleBar button'))
+		expect(buttons).toHaveLength(4)
+		expect(buttons[0].classList.contains('close')).toBe(true)
+		expect(buttons[1].classList.contains('outline')).toBe(true)
+		expect(buttons[2].getAttribute('aria-label')).toBe('Close files to the left')
+		expect(buttons[3].getAttribute('aria-label')).toBe('Close files to the right')
+		expect(thread.querySelector('.verticalTitleBar .name').previousElementSibling.classList.contains('buttons')).toBe(true)
+		expect(buttons[1].getBoundingClientRect().top).toBeGreaterThan(buttons[0].getBoundingClientRect().top)
+		expect(buttons[2].getBoundingClientRect().top).toBeGreaterThan(buttons[1].getBoundingClientRect().top)
+		expect(container.querySelector('.toggle')).toBeNull()
+		buttons[1].click()
+		await wait(30)
+		expect(info.outlineExpanded.value).toBe(false)
+		expect(buttons[1].getAttribute('aria-expanded')).toBe('false')
+		expect(container.style.paddingLeft).toBe('0px')
+		expect(getComputedStyle(container.querySelector('nav')).display).toBe('none')
+		thread.classList.remove('multiple')
+		await wait(40)
+		expect(container.querySelector('.toggle')).not.toBeNull()
+		expect(container.style.paddingLeft).toBe('28px')
+		thread.classList.add('multiple')
+		await wait(40)
+		expect(container.querySelector('.toggle')).toBeNull()
+		expect(container.style.paddingLeft).toBe('0px')
+	})
+
+	it('opens narrow outlines from the title bar and releases the per-view controller on unmount', async () => {
+		const { container, thread, info, control } = setup('# Title', 500, true)
+		await wait(40)
+		const button = thread.querySelector<HTMLButtonElement>('.verticalTitleBar .outline')
+		expect(button.getAttribute('aria-expanded')).toBe('false')
+		expect(container.style.paddingLeft).toBe('0px')
+		button.click()
+		await wait(30)
+		expect(container.querySelector('nav').classList.contains('overlay')).toBe(true)
+		expect(button.getAttribute('aria-expanded')).toBe('true')
+		expect(info.outlineExpanded.value).toBe(true)
+		container.querySelector<HTMLButtonElement>('.headings button').click()
+		await wait(30)
+		expect(button.getAttribute('aria-expanded')).toBe('false')
+		await cleanups.pop()()
+		expect(control.value).toBeNull()
+	})
+
 })

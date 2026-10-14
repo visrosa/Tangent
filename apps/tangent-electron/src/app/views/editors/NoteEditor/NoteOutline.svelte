@@ -2,7 +2,7 @@
 import { onDestroy, onMount } from 'svelte'
 import type MarkdownEditor from './MarkdownEditor'
 import type NoteViewInfo from 'common/dataTypes/NoteViewInfo'
-import { getOutlineHeadings, headingAtPosition } from './outline'
+import { getOutlineHeadings, headingAtPosition, type NoteOutlineControl } from './outline'
 
 export let editor: MarkdownEditor
 export let container: HTMLElement
@@ -10,12 +10,14 @@ export let info: NoteViewInfo = null
 export let extraTop = 0
 export let onNavigate: (position: number) => void
 export let onWidth: (width: number) => void = () => {}
+export let onControl: (control: NoteOutlineControl | null) => void = () => {}
 
 let headings = getOutlineHeadings(editor.doc)
 let active: string = null
 let preferredExpanded = true
 let narrowOpen = false
 let narrow = false
+let titleBarVisible = false
 let availableHeight = 400
 let stopPreference: () => void
 let frame = 0
@@ -25,7 +27,8 @@ $: {
 	stopPreference = info?.outlineExpanded.subscribe(value => preferredExpanded = value)
 }
 $: expanded = narrow ? narrowOpen : preferredExpanded
-$: onWidth(narrow || !expanded ? 28 : 192)
+$: onWidth(narrow || !expanded ? (titleBarVisible ? 0 : 28) : 192)
+$: onControl({ expanded, toggle })
 
 function refresh(event?) {
 	headings = getOutlineHeadings(editor.doc)
@@ -52,6 +55,7 @@ function updateFromScroll() {
 	active = current
 }
 function resize() {
+	titleBarVisible = container.closest('.ThreadView')?.classList.contains('multiple') ?? false
 	const wasNarrow = narrow
 	narrow = container.clientWidth < 640
 	if (wasNarrow !== narrow) narrowOpen = false
@@ -82,27 +86,34 @@ onMount(() => {
 	window.addEventListener('resize', resize)
 	const observer = new ResizeObserver(resize)
 	observer.observe(container)
+	const thread = container.closest('.ThreadView')
+	const titleObserver = new MutationObserver(resize)
+	if (thread) titleObserver.observe(thread, { attributes: true, attributeFilter: ['class'] })
 	resize()
 	return () => {
 		editor.off('changed', refresh)
 		container.removeEventListener('scroll', scheduleScroll)
 		window.removeEventListener('resize', resize)
 		observer.disconnect()
+		titleObserver.disconnect()
 	}
 })
 onDestroy(() => {
 	stopPreference?.()
 	cancelAnimationFrame(frame)
+	onControl(null)
 })
 </script>
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div class="outline-anchor" style:top={`${extraTop}px`} on:mousedown|stopPropagation on:mouseup|stopPropagation on:mousemove|stopPropagation on:keydown|stopPropagation={onKeyDown}>
-	<nav aria-label="Note outline" class:expanded class:overlay={narrow && expanded} style:height={`${availableHeight}px`}>
+	<nav aria-label="Note outline" class:expanded class:inTitleBar={titleBarVisible} class:overlay={narrow && expanded} style:height={`${availableHeight}px`}>
+		{#if !titleBarVisible}
 		<button class="toggle" type="button" aria-label={expanded ? 'Collapse outline' : 'Expand outline'} aria-expanded={expanded} on:click={toggle} title={expanded ? 'Collapse outline' : 'Expand outline'}>
 			{expanded ? '‹' : '☷'}
 			{#if expanded}<span>Outline</span>{/if}
 		</button>
+		{:else if expanded}<span class="outline-title">Outline</span>{/if}
 		{#if expanded}
 			<div class="headings">
 				{#each headings as heading (heading.id)}
@@ -119,6 +130,8 @@ onDestroy(() => {
 .outline-anchor { position: sticky; height: 0; margin-left: calc(-1 * var(--outlineWidth)); z-index: 11; }
 nav { width: 28px; display: flex; flex-direction: column; background: var(--noteBackgroundColor); border-right: 1px solid var(--borderColor); box-sizing: border-box; cursor: default; }
 nav.expanded { width: 192px; }
+nav.inTitleBar:not(.expanded) { display: none; }
+.outline-title { padding: 8px; font-size: 12px; color: var(--deemphasizedTextColor); }
 nav.overlay { box-shadow: 4px 0 12px #0003; }
 button { color: var(--deemphasizedTextColor); background: none; border: none; text-align: left; cursor: pointer; font: inherit; font-size: 12px; }
 button:hover, button.active { color: var(--textColor); background: var(--accentBackgroundColor); }

@@ -2,6 +2,8 @@ import type { TextDocument } from '@typewriter/document'
 import { safeHeaderLine } from 'common/markdownModel/header'
 import { lineToText } from 'common/typewriterUtils'
 
+export type NoteOutlineControl = { expanded: boolean; toggle: () => void }
+
 export type OutlineHeading = { id: string, index: number, start: number, level: number, depth: number, text: string }
 
 export function getOutlineHeadings(doc: TextDocument): OutlineHeading[] {

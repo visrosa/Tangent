@@ -1455,6 +1455,7 @@ function updateCodeBlockSizing(pre: HTMLElement, context: CodeBlockSizingContext
 	{#if container && layout === 'fill'}
 		<NoteOutline {editor} {container} info={$outlineInfo} {extraTop}
 			onWidth={width => outlineWidth = width}
+			onControl={control => state.outlineControl.set(control)}
 			onNavigate={position => { editor.select(position); editor.root.focus({ preventScroll: true }); tick().then(() => ensureRangeInView([position, position])); }} />
 	{/if}
 	<div class="extraTop" style={`height: ${effectiveExtraTop}px;`}></div>
