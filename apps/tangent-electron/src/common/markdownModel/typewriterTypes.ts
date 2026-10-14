@@ -311,6 +311,67 @@ function buildDlTree(lineData: DlLineEntry[]): DlTreeNode[] {
 	return roots
 }
 
+function getDlLayouts(lineData: DlLineEntry[], hidden: boolean[]) {
+	const indices = new Map(lineData.map((entry, index) => [entry[2], index]))
+	const layouts: Array<{ row: number, span: number } | undefined> = []
+	const definitionCollapsed: boolean[] = []
+	const groupedTerms = new Set<string>()
+	const visible = (node: DlTreeNode) => !hidden[indices.get(node.entry[2])]
+
+	const place = (nodes: DlTreeNode[], firstRow: number): number => {
+		let nextRow = firstRow
+		for (let index = 0; index < nodes.length; index++) {
+			let owner = nodes[index]
+			let dl = owner.entry[0].dl as DlLineData
+			if (dl.role === 'value') {
+				if (visible(owner)) layouts[indices.get(owner.entry[2])] = { row: nextRow++, span: 1 }
+				continue
+			}
+
+			const group = [owner]
+			while (!dl.hasDef && owner.children.length === 0 && index + 1 < nodes.length) {
+				const next = nodes[index + 1]
+				if ((next.entry[0].dl as DlLineData).role !== 'term'
+					|| next.entry[0].indent?.indent !== owner.entry[0].indent?.indent) break
+				groupedTerms.add(owner.entry[2])
+				group.push(next)
+				owner = next
+				dl = owner.entry[0].dl as DlLineData
+				index++
+			}
+
+			const terms = group.filter(visible)
+			// An inline definition shares its owner's source line; moving it above
+			// that term would overlap the earlier terms' editable boxes.
+			const childRow = nextRow + (dl.hasDef ? terms.length : 0)
+			const childEnd = place(owner.children, childRow)
+			const endRow = Math.max(nextRow + terms.length, childEnd)
+			terms.forEach((term, offset) => {
+				const row = nextRow + offset
+				layouts[indices.get(term.entry[2])] = {
+					row,
+					span: term === owner && !dl.hasDef ? endRow - row : 1
+				}
+			})
+
+			definitionCollapsed[indices.get(owner.entry[2])] = visible(owner)
+				&& hasCollapsedChildren(owner.entry[0].collapsed)
+				&& (!!dl.hasDef || childEnd === childRow)
+
+			// A shared description's bar must cover every term, even when there
+			// are fewer descriptions than terms.
+			const lastChild = owner.children.findLast(visible)
+			if (!dl.hasDef && childEnd < endRow && (lastChild?.entry[0].dl as DlLineData)?.role === 'value') {
+				layouts[indices.get(lastChild.entry[2])].span += endRow - childEnd
+			}
+			nextRow = endRow
+		}
+		return nextRow
+	}
+	place(buildDlTree(lineData), 1)
+	return { layouts, definitionCollapsed, groupedTerms }
+}
+
 function getDlExportProps(attributes: AttributeMap, role: DlLineData['role'], key: string) {
 	const dl = attributes.dl as DlLineData
 	const props = getCoreLineProperties(attributes, `dl-${role}`)
@@ -443,38 +504,7 @@ const noteTypeset:TypesetTypes = {
 					const hidden = lineData.map(([attributes]) => isCollapsed(attributes.collapsed)
 						&& !attributes.collapsedReveal)
 					const columns = getDlColumns(lineData)
-					const layouts: Array<{ row: number, span: number } | undefined> = []
-					const definitionCollapsed: boolean[] = []
-					let nextRow = 1
-					for (let index = 0; index < lineData.length; index++) {
-						if (layouts[index] || hidden[index]) continue
-
-						const [attributes] = lineData[index]
-						const dl = attributes.dl as DlLineData
-						const collapseParent = dl.role === 'term' && hasCollapsedChildren(attributes.collapsed)
-						if (dl.role === 'term' && dl.hasDef === false) {
-							const termIndent = attributes.indent?.indent ?? ''
-							let valueCount = 0
-							for (let valueIndex = index + 1; valueIndex < lineData.length; valueIndex++) {
-								const [valueAttributes] = lineData[valueIndex]
-								const valueDl = valueAttributes.dl as DlLineData
-								if (valueDl.role !== 'value' || valueDl.termIndent !== termIndent) break
-								if (hidden[valueIndex]) continue
-								layouts[valueIndex] = { row: nextRow + valueCount, span: 1 }
-								valueCount++
-							}
-
-							definitionCollapsed[index] = collapseParent && valueCount === 0
-							const span = Math.max(1, valueCount)
-							layouts[index] = { row: nextRow, span }
-							nextRow += span
-							continue
-						}
-
-						definitionCollapsed[index] = collapseParent
-						layouts[index] = { row: nextRow, span: 1 }
-						nextRow++
-					}
+					const { layouts, definitionCollapsed, groupedTerms } = getDlLayouts(lineData, hidden)
 
 					const lines = lineData.map(([attributes, children, id], index) => {
 						const sourceLine = editor.doc.getLineBy(id)
@@ -487,6 +517,7 @@ const noteTypeset:TypesetTypes = {
 
 						let className = `dl-line dl-${dl.role}`
 						if (dl.termIndent !== undefined) className += ' dl-nested'
+						if (groupedTerms.has(id)) className += ' dl-group-term'
 						if (definitionCollapsed[index]) className += ' dl-description-collapsed'
 
 						let lineChildren = children

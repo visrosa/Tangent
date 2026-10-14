@@ -148,9 +148,93 @@ describe('description-list HTML', () => {
 		expect(signature(roundTripped.lines)).toEqual(signature(original.lines))
 	})
 
+	test.each(['\t', '  '])('lays out terms sharing a description with %j indentation', async indent => {
+		const source = `- Term1 ::\n- Term2 ::\n${indent}- Describes both\nplain`
+		const { editor, root } = createMarkdownEditor(source)
+		const article = mountInNote(root)
+		const lines = () => Array.from(root.querySelectorAll('.dl-line')) as HTMLElement[]
+		try {
+			expect(structure(render(source).querySelector('dl.description-list')))
+				.toEqual([['DT', 'Term1'], ['DT', 'Term2'], ['DD', 'Describes both']])
+			expect(lines().map(line => line.style.gridRow)).toEqual(['1', '2', '1 / span 2'])
+			expect(lines()[0].classList.contains('dl-group-term')).toBe(true)
+			expect(lines()[2].getBoundingClientRect().top).toBe(lines()[0].getBoundingClientRect().top)
+			expect(lines()[2].getBoundingClientRect().bottom).toBe(lines()[1].getBoundingClientRect().bottom)
+			editor.collapsingSections.toggleLineCollapsed(1)
+			await wait()
+			expect(lines().map(line => line.style.gridRow)).toEqual(['1', '2', ''])
+			expect(lines()[1].querySelector('.dl-summary').getAttribute('data-summary')).toBe('Describes both')
+			expect(lines().slice(0, 2).every(line => getComputedStyle(line).display !== 'none')).toBe(true)
+			expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+			editor.collapsingSections.toggleLineCollapsed(1)
+			await wait()
+			expect(lines().map(line => line.style.gridRow)).toEqual(['1', '2', '1 / span 2'])
+		} finally {
+			editor.destroy()
+			article.remove()
+		}
+	})
+
+	test.each(['\t', '  '])('lays out a nested term beside its parent with %j indentation', indent => {
+		const source = `- Term1 ::\n${indent}- Term1.1 ::\n${indent}${indent}- Desc1.1`
+		const { editor, root } = createMarkdownEditor(source)
+		const article = mountInNote(root)
+		try {
+			expect(structure(render(source).querySelector('dl.description-list')))
+				.toEqual([['DT', 'Term1'], ['SUBTREE', [['DT', 'Term1.1'], ['DD', 'Desc1.1']]]])
+			const lines = Array.from(root.querySelectorAll('.dl-line')) as HTMLElement[]
+			expect(lines.map(line => line.style.gridRow)).toEqual(['1', '1', '1'])
+			expect(lines.map(line => line.getBoundingClientRect().top))
+				.toEqual(Array(3).fill(lines[0].getBoundingClientRect().top))
+			expect(textLeft(lines[1], 'Term1.1')).toBeGreaterThan(textLeft(lines[0], 'Term1'))
+			expect(textLeft(lines[2], 'Desc1.1')).toBeGreaterThan(textLeft(lines[1], 'Term1.1'))
+			expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+		} finally {
+			editor.destroy()
+			article.remove()
+		}
+	})
+
 	test('separates groups across a blank line', () => {
 		const container = render('- alpha :: one\n\n- beta :: two')
 		expect(container.querySelectorAll('dl.description-list')).toHaveLength(2)
+	})
+
+	test.each([
+		['more terms', '- first ::\n- second ::\n- third ::\n\t- value one\n\t- value two\n- next :: final', ['1', '2', '3', '1', '2 / span 2', '4']],
+		['more values', '- first ::\n- second ::\n\t- value one\n\t- value two\n\t- value three\n- next :: final', ['1', '2 / span 2', '1', '2', '3', '4']],
+		['nested shared terms', '- parent ::\n\t- first ::\n\t- second ::\n\t\t- value\n- next :: final', ['1 / span 2', '1', '2', '1 / span 2', '3']],
+		['an inline owner', '- first ::\n- second :: inline\n\t- child :: description\n- next :: final', ['1', '2', '3', '4']],
+		['separate subtrees', '- first ::\n\t- child ::\n\t\t- value\n- second ::\n\t- second value', ['1', '1', '1', '2', '2']],
+	])('keeps group and subtree boundaries with %s', (_name, source, rows) => {
+		const { editor, root } = createMarkdownEditor(source)
+		try {
+			expect(Array.from(root.querySelectorAll('.dl-line'), (line: HTMLElement) => line.style.gridRow)).toEqual(rows)
+			expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+		} finally { editor.destroy() }
+	})
+
+	test.each([
+		['shared', '- Term1 ::\n- Term2 ::\n\t- Describes both', ['1', '2', '1 / span 2']],
+		['nested', '- Term1 ::\n\t- Term1.1 ::\n\t\t- Desc1.1', ['1', '1', '1']],
+	])('keeps the %s structure while typing and editing', async (_name, source, rows) => {
+		const { editor, root } = createMarkdownEditor('')
+		try {
+			editor.select(0)
+			for (const char of source) {
+				editor.insert(char)
+				await wait()
+			}
+			const lineRows = () => Array.from(root.querySelectorAll('.dl-line'), (line: HTMLElement) => line.style.gridRow)
+			expect(lineRows()).toEqual(rows)
+			expect(editor.doc.lines.map(line => line.attributes.dl.role)).toEqual(['term', 'term', 'value'])
+			editor.select(source.indexOf('Term1') + 5)
+			editor.insert(' edited')
+			await wait()
+			expect(lineRows()).toEqual(rows)
+			expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join(''))
+				.toBe(source.replace('Term1', 'Term1 edited') + '\n')
+		} finally { editor.destroy() }
 	})
 
 	test('renders a description list nested under a regular list', () => {

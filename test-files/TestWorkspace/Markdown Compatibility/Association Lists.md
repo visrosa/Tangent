@@ -12,3 +12,12 @@
 
 - alpha beta :: Compare the term width and description alignment above.
 - `code  spacing` :: Code keeps its own spacing.
+
+- Earth ::
+- Terra ::
+	- The third planet from the Sun
+
+- Solar System ::
+	- Terrestrial planets ::
+		- Mercury :: The innermost planet
+		- Venus :: The second planet
