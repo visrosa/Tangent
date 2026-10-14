@@ -46,6 +46,10 @@ describe('keyboard delimiter substitutions', () => {
 		expect(handler.canActivateByRequest(sourceDocument('[+N+]text'))).toBe(false)
 	})
 
+	it.each(['arrow->+', 'arrow->]', 'ellipsis..+', '[+arrow->+'])('does not activate an unrelated substitution after typing in %s', source => {
+		expect(new UnicodeAutocompleter(null).canActivateFromTyping(source[source.length - 1], sourceDocument(source))).toBe(false)
+	})
+
 	it.each([
 		'`[+`', '```\n[-\n```', '$[+$',
 		'---\nkeys: [+\n---', '[[note|[+]]',
