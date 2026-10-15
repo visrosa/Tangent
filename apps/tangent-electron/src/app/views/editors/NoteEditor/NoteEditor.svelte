@@ -111,7 +111,9 @@ export let onScrollRequest: ScrollToCallback = null
 export let onKeyboardExit: KeyboardExitCallback = null
 
 let container: HTMLElement
-let outlineWidth = 28
+let outlineWidth = 0
+$: outlineControl = state.outlineControl
+$: hasOutline = layout === 'fill' && !!outlineControl
 $: outlineInfo = state.noteViewInfo
 
 let _lastFile: NoteFile
@@ -1450,12 +1452,12 @@ function updateCodeBlockSizing(pre: HTMLElement, context: CodeBlockSizingContext
 	class:typewriter={focusLevel >= FocusLevel.Typewriter}
 	style={`--noteWidthMax: ${$maxWidth}px;`}
 	style:--extraTop={extraTop + 'px'}
-	style:--outlineWidth={`${layout === 'fill' ? outlineWidth : 0}px`}
+	style:--outlineWidth={`${hasOutline ? outlineWidth : 0}px`}
 >
-	{#if container && layout === 'fill'}
+	{#if container && editorElement && hasOutline}
 		<NoteOutline {editor} {container} info={$outlineInfo} {extraTop}
 			onWidth={width => outlineWidth = width}
-			onControl={control => state.outlineControl.set(control)}
+			onControl={control => outlineControl?.set(control)}
 			onNavigate={position => { editor.select(position); editor.root.focus({ preventScroll: true }); tick().then(() => ensureRangeInView([position, position])); }} />
 	{/if}
 	<div class="extraTop" style={`height: ${effectiveExtraTop}px;`}></div>
