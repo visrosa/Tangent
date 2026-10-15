@@ -313,9 +313,10 @@ function buildDlTree(lineData: DlLineEntry[]): DlTreeNode[] {
 
 function getDlLayouts(lineData: DlLineEntry[], hidden: boolean[]) {
 	const indices = new Map(lineData.map((entry, index) => [entry[2], index]))
-	const layouts: Array<{ row: number, span: number } | undefined> = []
+	const layouts: Array<{ row: number, span: number, termRow?: number, definitionSpan?: number } | undefined> = []
 	const definitionCollapsed: boolean[] = []
 	const groupedTerms = new Set<string>()
+	const owners = new Map<string, DlTreeNode>()
 	const visible = (node: DlTreeNode) => !hidden[indices.get(node.entry[2])]
 
 	const place = (nodes: DlTreeNode[], firstRow: number): number => {
@@ -340,17 +341,21 @@ function getDlLayouts(lineData: DlLineEntry[], hidden: boolean[]) {
 				index++
 			}
 
+			for (const child of owner.children) {
+				if ((child.entry[0].dl as DlLineData).role === 'value') owners.set(child.entry[2], owner)
+			}
+			owners.set(owner.entry[2], owner)
 			const terms = group.filter(visible)
-			// An inline definition shares its owner's source line; moving it above
-			// that term would overlap the earlier terms' editable boxes.
-			const childRow = nextRow + (dl.hasDef ? terms.length : 0)
+			const childRow = nextRow + (dl.hasDef ? 1 : 0)
 			const childEnd = place(owner.children, childRow)
 			const endRow = Math.max(nextRow + terms.length, childEnd)
 			terms.forEach((term, offset) => {
 				const row = nextRow + offset
 				layouts[indices.get(term.entry[2])] = {
-					row,
-					span: term === owner && !dl.hasDef ? endRow - row : 1
+					row: term === owner && dl.hasDef ? nextRow : row,
+					span: term === owner ? endRow - (dl.hasDef ? nextRow : row) : 1,
+					termRow: term === owner && dl.hasDef ? offset + 1 : undefined,
+					definitionSpan: term === owner && dl.hasDef && childEnd === childRow ? terms.length : 1
 				}
 			})
 
@@ -369,7 +374,7 @@ function getDlLayouts(lineData: DlLineEntry[], hidden: boolean[]) {
 		return nextRow
 	}
 	place(buildDlTree(lineData), 1)
-	return { layouts, definitionCollapsed, groupedTerms }
+	return { layouts, definitionCollapsed, groupedTerms, owners }
 }
 
 function getDlExportProps(attributes: AttributeMap, role: DlLineData['role'], key: string) {
@@ -504,7 +509,7 @@ const noteTypeset:TypesetTypes = {
 					const hidden = lineData.map(([attributes]) => isCollapsed(attributes.collapsed)
 						&& !attributes.collapsedReveal)
 					const columns = getDlColumns(lineData)
-					const { layouts, definitionCollapsed, groupedTerms } = getDlLayouts(lineData, hidden)
+					const { layouts, definitionCollapsed, groupedTerms, owners } = getDlLayouts(lineData, hidden)
 
 					const lines = lineData.map(([attributes, children, id], index) => {
 						const sourceLine = editor.doc.getLineBy(id)
@@ -520,6 +525,16 @@ const noteTypeset:TypesetTypes = {
 						if (groupedTerms.has(id)) className += ' dl-group-term'
 						if (definitionCollapsed[index]) className += ' dl-description-collapsed'
 
+						const owner = owners.get(id)
+						const bar = () => h('span', {
+							className: 'dl-collapse-bar',
+							contenteditable: 'false',
+							role: 'button',
+							tabindex: '0',
+							'aria-label': hasCollapsedChildren(owner.entry[0].collapsed) ? 'Expand descriptions' : 'Collapse descriptions',
+							'aria-expanded': String(!hasCollapsedChildren(owner.entry[0].collapsed)),
+							'data-dl-owner': owner.entry[2]
+						}, [])
 						let lineChildren = children
 						if (dl.role === 'term') {
 							const split = splitDlChildren(children)
@@ -528,10 +543,11 @@ const noteTypeset:TypesetTypes = {
 
 								if (dl.hasDef) {
 									className += ' dl-inline'
+									if (layouts[index]?.termRow > 1) className += ' dl-shared-inline'
 									lineChildren = [
 										h('span', { className: 'dl-term-content' }, split.term),
 										separator,
-										h('span', { className: 'dl-definition' }, split.definition)
+										h('span', { className: 'dl-definition' }, [bar(), ...split.definition])
 									]
 								}
 								else {
@@ -541,14 +557,17 @@ const noteTypeset:TypesetTypes = {
 										...(definitionCollapsed[index] ? [h('span', {
 											className: 'dl-summary',
 											'data-summary': collapsedDlSummary(lineData, index, hidden)
-										}, [])] : [])
+										}, [bar()])] : [])
 									]
 								}
 							}
 						}
 
+						if (dl.role === 'value' && owner) lineChildren = [bar(), ...lineChildren]
+
 						const props = getCoreLineProperties(attributes, className)
 						const layout = layouts[index]
+						if (layout?.termRow) appendStyle(props, `--dlTermRow:${layout.termRow};--dlDefinitionSpan:${layout.definitionSpan};`)
 						if (layout) {
 							appendStyle(props, layout.span > 1
 								? `grid-row:${layout.row} / span ${layout.span};`

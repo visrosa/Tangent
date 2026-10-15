@@ -287,7 +287,7 @@ describe('description-list HTML', () => {
 		['more terms', '- first ::\n- second ::\n- third ::\n\t- value one\n\t- value two\n- next :: final', ['1', '2', '3', '1', '2 / span 2', '4']],
 		['more values', '- first ::\n- second ::\n\t- value one\n\t- value two\n\t- value three\n- next :: final', ['1', '2 / span 2', '1', '2', '3', '4']],
 		['nested shared terms', '- parent ::\n\t- first ::\n\t- second ::\n\t\t- value\n- next :: final', ['1 / span 2', '1', '2', '1 / span 2', '3']],
-		['an inline owner', '- first ::\n- second :: inline\n\t- child :: description\n- next :: final', ['1', '2', '3', '4']],
+		['an inline owner', '- first ::\n- second :: inline\n\t- child :: description\n- next :: final', ['1', '1 / span 2', '2', '3']],
 		['separate subtrees', '- first ::\n\t- child ::\n\t\t- value\n- second ::\n\t- second value', ['1', '1', '1', '2', '2']],
 	])('keeps group and subtree boundaries with %s', (_name, source, rows) => {
 		const { editor, root } = createMarkdownEditor(source)
@@ -748,4 +748,84 @@ describe('description-list alignment', () => {
 		expect(editor.doc.lines[0].content.ops.map(op => op.insert).join('')).toBe(source)
 	})
 
+})
+
+describe('shared term and description geometry', () => {
+	test.each([
+		'- first ::\n- second :: inline description\n\t- another description\n- next :: final',
+		'- first ::\n- second ::\n\t- description one\n\t- description two\n- next :: final',
+		'- parent ::\n\t- first ::\n\t- second :: inline description\n\t\t- another description\n- next :: final'
+	])('starts the columns together without hiding editable terms: %s', async source => {
+		const { editor, root } = createMarkdownEditor(source)
+		const article = mountInNote(root)
+		article.style.width = '500px'
+		try {
+			await wait(30)
+			const terms = Array.from(root.querySelectorAll<HTMLElement>('.dl-term-content'))
+			const first = terms.find(term => term.textContent.includes('first'))
+			const second = terms.find(term => term.textContent.includes('second'))
+			const definition = Array.from(root.querySelectorAll<HTMLElement>('.dl-definition, .dl-value')).find(element => element.textContent.includes('description'))
+			expect(definition.getBoundingClientRect().top).toBeCloseTo(first.getBoundingClientRect().top, 0)
+			expect(second.getBoundingClientRect().top).toBeGreaterThan(first.getBoundingClientRect().top)
+			for (const term of [first, second]) {
+				const rect = term.getBoundingClientRect()
+				expect(term.contains(document.elementFromPoint(rect.left + 2, rect.top + 2))).toBe(true)
+			}
+			expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+		} finally { editor.destroy(); article.remove() }
+	})
+})
+
+describe('Association List bar controls', () => {
+	test.each([
+		'- first ::\n- second :: inline\n\t- more\n- other :: remains',
+		'- first ::\n- second ::\n\t- description\n\t- more\n- other :: remains',
+		'- parent ::\n\t- child :: nested\n\t\t- more\n- other :: remains'
+	])('shares persisted gutter folding without source text: %s', async source => {
+		const { editor, root } = createMarkdownEditor(source)
+		const article = mountInNote(root)
+		const { WritableStore } = await import('common/stores')
+		const collapsed = new WritableStore<number[]>([])
+		editor.collapsingSections.setCollapsedStateStore(collapsed)
+		try {
+			const bar = () => root.querySelector<HTMLElement>('.dl-collapse-bar')
+			const ownerId = bar().dataset.dlOwner
+			const ownerIndex = editor.doc.lines.findIndex(line => line.id === ownerId)
+			bar().dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }))
+			bar().click()
+			await wait(20)
+			expect(collapsed.value).toContain(ownerIndex)
+			expect(bar().getAttribute('aria-expanded')).toBe('false')
+			expect(bar().textContent).toBe('')
+			expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+			bar().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
+			await wait(20)
+			expect(collapsed.value ?? []).not.toContain(ownerIndex)
+			editor.collapsingSections.toggleLineCollapsed(ownerIndex)
+			await wait(20)
+			expect(bar().getAttribute('aria-expanded')).toBe('false')
+			bar().click()
+			expect(collapsed.value ?? []).not.toContain(ownerIndex)
+			expect(editor.getText()).toBe(source)
+		} finally { editor.destroy(); article.remove() }
+	})
+})
+
+test('a wrapped inline description uses the group height once', async () => {
+	const source = '- first ::\n- second :: ' + 'a long description that wraps in a proportional font '.repeat(8) + '\n- next :: final'
+	const { editor, root } = createMarkdownEditor(source)
+	const article = mountInNote(root)
+	article.style.cssText = 'width:500px;font-family:serif;'
+	try {
+		await wait(30)
+		const terms = Array.from(root.querySelectorAll<HTMLElement>('.dl-term-content'))
+		const definition = root.querySelector<HTMLElement>('.dl-definition')
+		const range = document.createRange()
+		range.selectNodeContents(definition)
+		const textHeight = range.getBoundingClientRect().height
+		const termHeight = terms[0].getBoundingClientRect().height + terms[1].getBoundingClientRect().height
+		const start = terms[0].getBoundingClientRect().top
+		expect(terms[2].getBoundingClientRect().top - start).toBeLessThanOrEqual(Math.max(textHeight, termHeight) + 5)
+		expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+	} finally { editor.destroy(); article.remove() }
 })

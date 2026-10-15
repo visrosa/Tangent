@@ -70,6 +70,17 @@ export function collapsingSections(editor: Editor) {
 		applyCollapsedState()
 	}
 
+	function onBarEvent(event: MouseEvent | KeyboardEvent) {
+		const target = event.target instanceof Element ? event.target.closest<HTMLElement>('.dl-collapse-bar') : null
+		if (!target || !editor.root.contains(target)) return
+		if (event instanceof KeyboardEvent && event.key !== 'Enter' && event.key !== ' ') return
+		event.preventDefault()
+		event.stopPropagation()
+		if (event.type === 'mousedown') return
+		const index = editor.doc.lines.findIndex(line => line.id === target.dataset.dlOwner)
+		if (index >= 0) toggleLineCollapsed(index)
+	}
+
 	function onChanging(event: EditorChangeEvent) {
 		if (preventUncollapseOnEdit > 0 || event.source === Source.history) return
 		if (event.change?.contentChanged && event.changedLines?.length) {
@@ -167,10 +178,12 @@ export function collapsingSections(editor: Editor) {
 
 	return {
 		init() {
+			for (const type of ['mousedown', 'click', 'keydown']) editor.root.addEventListener(type, onBarEvent)
 			editor.on('changing', onChanging)
 			editor.on('changed', onChanged)
 		},
 		destroy() {
+			for (const type of ['mousedown', 'click', 'keydown']) editor.root.removeEventListener(type, onBarEvent)
 			editor.off('changing', onChanging)
 			editor.off('changed', onChanged)
 		},
