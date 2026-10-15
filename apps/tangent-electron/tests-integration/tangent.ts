@@ -47,9 +47,13 @@ export const test = base.extend<TangentFixtures & TangentOptions>({
 			await fs.promises.mkdir(workspace, { recursive: true })
 		}
 
+		const environment = { ...process.env }
+		delete environment.ELECTRON_RUN_AS_NODE
+
 		const electronApp = await electron.launch({
 			args: ['.', workspace],
 			env: {
+				...environment,
 				INTEGRATION_TEST: '1',
 				WORKSPACE_NAME: workspaceInfoName,
 				// forward other integration test environment variables
