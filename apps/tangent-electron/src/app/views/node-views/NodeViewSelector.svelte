@@ -63,6 +63,7 @@ $: showSettings = showSettingsFromMouse || showSettingsFromHover || showSettings
 
 let container: HTMLElement
 let settingsContainer: HTMLElement
+let settingsMouseTimeout: ReturnType<typeof setTimeout>
 let settingsHeight: number = extraTop
 const settingsFocusSelector = '.arrowNavigate, .WorkspaceFileHeader .title, .QueryEditor article'
 
@@ -117,6 +118,8 @@ function onMouseEnterContainer(event: MouseEvent) {
 
 function onMouseLeaveContainer(event: MouseEvent) {
 	hintSettings = false
+	clearTimeout(settingsMouseTimeout)
+	settingsMouseTimeout = null
 	showSettingsFromMouse = false
 }
 
@@ -133,11 +136,17 @@ function onMouseMoveContainer(event: MouseEvent) {
 	const hintThreshold = showThreshold * 2
 
 	hintSettings = clientY < hintThreshold
-	if (layout === 'fill') {
-		showSettingsFromMouse = clientY < showThreshold
-	}
-	else {
-		showSettingsFromMouse = (rect.width - clientX) < showThreshold && clientY < showThreshold
+	const inHotspot = clientY < showThreshold && (layout === 'fill' || (rect.width - clientX) < showThreshold)
+	if (inHotspot) {
+		clearTimeout(settingsMouseTimeout)
+		settingsMouseTimeout = null
+		showSettingsFromMouse = true
+	} else if (showSettingsFromMouse && !settingsMouseTimeout) {
+		// Keep the animated strip mounted while the pointer travels from its hotspot.
+		settingsMouseTimeout = setTimeout(() => {
+			showSettingsFromMouse = false
+			settingsMouseTimeout = null
+		}, 500)
 	}
 }
 
@@ -153,6 +162,7 @@ function onSettingsEnter() {
 	showSettingsFromHover =  true
 }
 function onSettingsLeave() {
+	clearTimeout(settingsHoverTimeout)
 	settingsHoverTimeout = setTimeout(() => {
 		showSettingsFromHover = false
 	}, 500)
@@ -200,6 +210,7 @@ function onSettingsFocusOut(event: FocusEvent) {
 }
 
 onDestroy(() => {
+	clearTimeout(settingsMouseTimeout)
 	clearTimeout(settingsHoverTimeout)
 	clearTimeout(settingsFocusTimeout)
 })
