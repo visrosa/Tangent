@@ -6,7 +6,7 @@ Every file you open, follow through a link, or link to from another file is adde
 
 Each [[Sessions|Session]] gets its own map, with the maps of previous sessions shown above the current session.
 
-You can pan and zoom the map view by scrolling, pinching, and clicking & dragging. These actions are configurable in the [[Maps|Maps settings]]. You can also press the `F` to focus on the currently selected node.
+You can pan and zoom the map view by scrolling, pinching, and clicking & dragging. These actions are configurable in the [[Maps|Maps settings]]. You can also press the ⁅F⁆ to focus on the currently selected node.
 
 # Thread Selection
 Nodes that are in your [[Thread View]] are given a colored border and displayed with thick connection lines. The current node is completely filled with color.

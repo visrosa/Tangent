@@ -33,9 +33,9 @@ The __Use Spell Check__ toggle will control whether or not spell check should be
 __Additional Spell Check Languages__ lets you add additional languages to your spell check dictionary in addition to the default language of your system. Unfortunately, this option is _not_ available on Mac.
 
 ## Smart Paragraph Breaks
-Enabling the __Smart Paragraph Breaks__ option will automatically insert a blank link when you press Enter in a paragraph. Additionally, deleting a paragraph with Backspace in front of any empty line will delete the empty line automatically.
+Enabling the __Smart Paragraph Breaks__ option will automatically insert a blank link when you press ⁅Enter⁆ in a paragraph. Additionally, deleting a paragraph with ⁅Backspace⁆ in front of any empty line will delete the empty line automatically.
 
-When this setting is enabled, holding Shift while pressing Enter or Backspace will avoid this automatic behavior.
+When this setting is enabled, holding ⁅Shift⁆ while pressing ⁅Enter⁆ or ⁅Backspace⁆ will avoid this automatic behavior.
 
 # Code Options
 **Extra Wide Code** allows code blocks to expand outside of the normal width of a note. This can be very helpful when looking at code from verbose codebases.

@@ -31,7 +31,7 @@ function convertToDisplayCharacters(shortcut: string) {
 export function shortcutDisplayString(shortcut: string) {
 	shortcut = convertToDisplayCharacters(shortcut)
 	if (isMac) {
-		shortcut = shortcut.replace(/\+/g, ' ')
+		shortcut = shortcut.replace(/\+(?=.)/g, ' ')
 	}
 
 	return shortcut
