@@ -1,4 +1,5 @@
 <script lang="ts">
+import { getLineBounds } from './lineGeometry'
 import { onDestroy } from 'svelte'
 import { computePosition } from '@floating-ui/dom'
 import type MarkdownEditor from './MarkdownEditor'
@@ -25,7 +26,7 @@ $: positionOnLine(target?.element, container)
 function positionOnLine(line: HTMLElement, container: HTMLElement) {
 	if (!line || !container) return
 
-	computePosition(line, container, {
+	computePosition({ contextElement: line, getBoundingClientRect: () => getLineBounds(line) }, container, {
 		strategy: 'absolute',
 		placement: side === 'left' ? 'left-start' : 'right-start'
 	}).then(result => {
