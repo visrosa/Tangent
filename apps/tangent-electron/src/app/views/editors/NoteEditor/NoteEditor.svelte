@@ -524,6 +524,7 @@ async function navigateOutline(position: number) {
 	const request = ++outlineNavigationRequest
 	placingOutlineHeading = true
 	try {
+		editor.collapsingSections.expandToPosition(position)
 		editor.select(position)
 		editor.root.focus({ preventScroll: true })
 		await tick()

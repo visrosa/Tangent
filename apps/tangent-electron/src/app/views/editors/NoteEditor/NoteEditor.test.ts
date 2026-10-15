@@ -109,3 +109,18 @@ describe('explicit outline navigation', () => {
 		expect(state.editor.getText()).toBe(source)
 	})
 })
+
+it('opens nested destination ancestors and its own section while preserving unrelated folds', async () => {
+	const source = '# Sibling\nHidden sibling\n# Parent\n## Nested\n### Destination\nRead this content\n## Other\nUnrelated content'
+	const { target, state } = await setup(source, true, { editable: true })
+	await wait(80)
+	for (const index of [0, 4, 3, 6, 2]) state.editor.collapsingSections.toggleLineCollapsed(index)
+	await tick()
+	Array.from(target.querySelectorAll<HTMLButtonElement>('.headings button')).find(button => button.textContent === 'Destination').click()
+	await wait(80)
+	expect(state.editor.collapsingSections.lineHasCollapsedChildren(0)).toBe(true)
+	expect(state.editor.collapsingSections.lineHasCollapsedChildren(6)).toBe(true)
+	for (const index of [2, 3, 4]) expect(state.editor.collapsingSections.lineHasCollapsedChildren(index)).toBe(false)
+	expect(state.editor.collapsingSections.lineIsCollapsed(5)).toBe(false)
+	expect(state.editor.getText()).toBe(source)
+})

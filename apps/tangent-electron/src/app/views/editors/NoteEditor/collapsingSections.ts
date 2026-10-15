@@ -66,6 +66,30 @@ export function collapsingSections(editor: Editor) {
 		applyCollapsedState()
 	}
 
+	function expandToPosition(position: number) {
+		const doc = editor.doc
+		const target = doc.getLineAt(position)
+		const targetIndex = doc.lines.indexOf(target)
+		const collapse: sections.CollapseChange = {}
+		if (sections.lineHasCollapsedChildren(target)) sections.expandSection(doc, target, collapse)
+		let depth = sections.lineCollapseDepth(target, collapse)
+		for (let index = targetIndex - 1; index >= 0 && depth > 0; index--) {
+			const line = doc.lines[index]
+			if (sections.lineHasCollapsedChildren(line, collapse) && sections.lineCollapseDepth(line, collapse) < depth) {
+				sections.expandSection(doc, line, collapse)
+				depth = sections.lineCollapseDepth(target, collapse)
+			}
+		}
+		if (Object.keys(collapse).length) {
+			preventUncollapseOnEdit++
+			try {
+				sections.applyCollapseChange(collapse, editor.change).apply()
+			}
+			finally { preventUncollapseOnEdit-- }
+			applyCollapsedState()
+		}
+	}
+
 	function onChanging(event: EditorChangeEvent) {
 		if (preventUncollapseOnEdit > 0 || event.source === Source.history) return
 		if (event.change?.contentChanged && event.changedLines?.length) {
@@ -174,6 +198,7 @@ export function collapsingSections(editor: Editor) {
 		lineHasCollapsedChildren,
 		lineIsCollapsed,
 		toggleLineCollapsed,
+		expandToPosition,
 
 		setCollapsedStateStore(store: WritableStore<number[]>) {
 			collapsedState = store
