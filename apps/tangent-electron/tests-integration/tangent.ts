@@ -50,9 +50,17 @@ export const test = base.extend<TangentFixtures & TangentOptions>({
 
 		const environment = { ...process.env }
 		delete environment.ELECTRON_RUN_AS_NODE
+		const forceX11 = environment.TANGENT_TEST_X11 === '1'
+		if (forceX11) {
+			// DISPLAY alone does not override an inherited Wayland connection.
+			delete environment.WAYLAND_DISPLAY
+			delete environment.WAYLAND_SOCKET
+			environment.XDG_SESSION_TYPE = 'x11'
+			environment.ELECTRON_OZONE_PLATFORM_HINT = 'x11'
+		}
 
 		const electronApp = await electron.launch({
-			args: ['.', workspace],
+			args: [...(forceX11 ? ['--ozone-platform=x11'] : []), '.', workspace],
 			env: {
 				...environment,
 				INTEGRATION_TEST: '1',
