@@ -1,4 +1,5 @@
 <script lang="ts">
+import { getLineBounds } from './lineGeometry'
 import { getContext, onDestroy, tick } from 'svelte'
 import {
 	DecorateEvent,
@@ -1033,7 +1034,7 @@ function onMouseMove(event: MouseEvent) {
 	
 	for (let i = 0 ; i < count; i++) {
 		const lineElement = lines.item(i) as HTMLElement
-		const lineBounds = lineElement.getBoundingClientRect()
+		const lineBounds = getLineBounds(lineElement)
 
 		const leftBound = Math.min(bounds.left, lineBounds.left)
 		const rightBound = Math.max(bounds.right, lineBounds.right)

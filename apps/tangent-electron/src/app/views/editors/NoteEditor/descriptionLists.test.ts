@@ -3,6 +3,7 @@ import { wait } from '@such-n-such/core'
 import { Editor, deltaFromDom, docFromHTML, docToHTML } from 'typewriter-editor'
 import { markdownToTextDocument } from 'common/markdownModel/parser'
 import noteTypeset from 'common/markdownModel/typewriterTypes'
+import { getLineBounds } from './lineGeometry'
 import type { DlLineData } from 'common/markdownModel/dl'
 import './t-embed'
 import MarkdownEditor from './MarkdownEditor'
@@ -684,6 +685,7 @@ describe('shared term and description geometry', () => {
 			const definition = Array.from(root.querySelectorAll<HTMLElement>('.dl-definition, .dl-value')).find(element => element.textContent.includes('description'))
 			expect(definition.getBoundingClientRect().top).toBeCloseTo(first.getBoundingClientRect().top, 0)
 			expect(second.getBoundingClientRect().top).toBeGreaterThan(first.getBoundingClientRect().top)
+			expect(getLineBounds(second.parentElement).top).toBeCloseTo(second.getBoundingClientRect().top, 0)
 			for (const term of [first, second]) {
 				const rect = term.getBoundingClientRect()
 				expect(term.contains(document.elementFromPoint(rect.left + 2, rect.top + 2))).toBe(true)
