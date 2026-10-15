@@ -323,7 +323,9 @@ export default class Workspace {
 	}
 
 	containsPath(filepath:string): boolean {
-		return filepath.startsWith(this.contentsStore.files.path)
+		if (typeof filepath !== 'string') return false
+		const relative = path.relative(this.rootPath, filepath)
+		return relative !== '..' && !relative.startsWith('..' + path.sep) && !path.isAbsolute(relative)
 	}
 
 	addObserver(observer: WindowHandle) {
