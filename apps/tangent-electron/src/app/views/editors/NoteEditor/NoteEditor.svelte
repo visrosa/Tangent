@@ -531,7 +531,10 @@ async function navigateOutline(position: number) {
 		await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
 		if (request !== outlineNavigationRequest || !container?.isConnected || !editor._root) return
 
-		const bounds = editor.getBounds([position, position])
+		const heading = editor.doc.getLineAt(position)
+		const element = Array.from(editor.root.querySelectorAll<HTMLElement>('.line'))
+			.find(element => (element as HTMLElement & { key?: string }).key === heading.id)
+		const bounds = element?.getBoundingClientRect() ?? editor.getBounds([position, position])
 		const headerHeight = willFixTitle ? headerElement.getBoundingClientRect().height : 0
 		const top = container.getBoundingClientRect().top + extraTop + headerHeight + 24
 		const y = Math.max(0, Math.min(container.scrollHeight - container.clientHeight,
