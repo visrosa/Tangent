@@ -1,3 +1,4 @@
+import { isWindows } from '../src/common/platform'
 import { Workspace } from 'app/model'
 import { test, expect, wait } from './tangent'
 
@@ -212,7 +213,7 @@ test('Creating and Deleting Note', async ({ tangent, workspace }) => {
 	await wait(500)
 
 	await window.shortcut('Mod+P')
-	await keyboard.type('Delete')
+	await keyboard.type(isWindows ? 'Move to Recycle Bin' : 'Move to Trash')
 	await keyboard.press('Enter')
 
 	await wait(500)
