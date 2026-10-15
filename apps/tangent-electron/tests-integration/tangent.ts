@@ -31,7 +31,7 @@ export const defaultWorkspace = path.resolve(path.join(
 export const test = base.extend<TangentFixtures & TangentOptions>({
 
 	workspaceInfoName: ['test_', { option: true }],
-	workspace: [defaultWorkspace, { option: true }],
+	workspace: [process.env.TANGENT_TEST_WORKSPACE ?? defaultWorkspace, { option: true }],
 	resetWorkspaceInfo: [true, { option: true }],
 	resetWorkspace: [true, { option: true }],
 
