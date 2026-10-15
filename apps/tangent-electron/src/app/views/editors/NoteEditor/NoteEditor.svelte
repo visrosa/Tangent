@@ -127,6 +127,8 @@ let lastFocusLevel = focusLevel
 
 let isInitializing = false
 let allowSelectionScroll = true
+let outlineNavigationRequest = 0
+let placingOutlineHeading = false
 let saveTimeout = null
 let hasSelection = false
 let justScrolled = true
@@ -227,6 +229,7 @@ function onEditorRoot() {
 }
 
 onDestroy(() => {
+	outlineNavigationRequest++
 	if (note) {
 		note.dropFile()
 	}
@@ -517,6 +520,29 @@ function ensureRangeInView(range: EditorRange, buffer=50, scrollTime?: number) {
 	})
 }
 
+async function navigateOutline(position: number) {
+	const request = ++outlineNavigationRequest
+	placingOutlineHeading = true
+	try {
+		editor.select(position)
+		editor.root.focus({ preventScroll: true })
+		await tick()
+		await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+		if (request !== outlineNavigationRequest || !container?.isConnected || !editor._root) return
+
+		const bounds = editor.getBounds([position, position])
+		const headerHeight = willFixTitle ? headerElement.getBoundingClientRect().height : 0
+		const top = container.getBoundingClientRect().top + extraTop + headerHeight + 24
+		const y = Math.max(0, Math.min(container.scrollHeight - container.clientHeight,
+			container.scrollTop + bounds.top - top))
+		// A timed scroll cancels any in-flight caret animation.
+		scrollTo({ container, y, duration: 1 })
+	}
+	finally {
+		if (request === outlineNavigationRequest) placingOutlineHeading = false
+	}
+}
+
 function onEditorChange(changeEvent: EditorChangeEvent) {
 
 	// Manage annotation interactions
@@ -618,7 +644,7 @@ function onEditorChange(changeEvent: EditorChangeEvent) {
 			note.realizeFile()
 		}
 
-		if (selectionChanged && !isEditorMouseDown) {
+		if (selectionChanged && !isEditorMouseDown && !placingOutlineHeading) {
 			if (container && focusLevel >= FocusLevel.Typewriter) {
 				if (changeEvent.doc.selection) {
 					// Microtask means that layout is finished and the scroll appears to happen seemlessly
@@ -1458,7 +1484,7 @@ function updateCodeBlockSizing(pre: HTMLElement, context: CodeBlockSizingContext
 		<NoteOutline {editor} {container} info={$outlineInfo} {extraTop}
 			onWidth={width => outlineWidth = width}
 			onControl={control => outlineControl?.set(control)}
-			onNavigate={position => { editor.select(position); editor.root.focus({ preventScroll: true }); tick().then(() => ensureRangeInView([position, position])); }} />
+			onNavigate={navigateOutline} />
 	{/if}
 	<div class="extraTop" style={`height: ${effectiveExtraTop}px;`}></div>
 	<WorkspaceFileHeader
