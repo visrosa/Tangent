@@ -359,6 +359,28 @@ article.note {
 			line-height: 1.3em;
 		}
 
+		.dl-value, .dl-definition, .dl-summary { position: relative; }
+		.dl-collapse-bar {
+			position: absolute;
+			inset-block: 0;
+			inset-inline-start: calc(-1 * var(--dlBarWidth));
+			width: var(--dlBarPadding);
+			cursor: pointer;
+			font-size: 1em;
+			font-weight: 400;
+			color: var(--accentTextColor);
+			&::before {
+				content: '‹';
+				position: absolute;
+				top: 0;
+				left: 0;
+				background: var(--noteBackgroundColor);
+				line-height: 1.3;
+			}
+			&[aria-expanded="false"]::before { content: '›'; }
+			&:hover, &:focus-visible { background: var(--accentDeemphasizedBackgroundColor); }
+		}
+
 		.dl-definition { min-height: 0; }
 
 		.dl-summary {

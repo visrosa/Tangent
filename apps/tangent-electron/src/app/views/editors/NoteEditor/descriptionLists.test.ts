@@ -692,3 +692,38 @@ describe('shared term and description geometry', () => {
 		} finally { editor.destroy(); article.remove() }
 	})
 })
+
+describe('Association List bar controls', () => {
+	test.each([
+		'- first ::\n- second :: inline\n\t- more\n- other :: remains',
+		'- first ::\n- second ::\n\t- description\n\t- more\n- other :: remains',
+		'- parent ::\n\t- child :: nested\n\t\t- more\n- other :: remains'
+	])('shares persisted gutter folding without source text: %s', async source => {
+		const { editor, root } = createMarkdownEditor(source)
+		const article = mountInNote(root)
+		const { WritableStore } = await import('common/stores')
+		const collapsed = new WritableStore<number[]>([])
+		editor.collapsingSections.setCollapsedStateStore(collapsed)
+		try {
+			const bar = () => root.querySelector<HTMLElement>('.dl-collapse-bar')
+			const ownerId = bar().dataset.dlOwner
+			const ownerIndex = editor.doc.lines.findIndex(line => line.id === ownerId)
+			bar().dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }))
+			bar().click()
+			await wait(20)
+			expect(collapsed.value).toContain(ownerIndex)
+			expect(bar().getAttribute('aria-expanded')).toBe('false')
+			expect(bar().textContent).toBe('')
+			expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+			bar().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
+			await wait(20)
+			expect(collapsed.value ?? []).not.toContain(ownerIndex)
+			editor.collapsingSections.toggleLineCollapsed(ownerIndex)
+			await wait(20)
+			expect(bar().getAttribute('aria-expanded')).toBe('false')
+			bar().click()
+			expect(collapsed.value ?? []).not.toContain(ownerIndex)
+			expect(editor.getText()).toBe(source)
+		} finally { editor.destroy(); article.remove() }
+	})
+})

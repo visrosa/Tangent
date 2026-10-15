@@ -316,6 +316,7 @@ function getDlLayouts(lineData: DlLineEntry[], hidden: boolean[]) {
 	const layouts: Array<{ row: number, span: number, termRow?: number } | undefined> = []
 	const definitionCollapsed: boolean[] = []
 	const groupedTerms = new Set<string>()
+	const owners = new Map<string, DlTreeNode>()
 	const visible = (node: DlTreeNode) => !hidden[indices.get(node.entry[2])]
 
 	const place = (nodes: DlTreeNode[], firstRow: number): number => {
@@ -340,6 +341,10 @@ function getDlLayouts(lineData: DlLineEntry[], hidden: boolean[]) {
 				index++
 			}
 
+			for (const child of owner.children) {
+				if ((child.entry[0].dl as DlLineData).role === 'value') owners.set(child.entry[2], owner)
+			}
+			owners.set(owner.entry[2], owner)
 			const terms = group.filter(visible)
 			const childRow = nextRow + (dl.hasDef ? 1 : 0)
 			const childEnd = place(owner.children, childRow)
@@ -368,7 +373,7 @@ function getDlLayouts(lineData: DlLineEntry[], hidden: boolean[]) {
 		return nextRow
 	}
 	place(buildDlTree(lineData), 1)
-	return { layouts, definitionCollapsed, groupedTerms }
+	return { layouts, definitionCollapsed, groupedTerms, owners }
 }
 
 function getDlExportProps(attributes: AttributeMap, role: DlLineData['role'], key: string) {
@@ -503,7 +508,7 @@ const noteTypeset:TypesetTypes = {
 					const hidden = lineData.map(([attributes]) => isCollapsed(attributes.collapsed)
 						&& !attributes.collapsedReveal)
 					const columns = getDlColumns(lineData)
-					const { layouts, definitionCollapsed, groupedTerms } = getDlLayouts(lineData, hidden)
+					const { layouts, definitionCollapsed, groupedTerms, owners } = getDlLayouts(lineData, hidden)
 
 					const lines = lineData.map(([attributes, children, id], index) => {
 						const sourceLine = editor.doc.getLineBy(id)
@@ -519,6 +524,16 @@ const noteTypeset:TypesetTypes = {
 						if (groupedTerms.has(id)) className += ' dl-group-term'
 						if (definitionCollapsed[index]) className += ' dl-description-collapsed'
 
+						const owner = owners.get(id)
+						const bar = () => h('span', {
+							className: 'dl-collapse-bar',
+							contenteditable: 'false',
+							role: 'button',
+							tabindex: '0',
+							'aria-label': hasCollapsedChildren(owner.entry[0].collapsed) ? 'Expand descriptions' : 'Collapse descriptions',
+							'aria-expanded': String(!hasCollapsedChildren(owner.entry[0].collapsed)),
+							'data-dl-owner': owner.entry[2]
+						}, [])
 						let lineChildren = children
 						if (dl.role === 'term') {
 							const split = splitDlChildren(children)
@@ -531,7 +546,7 @@ const noteTypeset:TypesetTypes = {
 									lineChildren = [
 										h('span', { className: 'dl-term-content' }, split.term),
 										separator,
-										h('span', { className: 'dl-definition' }, split.definition)
+										h('span', { className: 'dl-definition' }, [bar(), ...split.definition])
 									]
 								}
 								else {
@@ -541,11 +556,13 @@ const noteTypeset:TypesetTypes = {
 										...(definitionCollapsed[index] ? [h('span', {
 											className: 'dl-summary',
 											'data-summary': collapsedDlSummary(lineData, index, hidden)
-										}, [])] : [])
+										}, [bar()])] : [])
 									]
 								}
 							}
 						}
+
+						if (dl.role === 'value' && owner) lineChildren = [bar(), ...lineChildren]
 
 						const props = getCoreLineProperties(attributes, className)
 						const layout = layouts[index]
