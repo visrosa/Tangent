@@ -829,3 +829,26 @@ test('a wrapped inline description uses the group height once', async () => {
 		expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
 	} finally { editor.destroy(); article.remove() }
 })
+
+test.each([
+	'first ::\nsecond ::\n: description one\n: description two\nplain',
+	'parent ::\n\tfirst ::\n\tsecond ::\n\t: description one\n\t: description two\nplain',
+	'first ::\n- second :: description one\n\t- description two\nplain'
+])('portable shared groups align and retain bar ownership: %s', async source => {
+	const { editor, root } = createMarkdownEditor(source)
+	const article = mountInNote(root)
+	try {
+		await wait(20)
+		const term = Array.from(root.querySelectorAll<HTMLElement>('.dl-term-content')).find(element => element.textContent.includes('first'))
+		const description = root.querySelector<HTMLElement>('.dl-value, .dl-definition')
+		expect(description.getBoundingClientRect().top).toBeCloseTo(term.getBoundingClientRect().top, 0)
+		const bar = description.querySelector<HTMLElement>('.dl-collapse-bar')
+		const owner = editor.doc.lines.findIndex(line => line.id === bar.dataset.dlOwner)
+		bar.click()
+		await wait(20)
+		expect(editor.collapsingSections.lineHasCollapsedChildren(owner)).toBe(true)
+		expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+		editor.collapsingSections.toggleLineCollapsed(owner)
+		expect(editor.getText()).toBe(source)
+	} finally { editor.destroy(); article.remove() }
+})
