@@ -313,7 +313,7 @@ function buildDlTree(lineData: DlLineEntry[]): DlTreeNode[] {
 
 function getDlLayouts(lineData: DlLineEntry[], hidden: boolean[]) {
 	const indices = new Map(lineData.map((entry, index) => [entry[2], index]))
-	const layouts: Array<{ row: number, span: number } | undefined> = []
+	const layouts: Array<{ row: number, span: number, termRow?: number } | undefined> = []
 	const definitionCollapsed: boolean[] = []
 	const groupedTerms = new Set<string>()
 	const visible = (node: DlTreeNode) => !hidden[indices.get(node.entry[2])]
@@ -341,16 +341,15 @@ function getDlLayouts(lineData: DlLineEntry[], hidden: boolean[]) {
 			}
 
 			const terms = group.filter(visible)
-			// An inline definition shares its owner's source line; moving it above
-			// that term would overlap the earlier terms' editable boxes.
-			const childRow = nextRow + (dl.hasDef ? terms.length : 0)
+			const childRow = nextRow + (dl.hasDef ? 1 : 0)
 			const childEnd = place(owner.children, childRow)
 			const endRow = Math.max(nextRow + terms.length, childEnd)
 			terms.forEach((term, offset) => {
 				const row = nextRow + offset
 				layouts[indices.get(term.entry[2])] = {
-					row,
-					span: term === owner && !dl.hasDef ? endRow - row : 1
+					row: term === owner && dl.hasDef ? nextRow : row,
+					span: term === owner ? endRow - (dl.hasDef ? nextRow : row) : 1,
+					termRow: term === owner && dl.hasDef ? offset + 1 : undefined
 				}
 			})
 
@@ -528,6 +527,7 @@ const noteTypeset:TypesetTypes = {
 
 								if (dl.hasDef) {
 									className += ' dl-inline'
+									if (layouts[index]?.termRow > 1) className += ' dl-shared-inline'
 									lineChildren = [
 										h('span', { className: 'dl-term-content' }, split.term),
 										separator,
@@ -549,6 +549,7 @@ const noteTypeset:TypesetTypes = {
 
 						const props = getCoreLineProperties(attributes, className)
 						const layout = layouts[index]
+						if (layout?.termRow) appendStyle(props, `--dlTermRow:${layout.termRow};`)
 						if (layout) {
 							appendStyle(props, layout.span > 1
 								? `grid-row:${layout.row} / span ${layout.span};`

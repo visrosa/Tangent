@@ -268,7 +268,8 @@ article.note {
 		.dl-term {
 			display: grid;
 			grid-template-columns: subgrid;
-			align-items: center;
+			grid-template-rows: subgrid;
+			align-items: start;
 			font-weight: 600;
 		}
 
@@ -298,12 +299,14 @@ article.note {
 
 			.dl-term-content {
 				grid-column: 1;
-				align-self: center;
+				grid-row: var(--dlTermRow, 1);
+				align-self: start;
 				transition: color .12s ease;
 			}
 
 			.dl-definition {
 				grid-column: 3 / -1;
+				grid-row: 1;
 				display: block;
 				font-weight: 400;
 				min-width: 0;
@@ -325,6 +328,14 @@ article.note {
 
 				code.inline_code { white-space: pre; }
 			}
+		}
+
+		// Shared source wrappers overlap earlier term rows. Only their fragments
+		// should receive pointer hits, so those earlier terms remain editable.
+		.dl-shared-inline {
+			pointer-events: none;
+			> span { pointer-events: auto; }
+			.dl-separator { grid-row: var(--dlTermRow, 1); }
 		}
 
 		.dl-separator {

@@ -204,7 +204,7 @@ describe('description-list HTML', () => {
 		['more terms', '- first ::\n- second ::\n- third ::\n\t- value one\n\t- value two\n- next :: final', ['1', '2', '3', '1', '2 / span 2', '4']],
 		['more values', '- first ::\n- second ::\n\t- value one\n\t- value two\n\t- value three\n- next :: final', ['1', '2 / span 2', '1', '2', '3', '4']],
 		['nested shared terms', '- parent ::\n\t- first ::\n\t- second ::\n\t\t- value\n- next :: final', ['1 / span 2', '1', '2', '1 / span 2', '3']],
-		['an inline owner', '- first ::\n- second :: inline\n\t- child :: description\n- next :: final', ['1', '2', '3', '4']],
+		['an inline owner', '- first ::\n- second :: inline\n\t- child :: description\n- next :: final', ['1', '1 / span 2', '2', '3']],
 		['separate subtrees', '- first ::\n\t- child ::\n\t\t- value\n- second ::\n\t- second value', ['1', '1', '1', '2', '2']],
 	])('keeps group and subtree boundaries with %s', (_name, source, rows) => {
 		const { editor, root } = createMarkdownEditor(source)
@@ -665,4 +665,30 @@ describe('description-list alignment', () => {
 		expect(editor.doc.lines[0].content.ops.map(op => op.insert).join('')).toBe(source)
 	})
 
+})
+
+describe('shared term and description geometry', () => {
+	test.each([
+		'- first ::\n- second :: inline description\n\t- another description\n- next :: final',
+		'- first ::\n- second ::\n\t- description one\n\t- description two\n- next :: final',
+		'- parent ::\n\t- first ::\n\t- second :: inline description\n\t\t- another description\n- next :: final'
+	])('starts the columns together without hiding editable terms: %s', async source => {
+		const { editor, root } = createMarkdownEditor(source)
+		const article = mountInNote(root)
+		article.style.width = '500px'
+		try {
+			await wait(30)
+			const terms = Array.from(root.querySelectorAll<HTMLElement>('.dl-term-content'))
+			const first = terms.find(term => term.textContent.includes('first'))
+			const second = terms.find(term => term.textContent.includes('second'))
+			const definition = Array.from(root.querySelectorAll<HTMLElement>('.dl-definition, .dl-value')).find(element => element.textContent.includes('description'))
+			expect(definition.getBoundingClientRect().top).toBeCloseTo(first.getBoundingClientRect().top, 0)
+			expect(second.getBoundingClientRect().top).toBeGreaterThan(first.getBoundingClientRect().top)
+			for (const term of [first, second]) {
+				const rect = term.getBoundingClientRect()
+				expect(term.contains(document.elementFromPoint(rect.left + 2, rect.top + 2))).toBe(true)
+			}
+			expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+		} finally { editor.destroy(); article.remove() }
+	})
 })
