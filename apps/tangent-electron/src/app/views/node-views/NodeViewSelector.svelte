@@ -1,5 +1,5 @@
 <script lang="ts">
-import { getContext, tick } from 'svelte'
+import { getContext, onDestroy, tick } from 'svelte'
 import { writable } from 'svelte/store'
 import { fly, fade } from 'svelte/transition'
 import { FocusLevel } from 'common/dataTypes/TangentInfo'
@@ -56,9 +56,10 @@ $: console.log({ popups: $settingsPopups })
 let hintSettings = false
 let showSettingsFromMouse = false
 let showSettingsFromHover = false
+let showSettingsFromFocus = false
 $: showSettingsState = state.showSettings
 $: willShowSettings = (showSettingsState && $showSettingsState !== false)
-$: showSettings = showSettingsFromMouse || showSettingsFromHover || willShowSettings || $settingsPopups > 0
+$: showSettings = showSettingsFromMouse || showSettingsFromHover || showSettingsFromFocus || willShowSettings || $settingsPopups > 0
 
 let container: HTMLElement
 let settingsContainer: HTMLElement
@@ -180,6 +181,7 @@ function onSettingsKeydown(event: KeyboardEvent) {
 	}
 }
 function onSettingsFocusIn(event: FocusEvent) {
+	showSettingsFromFocus = true
 	if (settingsFocusTimeout) {
 		clearTimeout(settingsFocusTimeout)
 	}
@@ -188,12 +190,19 @@ function onSettingsFocusIn(event: FocusEvent) {
 	}
 }
 function onSettingsFocusOut(event: FocusEvent) {
+	if (event.relatedTarget instanceof Node && settingsContainer?.contains(event.relatedTarget)) return
+	showSettingsFromFocus = false
 	if (!willShowSettings) return
 	settingsFocusTimeout = setTimeout(() => {
 		showSettingsState?.set(false)
 		settingsFocusTimeout = null
 	}, 50)
 }
+
+onDestroy(() => {
+	clearTimeout(settingsHoverTimeout)
+	clearTimeout(settingsFocusTimeout)
+})
 
 // This provides directory-scoped class names for custom css styling
 function getClassNamesForNode(node: TreeNode) {
@@ -419,7 +428,8 @@ main {
 
 .settings-container {
 	position: absolute;
-	z-index: 10;
+	// Panel controls must remain reachable above the note outline (z-index 11).
+	z-index: 12;
 	top: 0;
 	left: 4px;
 	right: 4px;
