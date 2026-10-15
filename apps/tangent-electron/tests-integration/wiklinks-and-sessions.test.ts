@@ -243,9 +243,9 @@ test('Working with and then deleting files in folder', async ({ tangent, workspa
 
 
 	// Delete folder
-	await window.shortcut('Mod+Alt+ArrowLeft')
+	await window.shortcut('Mod+Shift+[')
 	await wait(500)
-	await window.shortcut('Mod+Alt+ArrowLeft')
+	await window.shortcut('Mod+Shift+[')
 	await wait(500)
 	await window.shortcut('Mod+P')
 	await keyboard.type('Delete')

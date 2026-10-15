@@ -106,7 +106,7 @@ test('Note Linking', async ({ tangent, workspace }) => {
 	expect(await window.getCurrentEditorText()).toEqual('Some content to link to.')
 
 	// Navigate back
-	await window.shortcut('Mod+Alt+ArrowLeft')
+	await window.shortcut('Mod+Shift+[')
 	expect(await currentNoteTitle.innerText()).toEqual('Linking Note')
 
 	// Create a new link
