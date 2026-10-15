@@ -150,3 +150,11 @@ export function eventIsShortcutable(event: KeyboardEvent) {
 export function markEventAsShortcutable(event: KeyboardEvent) {
 	(event as any).shortcutable = true
 }
+
+
+export function shortcutsMatch(first: string, second: string) {
+	if (!first || !second) return false
+	// Shifted bracket events use braces, while accelerator notation retains brackets.
+	const normalize = (shortcut: string) => shortcut.replace(/Shift\+\{$/, 'Shift+[').replace(/Shift\+\}$/, 'Shift+]')
+	return normalize(first) === normalize(second)
+}

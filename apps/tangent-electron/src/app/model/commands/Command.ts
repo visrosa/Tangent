@@ -1,4 +1,4 @@
-import { eventIsShortcutable, shortcutFromEvent } from 'app/utils/shortcuts'
+import { eventIsShortcutable, shortcutFromEvent, shortcutsMatch } from 'app/utils/shortcuts'
 
 // Extend to provide type-safe context
 export interface CommandContext {
@@ -58,7 +58,7 @@ export default abstract class Command {
 	}
 
 	canExecuteFromShortcut(shortcut: string, context?: CommandContext): boolean {
-		return this.shortcuts?.includes(shortcut) && this.canExecute(context)
+		return this.shortcuts?.some(binding => shortcutsMatch(binding, shortcut)) && this.canExecute(context)
 	}
 
 	canExecute(context?: CommandContext): boolean {

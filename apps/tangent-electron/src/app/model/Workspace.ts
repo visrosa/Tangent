@@ -1,3 +1,4 @@
+import { shortcutsMatch } from 'app/utils/shortcuts'
 import type WindowApi from 'common/WindowApi'
 import { type ClientInfo, type WorkspaceInitState, WorkspaceState } from 'common/workspaceState'
 
@@ -785,7 +786,7 @@ export default class Workspace extends EventDispatcher {
 			if (command === target) continue
 			if (command.shortcuts && (!command.group || (targetIsCommand && target.group.startsWith(command.group)))) {
 				for (const sc of command.shortcuts) {
-					if (sc == shortcut) {
+					if (shortcutsMatch(sc, shortcut)) {
 						return 'This shortcut is used by "' + command.getName() + '"'
 					}
 				}
@@ -794,7 +795,7 @@ export default class Workspace extends EventDispatcher {
 
 		for (const rule of this.workspaceSettings.value.creationRules.value) {
 			if (rule === target) continue
-			if (rule.shortcut.value === shortcut) {
+			if (shortcutsMatch(rule.shortcut.value, shortcut)) {
 				return 'This shortcut is used by the creation rule "' + rule.name.value + '"'
 			}
 		}
