@@ -31,6 +31,8 @@ export default abstract class SetInfo extends ObjectStore {
 
 	applyPatch(patch: any, sendPatch?: boolean): boolean {
 
+		if (!patch || typeof patch !== 'object') return false
+
 		// convert any old state to new state
 		if (patch.cards) {
 			this.lensSettings.add(new CardsLensSettings(patch.cards))
