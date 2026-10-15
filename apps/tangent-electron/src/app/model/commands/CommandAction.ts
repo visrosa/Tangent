@@ -139,13 +139,13 @@ export default function command(node: HTMLElement, params: commandParams) {
 	update(params)
 
 	function makeTooltipRequest(event: MouseEvent) {
-		if (tooltip) {
-			requestTooltip(node, tooltip(), event)
-		}
+		const config = tooltip?.()
+		if (config) requestTooltip(node, config, event)
 	}
 
 	function onFocus() {
-		if (tooltip) requestTooltip(node, tooltip())
+		const config = tooltip?.()
+		if (config) requestTooltip(node, config)
 	}
 
 	function onKeyDown(event: KeyboardEvent) {

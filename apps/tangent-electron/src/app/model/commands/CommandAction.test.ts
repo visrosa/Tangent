@@ -83,3 +83,11 @@ it('offers help on keyboard focus and dismisses it on Escape and teardown', asyn
 	await vi.advanceTimersByTimeAsync(1100)
 	expect(tooltips.value).toHaveLength(0)
 })
+
+it('leaves commands without help focusable without requesting an empty tooltip', async () => {
+	const { node, command } = setup()
+	command.getTooltip = () => null
+	node.focus()
+	node.dispatchEvent(new MouseEvent('mouseenter'))
+	expect(tooltips.value).toHaveLength(0)
+})
