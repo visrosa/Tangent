@@ -313,7 +313,7 @@ function buildDlTree(lineData: DlLineEntry[]): DlTreeNode[] {
 
 function getDlLayouts(lineData: DlLineEntry[], hidden: boolean[]) {
 	const indices = new Map(lineData.map((entry, index) => [entry[2], index]))
-	const layouts: Array<{ row: number, span: number, termRow?: number } | undefined> = []
+	const layouts: Array<{ row: number, span: number, termRow?: number, definitionSpan?: number } | undefined> = []
 	const definitionCollapsed: boolean[] = []
 	const groupedTerms = new Set<string>()
 	const owners = new Map<string, DlTreeNode>()
@@ -354,7 +354,8 @@ function getDlLayouts(lineData: DlLineEntry[], hidden: boolean[]) {
 				layouts[indices.get(term.entry[2])] = {
 					row: term === owner && dl.hasDef ? nextRow : row,
 					span: term === owner ? endRow - (dl.hasDef ? nextRow : row) : 1,
-					termRow: term === owner && dl.hasDef ? offset + 1 : undefined
+					termRow: term === owner && dl.hasDef ? offset + 1 : undefined,
+					definitionSpan: term === owner && dl.hasDef && childEnd === childRow ? terms.length : 1
 				}
 			})
 
@@ -566,7 +567,7 @@ const noteTypeset:TypesetTypes = {
 
 						const props = getCoreLineProperties(attributes, className)
 						const layout = layouts[index]
-						if (layout?.termRow) appendStyle(props, `--dlTermRow:${layout.termRow};`)
+						if (layout?.termRow) appendStyle(props, `--dlTermRow:${layout.termRow};--dlDefinitionSpan:${layout.definitionSpan};`)
 						if (layout) {
 							appendStyle(props, layout.span > 1
 								? `grid-row:${layout.row} / span ${layout.span};`

@@ -306,7 +306,7 @@ article.note {
 
 			.dl-definition {
 				grid-column: 3 / -1;
-				grid-row: 1;
+				grid-row: 1 / span var(--dlDefinitionSpan, 1);
 				display: block;
 				font-weight: 400;
 				min-width: 0;
