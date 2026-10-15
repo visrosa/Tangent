@@ -1,9 +1,13 @@
 import { test, expect } from './tangent'
+import fs from 'fs/promises'
+import path from 'path'
 
-test('filename editing remains reachable above the outline', async ({ tangent }) => {
+test('filename editing remains reachable above the outline', async ({ tangent, workspace }) => {
 	const window = await tangent.firstWindow()
+	const filepath = path.join(workspace, 'Outline filename.md')
+	await fs.writeFile(filepath, '# First\n\n## Second\n\nBody')
+	await window.page.waitForFunction(filepath => !!(document as any).workspace.directoryStore.get(filepath), filepath)
 	await window.createAndOpenFileNamed('Outline filename')
-	await window.setCurrentEditorText('# First\n\n## Second\n\nBody')
 	await window.page.evaluate(() => (document as any).workspace.viewState.tangent.focusLevel.set(0))
 	const panel = window.page.locator('.current .NodeViewSelector')
 	await panel.getByRole('navigation', { name: 'Note outline' }).waitFor()
