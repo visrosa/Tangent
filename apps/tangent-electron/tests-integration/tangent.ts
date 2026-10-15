@@ -44,7 +44,8 @@ export const test = base.extend<TangentFixtures & TangentOptions>({
 		// Set up the app
 
 		if (workspace) {
-			await fs.promises.mkdir(workspace, { recursive: true })
+			// Prevent discovery from selecting an existing workspace above the fixture.
+			await fs.promises.mkdir(path.join(workspace, '.tangent'), { recursive: true })
 		}
 
 		const environment = { ...process.env }
