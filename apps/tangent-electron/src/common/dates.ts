@@ -165,6 +165,8 @@ export function fillDateFormat(format: string, date: Date) {
 	result = result.replace(/%MM%/g, forceTwoDigitNumber(date.getMonth() + 1))
 	result = result.replace(/%M%/g, (date.getMonth() + 1).toString())
 
+	result = result.replace(/%DDD%/g, daysIntoYear(date).toString().padStart(3, '0'))
+
 	result = result.replace(/%DD?o?%/g, str => {
 		const day = date.getDate()
 		let result = str[2] === 'D' ? forceTwoDigitNumber(day) : day.toString()
