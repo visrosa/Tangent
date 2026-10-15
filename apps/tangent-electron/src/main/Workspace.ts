@@ -1,4 +1,6 @@
 import fs from 'fs'
+import { removeFile } from './fileDeletion'
+import type { DeletionMode } from 'common/WindowApi'
 import path from 'path'
 
 import chalk from 'chalk'
@@ -323,7 +325,9 @@ export default class Workspace {
 	}
 
 	containsPath(filepath:string): boolean {
-		return filepath.startsWith(this.contentsStore.files.path)
+		if (typeof filepath !== 'string') return false
+		const relative = path.relative(this.rootPath, filepath)
+		return relative !== '..' && !relative.startsWith('..' + path.sep) && !path.isAbsolute(relative)
 	}
 
 	addObserver(observer: WindowHandle) {
@@ -783,21 +787,14 @@ export default class Workspace {
 		await fs.promises.cp(nodeToCopy.path, newPath, { recursive: true })
 	}
 
-	async delete(filepath: string) {
+	async delete(filepath: string, mode: DeletionMode = 'trash') {
 		const nodeToDelete = this.contentsStore.get(filepath)
 		if (!nodeToDelete) {
 			throw new Error('Cannot delete; path not found in the index: ' + filepath)
 		}
 		ioLog.info(chalk.green('Deleting'), chalk.gray(filepath))
 
-		// TODO: This may want to be some kind of external handler system?
-		if (shell && getSettings()?.debug_sendItemsToTrash.value) {
-			await shell.trashItem(filepath)
-		}
-		else {
-			// fall back to normal fs
-			await fs.promises.rm(filepath, { force: true, recursive: true })
-		}
+		await removeFile(filepath, mode)
 
 		// Send node removal messages immediately rather than wait for io lag
 		this.removeTreeRetainingVirtuals(nodeToDelete)

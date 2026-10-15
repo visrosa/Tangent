@@ -7,6 +7,8 @@ import type { QueryResult } from './indexing/queryResults'
 import type { QueryParseResult } from '@such-n-such/tangent-query-parser'
 import type { UrlData } from './urlData'
 
+export type DeletionMode = 'trash' | 'permanent'
+
 export interface SelectPathOptions {
 	title?: string
 	message?: string
@@ -90,7 +92,7 @@ export default interface WindowAPI {
 		createFolder(path: string): Promise<void>
 		move(filepath: string, newPath: string): Promise<void>
 		copy(filepath: string, newPath?: string): Promise<void>
-		delete(filepath: string): Promise<void>
+		delete(filepath: string, mode?: DeletionMode): Promise<void>
 		
 		/** Gets the contents of a file, but does not mark it as opened */
 		getFileContents(filepath): Promise<string>
