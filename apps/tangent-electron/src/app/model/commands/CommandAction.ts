@@ -47,7 +47,10 @@ export default function command(node: HTMLElement, params: commandParams) {
 
 	let tooltip: TooltipFunction = null
 
-	let isFirstPass = true
+	const applyAccessibleLabel = !node.hasAttribute('aria-label')
+		&& !node.hasAttribute('aria-labelledby') && !node.textContent.trim()
+	const applyToggleState = !node.hasAttribute('aria-pressed')
+		&& !node.hasAttribute('aria-checked') && !node.hasAttribute('aria-expanded')
 
 	function updateFromContext() {
 		if (options.includeDisable ?? true) {
@@ -57,6 +60,12 @@ export default function command(node: HTMLElement, params: commandParams) {
 			else {
 				node.setAttribute('disabled', '')
 			}
+		}
+
+		if (applyAccessibleLabel) {
+			const label = command.getLabel(context)
+			if (label) node.setAttribute('aria-label', label)
+			else node.removeAttribute('aria-label')
 		}
 
 		const shortcuts = command.shortcuts
@@ -108,7 +117,16 @@ export default function command(node: HTMLElement, params: commandParams) {
 			node.removeAttribute('checked')
 		}
 
-		// TODO: Tooltip, etc
+		if (applyToggleState) {
+			const role = node.getAttribute('role')
+			const stateAttribute = role === 'menuitemcheckbox' || role === 'menuitemradio'
+				? 'aria-checked'
+				: node.matches('button, [role="button"]') ? 'aria-pressed' : null
+			if (stateAttribute) {
+				if (checked == null) node.removeAttribute(stateAttribute)
+				else node.setAttribute(stateAttribute, String(checked))
+			}
+		}
 	}
 
 	function update(params: commandParams) {
@@ -119,7 +137,6 @@ export default function command(node: HTMLElement, params: commandParams) {
 	}
 
 	update(params)
-	isFirstPass = false
 
 	function makeTooltipRequest(event: MouseEvent) {
 		if (tooltip) {
@@ -127,7 +144,15 @@ export default function command(node: HTMLElement, params: commandParams) {
 		}
 	}
 
-	function onLeave(event: MouseEvent) {
+	function onFocus() {
+		if (tooltip) requestTooltip(node, tooltip())
+	}
+
+	function onKeyDown(event: KeyboardEvent) {
+		if (event.key === 'Escape') dropTooltip(node, false)
+	}
+
+	function onLeave(event: Event) {
 		if (tooltip) {
 			dropTooltip(node)
 		}
@@ -149,6 +174,9 @@ export default function command(node: HTMLElement, params: commandParams) {
 		node.addEventListener('click', clickHandler)
 	}
 
+	node.addEventListener('focus', onFocus)
+	node.addEventListener('blur', onLeave)
+	node.addEventListener('keydown', onKeyDown)
 	node.addEventListener('mouseenter', makeTooltipRequest)
 	node.addEventListener('mousemove', makeTooltipRequest)
 	node.addEventListener('mouseleave', onLeave)
@@ -165,6 +193,9 @@ export default function command(node: HTMLElement, params: commandParams) {
 				dropTooltip(node, false)
 			}
 			node.removeEventListener('click', clickHandler)
+			node.removeEventListener('focus', onFocus)
+			node.removeEventListener('blur', onLeave)
+			node.removeEventListener('keydown', onKeyDown)
 			node.removeEventListener('mouseenter', makeTooltipRequest)
 			node.removeEventListener('mousemove', makeTooltipRequest)
 			node.removeEventListener('mouseleave', onLeave)
