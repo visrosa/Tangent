@@ -692,3 +692,23 @@ describe('shared term and description geometry', () => {
 		} finally { editor.destroy(); article.remove() }
 	})
 })
+
+
+test('a wrapped inline description uses the group height once', async () => {
+	const source = '- first ::\n- second :: ' + 'a long description that wraps in a proportional font '.repeat(8) + '\n- next :: final'
+	const { editor, root } = createMarkdownEditor(source)
+	const article = mountInNote(root)
+	article.style.cssText = 'width:500px;font-family:serif;'
+	try {
+		await wait(30)
+		const terms = Array.from(root.querySelectorAll<HTMLElement>('.dl-term-content'))
+		const definition = root.querySelector<HTMLElement>('.dl-definition')
+		const range = document.createRange()
+		range.selectNodeContents(definition)
+		const textHeight = range.getBoundingClientRect().height
+		const termHeight = terms[0].getBoundingClientRect().height + terms[1].getBoundingClientRect().height
+		const start = terms[0].getBoundingClientRect().top
+		expect(terms[2].getBoundingClientRect().top - start).toBeLessThanOrEqual(Math.max(textHeight, termHeight) + 5)
+		expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+	} finally { editor.destroy(); article.remove() }
+})
