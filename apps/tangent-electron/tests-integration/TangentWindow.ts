@@ -80,7 +80,7 @@ export default class TangentWindow {
 	}
 
 	createAndOpenFileNamed(name: string) {
-		return this.page.evaluate(() => {
+		return this.page.evaluate(name => {
 			const workspace = (document as any).workspace as Workspace
 			workspace.navigateTo({
 				link: {
@@ -88,7 +88,7 @@ export default class TangentWindow {
 					form: 'wiki'
 				}
 			})
-		})
+		}, name)
 	}
 
 	getCurrentSessionPath() {
