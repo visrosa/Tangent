@@ -7,13 +7,12 @@ const mode = process.env.NODE_ENV || 'production';
 const prod = mode === 'production';
 
 async function buildDocumentation() {
-	const { shortcutPresentation } = await import('../src/common/keyboardKeys.mjs')
+	const { shortcutKeycaps } = await import('./documentation-keycaps.mjs')
 	const { buildDocumentation, platformShortcut } = require('./documentation.cjs')
 	await buildDocumentation(
 		path.resolve(__dirname, '../../../Documentation'),
 		path.resolve(__dirname, '../__build'),
-		(value, platform) => shortcutPresentation(platformShortcut(value, platform), platform)
-			.map(key => '`' + key.label + '`').join(' '))
+		(value, platform) => shortcutKeycaps(platformShortcut(value, platform), platform))
 }
 
 function getViteConfigPath(configName) {
