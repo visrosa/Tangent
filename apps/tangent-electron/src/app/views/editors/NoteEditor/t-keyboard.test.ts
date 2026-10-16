@@ -91,6 +91,33 @@ describe('keyboard input rendering', () => {
 		expect(longKey.getBoundingClientRect().height).toBeGreaterThan(nested[3].getBoundingClientRect().height)
 	})
 
+	it.each(['', '4. '])('moves a shortcut to the next line intact after %j prose', prefix => {
+		const source = `${prefix}Screenshots of any errors in the console (which can be opened with ⁅⁅⌃⁆⁅⇧⁆⁅I⁆⁆).`
+		const editor = makeEditor(source)
+		editor.root.className = 'note dark'
+		editor.root.style.width = '1600px'
+		const output = editor.root.querySelector('t-keyboard')
+		const keys = Array.from(preview(editor).querySelectorAll('kbd > kbd'))
+		const paragraph = output.closest('p')
+		const preceding = document.createRange()
+		preceding.setStart(paragraph, 0)
+		preceding.setEndBefore(output.closest('.inline-keyboard-container'))
+		const prefixWidth = preceding.getBoundingClientRect().width
+		const chordWidth = output.getBoundingClientRect().width
+		const outsideWidth = editor.root.getBoundingClientRect().width - paragraph.getBoundingClientRect().width
+		editor.root.style.width = `${outsideWidth + prefixWidth + chordWidth - keys[2].getBoundingClientRect().width}px`
+		const tops = keys.map(key => key.getBoundingClientRect().top)
+		expect(Math.max(...tops) - Math.min(...tops)).toBeLessThan(1)
+		expect(output.getBoundingClientRect().width).toBeCloseTo(chordWidth, 0)
+		const group = preview(editor).querySelector('kbd').getBoundingClientRect()
+		for (const key of keys) {
+			const bounds = key.getBoundingClientRect()
+			expect(bounds.left).toBeGreaterThan(group.left)
+			expect(bounds.right).toBeLessThan(group.right)
+		}
+		expect(typewriterToText(editor.doc)).toBe(source)
+	})
+
 	it('preserves Unicode source through reveal, DOM reconstruction and caret mapping', () => {
 		const source = 'Before ⁅⁅👩‍💻⁆⁅N⁆⁆⁅M⁆ after'
 		const editor = makeEditor(source)

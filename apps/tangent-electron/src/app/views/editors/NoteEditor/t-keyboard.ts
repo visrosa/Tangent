@@ -9,6 +9,8 @@ const keyboardStyleSheet = new CSSStyleSheet()
 keyboardStyleSheet.replaceSync(`
 	:host {
 		display: inline-block;
+		/* List hanging indents also cross the shadow boundary. */
+		text-indent: 0;
 		font-family: var(--codeFontFamily, monospace);
 		font-size: .85em;
 		max-inline-size: 100%;
