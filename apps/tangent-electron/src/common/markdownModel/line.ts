@@ -28,6 +28,7 @@ export function lineHasMultiLineContext(line: Line) {
 }
 
 export function lineIsMultiLineFormat(line: Line) {
+	if (line.attributes.footnoteDefinition) return true
 	if ('code' in line.attributes ||
 		'front_matter' in line.attributes ||
 		'math' in line.attributes ||

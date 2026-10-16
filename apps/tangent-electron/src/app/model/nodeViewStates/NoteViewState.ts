@@ -19,6 +19,7 @@ import NoteSettingsView from 'app/views/node-views/NoteSettingsView.svelte'
 import DataFile from '../DataFile'
 import NoteViewInfo from 'common/dataTypes/NoteViewInfo'
 import type MarkdownEditor from 'app/views/editors/NoteEditor/MarkdownEditor'
+import type { NoteOutlineControl } from 'app/views/editors/NoteEditor/outline'
 import { createContentIdMatcher } from 'common/markdownModel/links'
 import { deepEqual } from 'fast-equals'
 import NoteDetailsSummary from 'app/views/summaries/NoteDetailsSummary.svelte'
@@ -78,6 +79,7 @@ export default class NoteViewState implements NodeViewState, LensViewState {
 	readonly annotationIndex: WritableStore<number> = new WritableStore(-1)
 
 	readonly search: WritableStore<NoteSearchData> = new WritableStore(null)
+	readonly outlineControl = new WritableStore<NoteOutlineControl>(null)
 
 	protected readonly unsubs: (() => void)[]
 

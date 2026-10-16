@@ -20,8 +20,10 @@ import { getLanguage } from './codeSyntax'
 import { parseInlineKeyboard } from './keyboard'
 import { parseHtml } from './html'
 import { parseTemplateTokens } from './templates'
+import { continueFootnoteDefinition, parseFootnoteDefinition, parseFootnoteReference } from './footnotes'
 
 const blockPrograms: ParsingProgram[] = [
+	parseFootnoteDefinition,
 	parseHeader,
 	parseHorizontalRule,
 	parseBlockquote,
@@ -33,6 +35,7 @@ const blockPrograms: ParsingProgram[] = [
 ]
 
 const inlineObjectPrograms = [
+	parseFootnoteReference,
 	parseInlineMath,
 	parseAssociationListSeparator,
 	parseInlineGloss, // before furigana: an unescaped `::` wins over `|`
@@ -153,6 +156,7 @@ export default class NoteParser {
 			if (this._isStartOfLine) {
 				// Parse indentation
 				parseIndent(this.feed.currentChar, this)
+				continueFootnoteDefinition(this)
 				this._isStartOfContent = true
 			}
 

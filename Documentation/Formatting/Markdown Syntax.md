@@ -1,6 +1,7 @@
 Tangent uses a semi-custom flavor of markdown for formatting. You can:
 - Link to notes with [[Wiki Links]] or to the internet with [[Markdown Links]]
 - Insert [[Headers]]
+- Cite sources and write explanations with [[Footnotes]]
 - Use [[Bold and Italics]]
 - Insert [[Lists]] and [[Todos]]
 - Pair terms and descriptions with [[Association Lists]]: `- term :: description`

@@ -1,3 +1,4 @@
+import type { FootnoteData } from './footnotes'
 import type { FormatType, LineType, TypesetTypes } from 'typewriter-editor/typesetting'
 import { h } from 'typewriter-editor/rendering/vdom'
 import { foldedLineChildren, foldedText } from './foldedText'
@@ -921,6 +922,14 @@ const noteTypeset:TypesetTypes = {
 		revealableLine('horizontal_rule', 'p')
 	],
 	formats: [
+		hiddenGroupEmbedFormat<FootnoteData>({
+			name: 'footnote',
+			renderOutput: (data, attributes) => h('t-footnote', {
+				'footnote-key': data.key,
+				'footnote-definition': data.definition ? '' : null,
+				className: attributes.revealed ? 'revealed' : ''
+			}, [])
+		}),
 		// Formatting that starts a line
 		{
 			name: 'line_format',

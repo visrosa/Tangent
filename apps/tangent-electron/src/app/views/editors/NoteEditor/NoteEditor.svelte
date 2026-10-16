@@ -63,6 +63,7 @@ import YamlTooltip from './YamlTooltip.svelte';
 import TemplateTokenTooltip from './TemplateTokenTooltip.svelte';
 import TemplateTokenAutocompleter from '../autocomplete/TemplateTokenAutocompleter';
 import TemplateTokenAutocompleteMenu from '../autocomplete/TemplateTokenAutocompleteMenu.svelte';
+import NoteOutline from './NoteOutline.svelte'
 
 // Technically, this just needs to exist _somewhere_. Putting it here because of the svelte dependency
 // Force the use of the variable so that it is included in the bundle
@@ -111,6 +112,10 @@ export let onScrollRequest: ScrollToCallback = null
 export let onKeyboardExit: KeyboardExitCallback = null
 
 let container: HTMLElement
+let outlineWidth = 0
+$: outlineControl = state.outlineControl
+$: hasOutline = layout === 'fill' && !!outlineControl
+$: outlineInfo = state.noteViewInfo
 
 let _lastFile: NoteFile
 let _lastFileLoadState: FileLoadState = null
@@ -123,6 +128,8 @@ let lastFocusLevel = focusLevel
 
 let isInitializing = false
 let allowSelectionScroll = true
+let outlineNavigationRequest = 0
+let placingOutlineHeading = false
 let saveTimeout = null
 let hasSelection = false
 let justScrolled = true
@@ -223,6 +230,7 @@ function onEditorRoot() {
 }
 
 onDestroy(() => {
+	outlineNavigationRequest++
 	if (note) {
 		note.dropFile()
 	}
@@ -513,6 +521,33 @@ function ensureRangeInView(range: EditorRange, buffer=50, scrollTime?: number) {
 	})
 }
 
+async function navigateOutline(position: number) {
+	const request = ++outlineNavigationRequest
+	placingOutlineHeading = true
+	try {
+		editor.collapsingSections.expandToPosition(position)
+		editor.select(position)
+		editor.root.focus({ preventScroll: true })
+		await tick()
+		await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+		if (request !== outlineNavigationRequest || !container?.isConnected || !editor._root) return
+
+		const heading = editor.doc.getLineAt(position)
+		const element = Array.from(editor.root.querySelectorAll<HTMLElement>('.line'))
+			.find(element => (element as HTMLElement & { key?: string }).key === heading.id)
+		const bounds = element?.getBoundingClientRect() ?? editor.getBounds([position, position])
+		const headerHeight = willFixTitle ? headerElement.getBoundingClientRect().height : 0
+		const top = container.getBoundingClientRect().top + extraTop + headerHeight + 24
+		const y = Math.max(0, Math.min(container.scrollHeight - container.clientHeight,
+			container.scrollTop + bounds.top - top))
+		// A timed scroll cancels any in-flight caret animation.
+		scrollTo({ container, y, duration: 1 })
+	}
+	finally {
+		if (request === outlineNavigationRequest) placingOutlineHeading = false
+	}
+}
+
 function onEditorChange(changeEvent: EditorChangeEvent) {
 
 	// Manage annotation interactions
@@ -614,7 +649,7 @@ function onEditorChange(changeEvent: EditorChangeEvent) {
 			note.realizeFile()
 		}
 
-		if (selectionChanged && !isEditorMouseDown) {
+		if (selectionChanged && !isEditorMouseDown && !placingOutlineHeading) {
 			if (container && focusLevel >= FocusLevel.Typewriter) {
 				if (changeEvent.doc.selection) {
 					// Microtask means that layout is finished and the scroll appears to happen seemlessly
@@ -1448,7 +1483,14 @@ function updateCodeBlockSizing(pre: HTMLElement, context: CodeBlockSizingContext
 	class:typewriter={focusLevel >= FocusLevel.Typewriter}
 	style={`--noteWidthMax: ${$maxWidth}px;`}
 	style:--extraTop={extraTop + 'px'}
+	style:--outlineWidth={`${hasOutline ? outlineWidth : 0}px`}
 >
+	{#if container && editorElement && hasOutline}
+		<NoteOutline {editor} {container} info={$outlineInfo} {extraTop}
+			onWidth={width => outlineWidth = width}
+			onControl={control => outlineControl?.set(control)}
+			onNavigate={navigateOutline} />
+	{/if}
 	<div class="extraTop" style={`height: ${effectiveExtraTop}px;`}></div>
 	<WorkspaceFileHeader
 		node={$note}
@@ -1472,6 +1514,7 @@ function updateCodeBlockSizing(pre: HTMLElement, context: CodeBlockSizingContext
 		class="note"
 		class:focusing={$focusing}
 		spellcheck={showSpellCheck}
+		on:note-position-request|preventDefault={event => tick().then(() => ensureRangeInView([event.detail, event.detail]))}
 	></article>
 	{#if (!editorIsFocused || !editable) && virtual}
 		<div
@@ -1530,6 +1573,7 @@ function updateCodeBlockSizing(pre: HTMLElement, context: CodeBlockSizingContext
 
 <style lang="scss">
 main {
+	padding-left: var(--outlineWidth, 0px);
 	position: relative;
 
 	text-align: unset;

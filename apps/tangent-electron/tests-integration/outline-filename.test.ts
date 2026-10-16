@@ -1,0 +1,30 @@
+import { test, expect } from './tangent'
+import fs from 'fs/promises'
+import path from 'path'
+
+test('filename editing remains reachable above the outline', async ({ tangent, workspace }) => {
+	const window = await tangent.firstWindow()
+	const filepath = path.join(workspace, 'Outline filename.md')
+	await fs.writeFile(filepath, '# First\n\n## Second\n\nBody')
+	await window.page.waitForFunction(filepath => !!(document as any).workspace.directoryStore.get(filepath), filepath)
+	await window.createAndOpenFileNamed('Outline filename')
+	await window.page.evaluate(() => (document as any).workspace.viewState.tangent.focusLevel.set(0))
+	const panel = window.page.locator('.current .NodeViewSelector')
+	await panel.getByRole('navigation', { name: 'Note outline' }).waitFor()
+	const bounds = await panel.boundingBox()
+	const outline = await panel.getByRole('navigation', { name: 'Note outline' }).boundingBox()
+	await window.page.mouse.move(outline.x + 10, outline.y + 10)
+	const filename = panel.locator('.settings-container .WorkspaceFileHeader .title')
+	await filename.click()
+	await filename.fill('Renamed outline')
+	await window.page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+	await expect(filename).toBeVisible()
+	await filename.press('Enter')
+	await expect.poll(() => window.getCurrentFilePath()).toMatch(/Renamed outline\.md$/)
+	await window.page.mouse.move(outline.x + 10, outline.y + 10)
+	await filename.click()
+	await filename.fill('Canceled rename')
+	await filename.press('Escape')
+	await expect.poll(() => window.getCurrentFilePath()).toMatch(/Renamed outline\.md$/)
+	expect(await window.getCurrentEditorText()).toBe('# First\n\n## Second\n\nBody')
+})

@@ -14,7 +14,7 @@ import { derived } from 'svelte/store'
 import type { NavigationCallback, NavigationData } from 'app/events'
 import NodeViewSelector from '../node-views/NodeViewSelector.svelte'
 import ThreadViewVerticalTitleBar from './ThreadViewVerticalTitleBar.svelte'
-import type { NodeViewState } from 'app/model/nodeViewStates'
+import type { NodeViewState, NoteViewState } from 'app/model/nodeViewStates'
 import SvgIcon from '../smart-icons/SVGIcon.svelte'
 import { wait } from '@such-n-such/core'
 
@@ -224,6 +224,7 @@ function onWheel(event: WheelEvent, state: NodeViewState) {
 			</div>
 			<ThreadViewVerticalTitleBar
 				node={state.node}
+				outlineControl={'outlineControl' in state ? (state as NoteViewState).outlineControl : undefined}
 				{tangent}
 				{collapsedWidth}
 				supportDirty={$supportDirty}
