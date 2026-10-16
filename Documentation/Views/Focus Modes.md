@@ -13,7 +13,7 @@ In all of these modes, the top bar and [[The Sidebar]] are automatically hidden 
 These modes can be very helpful when you want to emphasize free-flowing thought and not get distracted by what is already there.
 
 # Shortcuts
-- {{shortcut:Mod+D}} will toggle between the last used focus mode and the [[Thread View]].
-- Pressing {{shortcut:Escape}} will also return you to the [[Thread View]] when in a Focus Mode.
+- ⁅⁅Cmd/Ctrl⁆⁅D⁆⁆ will toggle between the last used focus mode and the [[Thread View]].
+- Pressing ⁅Escape⁆ will also return you to the [[Thread View]] when in a Focus Mode.
 - You can move between [[Map View]], [[Thread View]], and the various focus modes by pinch-zooming on a multi-touch trackpad.
-- The {{shortcut:Mod+Alt+Left}} or {{shortcut:Mod+Alt+Right}} shortcuts for moving to the previous or next note in the Thread still work in the focus mode.
+- The ⁅⁅Cmd/Ctrl⁆⁅Alt⁆⁅Left⁆⁆ or ⁅⁅Cmd/Ctrl⁆⁅Alt⁆⁅Right⁆⁆ shortcuts for moving to the previous or next note in the Thread still work in the focus mode.

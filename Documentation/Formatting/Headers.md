@@ -8,4 +8,4 @@ You can mark a line as a header by adding `#` characters to the beginning of the
 
 The space between the `#` characters and the text of the header is required.
 
-You can use {{shortcut:Mod+1}} through {{shortcut:Mod+6}} to set the header level for the currently selected line or lines. {{shortcut:Mod+0}} clears the header formatting and sets the lines back to being paragraphs.
+You can use ⁅⁅Cmd/Ctrl⁆⁅1⁆⁆ through ⁅⁅Cmd/Ctrl⁆⁅6⁆⁆ to set the header level for the currently selected line or lines. ⁅⁅Cmd/Ctrl⁆⁅0⁆⁆ clears the header formatting and sets the lines back to being paragraphs.

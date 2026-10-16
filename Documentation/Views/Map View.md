@@ -16,11 +16,11 @@ You can change your current node simply by clicking on it or using the arrow key
 You can create new threads from the Map in a number of ways.
 1. You can click on a connection between to nodes to create a thread of those two nodes.
 2. You click and hold on a starting node or connection and drag across other nodes to create a thread with the nodes you pass through.
-3. You can hold {{shortcut:Shift}} and navigate with the arrow keys to extend your current thread.
+3. You can hold ⁅Shift⁆ and navigate with the arrow keys to extend your current thread.
 
 If **Show Previous Threads** is enabled in [[Maps|Maps Settings]], previous threads will visible on the map in different colors. You can hover over these colored connections to see the full thread. Clicking on a colored connection will restore the entire previous thread.
 
 # Node Manipulation
-When something in your map is distracting you from what you want to focus on, you can remove it via the node's context-menu or by selecting it and pressing the {{shortcut:Delete}} key. You can remove connections by holding {{shortcut:Alt}} and clicking on the wire between nodes.
+When something in your map is distracting you from what you want to focus on, you can remove it via the node's context-menu or by selecting it and pressing the ⁅Delete⁆ key. You can remove connections by holding ⁅Alt⁆ and clicking on the wire between nodes.
 
 If you accidentally add or remove something from the map and you want it back, you can undo or redo changes with the standard shortcut keys.

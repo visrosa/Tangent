@@ -11,6 +11,6 @@ A very full thread can be overwhelming. If you want to keep the state of your th
 Each note panel has an [[Outline]] attached to its left edge for navigation within the note.
 
 # Shortcuts
-- {{shortcut:Mod+Alt+Left}} and {{shortcut:Mod+Alt+Right}} will jump to the previous and next note in the thread, respectively.
-- {{shortcut:Mod+W}} will close the active panel, removing it from the thread.
-- {{shortcut:Mod+Shift+W}} will close all panels _except_ for the active panel, leaving it the only item in the thread.
+- ⁅⁅Cmd/Ctrl⁆⁅Alt⁆⁅Left⁆⁆ and ⁅⁅Cmd/Ctrl⁆⁅Alt⁆⁅Right⁆⁆ will jump to the previous and next note in the thread, respectively.
+- ⁅⁅Cmd/Ctrl⁆⁅W⁆⁆ will close the active panel, removing it from the thread.
+- ⁅⁅Cmd/Ctrl⁆⁅Shift⁆⁅W⁆⁆ will close all panels _except_ for the active panel, leaving it the only item in the thread.

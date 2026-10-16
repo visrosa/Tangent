@@ -19,9 +19,11 @@ it('retains documentation source and recognizes prose keycaps', () => {
 		const source = readFileSync(filename, 'utf8')
 		expect(typewriterToText(markdownToTextDocument(source)), filename).toBe(source)
 		if (filename.endsWith('Keycaps.md')) continue
-		for (const match of source.matchAll(/⁅[^⁆\n]+⁆/g)) {
-			const result = scanKeyboardSpan(match[0])
-			expect(result && result.keyboard, `${filename}: ${match[0]}`).toBeTruthy()
+		for (let index = 0; index < source.length; index++) {
+			if (source[index] !== '⁅') continue
+			const result = scanKeyboardSpan(source, index)
+			expect(result && result.keyboard, `${filename}: ${source.slice(index, index + 80)}`).toBeTruthy()
+			if (result) index = result.end - 1
 			count++
 		}
 	}

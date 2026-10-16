@@ -2,8 +2,8 @@ Sections of text within a note can be collapsed, hiding their content below thei
 
 A note's collapsed sate is saved and restored whenever you go back to that file.
 
-You can toggle the collapsed state of the section where your cursor currently is with the {{shortcut:Mod+Alt+Enter}} shortcut.
+You can toggle the collapsed state of the section where your cursor currently is with the ⁅⁅Cmd/Ctrl⁆⁅Alt⁆⁅Enter⁆⁆ shortcut.
 
-The {{shortcut:Mod+Alt+<}} and {{shortcut:Mod+Alt+>}} shortcuts will collapsed and reveal, respectively, the smallest and largest sections as appropriate. This can be used to quickly roll up or unfold a large document in steps.
+The ⁅⁅Cmd/Ctrl⁆⁅Alt⁆⁅<⁆⁆ and ⁅⁅Cmd/Ctrl⁆⁅Alt⁆⁅>⁆⁆ shortcuts will collapsed and reveal, respectively, the smallest and largest sections as appropriate. This can be used to quickly roll up or unfold a large document in steps.
 
-The {{shortcut:Mod+Alt+Shift+<}} and {{shortcut:Mod+Alt+Shift+>}} shortcuts will collapse & expand all sections, respectively.
+The ⁅⁅Cmd/Ctrl⁆⁅Alt⁆⁅Shift⁆⁅<⁆⁆ and ⁅⁅Cmd/Ctrl⁆⁅Alt⁆⁅Shift⁆⁅>⁆⁆ shortcuts will collapse & expand all sections, respectively.
