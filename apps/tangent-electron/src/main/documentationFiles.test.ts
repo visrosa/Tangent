@@ -50,3 +50,8 @@ it('builds all target archives and refreshes extracted documentation on content 
 	expect(await fs.readFile(path.join(destination, 'Guide.md'), 'utf8')).toBe('Press `Ctrl+V`.')
 	expect(await installDocumentation(archivePath, destination, '1.0', true)).toBe(true)
 })
+
+it('preserves nested fence examples, multiline code spans and escaped directives', () => {
+	const literal = '````md\n```\n{{shortcut:Mod+C}}\n```\n````\n`literal\n{{shortcut:Mod+C}}`\n\\{{shortcut:Mod+C}}\n'
+	expect(specializeDocumentation(literal + '{{shortcut:Mod+V}}', 'linux')).toBe(literal + '`Ctrl+V`')
+})

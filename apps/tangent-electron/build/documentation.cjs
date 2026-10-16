@@ -23,10 +23,26 @@ function shortcutMarkdown(value, platform) {
 }
 
 function specializeDocumentation(source, platform, render = shortcutMarkdown) {
-	// Markers are editorial build directives, including within keycap markup.
-	// Code fences and inline code remain literal documentation specimens.
-	return source.replace(/(^[ \t]*(?:`{3,}|~{3,})[^\n]*\n[\s\S]*?^[ \t]*(?:`{3,}|~{3,})[^\n]*(?:\n|$))|(`+)[^`]*?\2|\{\{shortcut:([^{}\n]+)\}\}/gm,
-		(match, fence, code, shortcut) => shortcut ? render(shortcut.trim(), platform) : match)
+	let fence = null, output = '', index = 0
+	const tokens = /^[ \t]*(?:>[^\S\n]*)*(`{3,}|~{3,})([^\n]*)(?:\n|$)|(`+)|\{\{shortcut:([^{}\n]+)\}\}/gm
+	for (let match; (match = tokens.exec(source));) {
+		output += source.slice(index, match.index)
+		if (fence) {
+			if (match[1]?.[0] === fence[0] && match[1].length >= fence.length && !match[2].trim()) fence = null
+			output += match[0]
+		}
+		else if (match[1]) { fence = match[1]; output += match[0] }
+		else if (match[3]) {
+			const close = new RegExp('(?<!`)' + match[3] + '(?!`)', 'g')
+			close.lastIndex = tokens.lastIndex
+			const end = close.exec(source)
+			if (end) tokens.lastIndex = end.index + end[0].length
+			output += source.slice(match.index, tokens.lastIndex)
+		}
+		else output += source[match.index - 1] === '\\' ? match[0] : render(match[4].trim(), platform)
+		index = tokens.lastIndex
+	}
+	return output + source.slice(index)
 }
 
 async function buildDocumentation(sourceRoot, buildRoot, render = shortcutMarkdown) {
