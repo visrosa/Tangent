@@ -1,5 +1,6 @@
 import type { FormatType, LineType, TypesetTypes } from 'typewriter-editor/typesetting'
 import { h } from 'typewriter-editor/rendering/vdom'
+import { foldedLineChildren } from './foldedText'
 import type { IndentDefinition } from './line'
 import { isEqual, type AttributeMap } from '@typewriter/document'
 import { isLargeList, type ListDefinition } from './list'
@@ -33,7 +34,7 @@ function getHideableFormatClass(attributes, baseClass = '') {
 		// Inject focus classes at the top so that opacity is applied in the right place
 		className += ' ' + attributes.decoration?.focus.class
 	}
-	
+
 	return className
 }
 
@@ -52,7 +53,7 @@ function hideableFormat(
 		name: formatName,
 		selector: `${elementName}.${formatName}`,
 		render: (attributes, children) => {
-			
+
 			let className = getHideableFormatClass(attributes, formatName)
 
 			let formatAttribute = attributes[formatName]
@@ -91,7 +92,7 @@ function revealableLine(lineName: string, elementName: string = 'div'): LineType
 			return h(
 				elementName,
 				getCoreLineProperties(attributes, lineName),
-				children)
+				foldedLineChildren(attributes, children))
 		},
 		fromDom: defaultLineFromDom(lineName)
 	}
@@ -115,7 +116,7 @@ function getCoreLineProperties(attributes, baseClass = ''): AttributeMap {
 			props.className += ' collapse-parent'
 		}
 	}
-	
+
 	if (attributes.collapsedReveal) {
 		props.className += ' collapsed-revealed'
 	}
@@ -152,7 +153,7 @@ function getCoreLineProperties(attributes, baseClass = ''): AttributeMap {
 			}
 		}
 	}
-	
+
 	return props
 }
 
@@ -202,7 +203,7 @@ const noteTypeset:TypesetTypes = {
 			name: 'line',
 			selector: 'p',
 			render: (attributes, children) => {
-				return h('p', getCoreLineProperties(attributes), children)	
+				return h('p', getCoreLineProperties(attributes), foldedLineChildren(attributes, children))
 			},
 			fromDom: defaultLineFromDom('line')
 		},
@@ -210,7 +211,7 @@ const noteTypeset:TypesetTypes = {
 			name: 'header',
 			selector: 'h1, h2, h3, h4, h5, h6',
 			defaultFollows: true,
-			render: (attributes, children) => h(`h${attributes.header}`, getCoreLineProperties(attributes), children),
+			render: (attributes, children) => h(`h${attributes.header}`, getCoreLineProperties(attributes), foldedLineChildren(attributes, children)),
 			fromDom: defaultLineFromDom('header') // Technically incorrect, but will be re-parsed anyhow
 		},
 		{
@@ -231,7 +232,7 @@ const noteTypeset:TypesetTypes = {
 					props.className += ' checkbox ' + listData.todoState
 				}
 
-				return h('p', props, children)
+				return h('p', props, foldedLineChildren(attributes, children))
 			},
 			fromDom: defaultLineFromDom('list')
 		},
@@ -264,7 +265,7 @@ const noteTypeset:TypesetTypes = {
 					props.style = `--innerLineIndent: ${indent};` // Replace indent
 					props.key = id
 
-					return h('p', props, children)
+					return h('p', props, foldedLineChildren(attributes, children))
 				})
 
 				let className = 'depth-' + depth
@@ -312,7 +313,7 @@ const noteTypeset:TypesetTypes = {
 					let props = getCoreLineProperties(attributes, 'codeLine')
 					props.key = id
 
-					return h('div', props, children)
+					return h('div', props, foldedLineChildren(attributes, children))
 				})
 
 				const codeData = lineData[0][0].code as CodeData
@@ -328,7 +329,7 @@ const noteTypeset:TypesetTypes = {
 				if (isRevealed) {
 					preClass += ' revealed'
 				}
-				
+
 				const content = h(
 					'pre',
 					{
@@ -390,7 +391,7 @@ const noteTypeset:TypesetTypes = {
 					else if (attributes.end) {
 						props.className += ' end'
 					}
-					return h('div', props, children)
+					return h('div', props, foldedLineChildren(attributes, children))
 				})
 				return h('div', { className: 'frontMatter', spellcheck: false }, h('code', null, children))
 			}
@@ -418,7 +419,7 @@ const noteTypeset:TypesetTypes = {
 					let props = getCoreLineProperties(attributes, 'mathLine')
 					props.key = id
 
-					return h('div', props, children)
+					return h('div', props, foldedLineChildren(attributes, children))
 				})
 
 				let containerClass = 'math-block-container output-container'
@@ -542,7 +543,7 @@ const noteTypeset:TypesetTypes = {
 					className,
 					listGlyph: listData.glyph
 				}, children)
-			}	
+			}
 		},
 
 		{

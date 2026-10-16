@@ -266,15 +266,32 @@ article.note {
 			opacity: .7;
 		}
 
-		&.collapse-parent {
-			&::after {
-				content: "…";
-				font-size: var(--fontSize);
-				color: var(--deemphasizedTextColor);
-				padding-inline-start: .5em;
-				line-height: 1em; // Not sure why this is needed, but it prevents children from moving down
-			}
-		}
+	}
+
+	.folded-text {
+		display: inline-grid;
+		grid-template-columns: minmax(0, auto) auto;
+		max-width: 100%;
+		vertical-align: top;
+		white-space: nowrap;
+	}
+	.folded-text-content {
+		min-width: 0;
+		overflow: hidden;
+		white-space: nowrap;
+		mask-image: linear-gradient(to right, black calc(100% - 1.5em), transparent);
+		code.inline_code { white-space: pre; }
+	}
+	.folded-text-marker::after {
+		content: "⋯";
+		color: var(--deemphasizedTextColor);
+		padding-inline-start: .15em;
+	}
+	.revealed > .folded-text,
+	.folded-text:has(.revealed) {
+		display: contents;
+		> .folded-text-content { display: contents; }
+		> .folded-text-marker { display: none; }
 	}
 
 	// This second term allows hidden contents of lines to remain hidden when a set of lines is revealed by an outer block
@@ -339,23 +356,12 @@ article.note {
 			}
 		}
 
-		&.start.collapse-parent {
-			&::after {
-				content: "--- front matter ---";
-				font-style: italic;
-				font-weight: 200;
-				display: inline-block;
-				border-top: 1px solid var(--deemphasizedTextColor);
-				border-bottom: 1px solid var(--deemphasizedTextColor);
-				opacity: .5;
-				line-height: rhythmUnit(1);
-
-				position: absolute;
-				left: 0;
-				right: .5em;
-				height: rhythmUnit(1);
-			}
+		&.start.collapse-parent .folded-text-content::before {
+			content: "Front matter";
+			font-style: italic;
+			color: var(--deemphasizedTextColor);
 		}
+
 	}
 
 	code, .code_wrapper {
