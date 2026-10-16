@@ -1,58 +1,52 @@
 # Keyboard Input
 
-All spellings: [+Enter+] [-Enter-] ⁅Enter⁆ ⹕Enter⹖
+Only quill brackets render keycaps: ⁅Enter⁆.
 
-Please press [+[+Ctrl+][+Shift+][+R+]+] to redraw the page.
+Former spellings stay literal: [+Enter+] [-Enter-] ⹕Enter⹖.
 
-Glyph-source equivalent: Please press ⁅⹕Ctrl⹖⹕Shift⹖⹕R⹖⁆ to redraw the page.
+Please press ⁅⁅Ctrl⁆⁅Shift⁆⁅R⁆⁆ to redraw the page.
 
-Each chord should show three individual keycaps inside one surrounding keycap, without visible source brackets. Compare the same note in light and dark themes.
+The chord should show three individual keycaps inside one surrounding keycap, without visible source brackets. Compare the same note in light and dark themes.
 
-Substitutions: type `[+` or `[-` for ⁅ and ⹕; `+]` or `-]` for ⹖ and ⁆.
+Substitutions: type `[+` or `[-` for `⁅`; `+]` or `-]` for `⁆`. Accept each suggestion with Enter or Tab; Escape preserves literal source.
 
-Adjacent inputs: [+⎇+][+N+]
+Adjacent inputs: ⁅⎇⁆⁅N⁆
 
-Nested groups:
+Nested group: ⁅⁅⎇⁆⁅N⁆⁆
 
-[+[+⎇+][+N+]+]
+Three levels: ⁅⁅⁅N⁆⁆⁆
 
-[-[-⎇-][-N-]-]
+Surrounding formatting: **⁅Enter⁆** _⁅Tab⁆_
 
-[+[-⎇-][+N+]+]
+Literal labels: ⁅**N**⁆ ⁅👩‍💻⁆ ⁅学習漢字⁆ ⁅  Space  ⁆
 
-⁅⹕⎇⹖⹕N⹖⁆
+Punctuation keys: ⁅+⁆ ⁅-⁆ ⁅[⁆ ⁅]⁆ ⁅\\⁆
 
-[+⹕⎇⹖⁅N⁆+]
+Inactive former delimiters inside a label: ⁅[+N+] [-N-] ⹕N⹖⁆
 
-⹕⁅⎇⁆[-N-]⹖
+Quill input inside ordinary punctuation: [+⁅N⁆+] [-⁅N⁆-] ⹕⁅N⁆⹖
 
-Three levels: [+[-[+N+]-]+]
+Inactive code: `⁅N⁆`
 
-Surrounding formatting: **[+Enter+]** _[-Tab-]_
+Inactive math: $⁅N⁆$
 
-Literal labels: [+**N**+] [+👩‍💻+] [+学習漢字+] [+  Space  +]
+Inactive link text: [[Keycaps|⁅N⁆]]
 
-Punctuation keys: [+++] [---] [+\[+] [+\]+] [+\\+]
+Literal opener: \⁅N⁆
 
-Inactive code: `[+N+]` and `[-N-]`
+Literal quill label: ⁅\⁅N\⁆⁆
 
-Inactive math: $[+N+]$
+Empty and malformed: ⁅⁆ ⁅ ⁆ ⁅⁅⁆⁆
 
-Inactive link text: [[Keyboard Input|[+N+]]]
+Partially substituted pairs: ⁅N+] [+N⁆ ⁅N-] [-N⁆
 
-Literal openers: \[+N+] \⁅N⁆ \⹕N⹖
-
-Literal glyph labels: ⁅\⹕N\⹖⁆
-
-Malformed: [++] [- -] [+N-] [+[-N+]+]
-
-Mismatched glyphs and mixed pairs: ⁅N⹖ ⹕N⁆ ⁅N+] [+N⁆
+Recovery after a closed malformed group: ⁅ ⁆ ⁅M⁆
 
 Incomplete:
 
-[+N
+⁅N
 
 Cross-line:
 
-[+N
-+]
+⁅N
+⁆
