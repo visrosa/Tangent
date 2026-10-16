@@ -9,5 +9,13 @@ export function foldedText(children: any[]) {
 }
 
 export function foldedLineChildren(attributes, children: any[]) {
-	return hasCollapsedChildren(attributes.collapsed) ? [foldedText(children)] : children
+	if (!hasCollapsedChildren(attributes.collapsed)) return children
+	// List markers paint outside the text box, so they must stay outside its mask.
+	let prefix = 0
+	while (prefix < children.length) {
+		const classes = children[prefix]?.props?.className ?? children[prefix]?.props?.class ?? ''
+		if (!classes.split(/\s+/).includes('line_format')) break
+		prefix++
+	}
+	return [...children.slice(0, prefix), foldedText(children.slice(prefix))]
 }
