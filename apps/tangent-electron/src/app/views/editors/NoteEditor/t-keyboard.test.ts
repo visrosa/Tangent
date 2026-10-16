@@ -40,8 +40,7 @@ afterEach(() => {
 
 describe('keyboard input rendering', () => {
 	it.each([
-		'[+[+⎇+][+N+]+]', '[-[-⎇-][-N-]-]', '[+[-⎇-][+N+]+]',
-		'⁅⹕⎇⹖⹕N⹖⁆', '⹕⁅⎇⁆[-N-]⹖', '[+⹕⎇⹖⁅N⁆+]',
+		'⁅⁅⎇⁆⁅N⁆⁆',
 	])('renders nested keycaps for %s', source => {
 		const editor = makeEditor(source)
 		expect(preview(editor).textContent).toBe('⎇N')
@@ -50,7 +49,7 @@ describe('keyboard input rendering', () => {
 	})
 
 	it.each(['light', 'dark'])('styles nested keycaps within the %s theme without shrinking inner labels', theme => {
-		const editor = makeEditor('Please press [+[+Ctrl+][+Shift+][+R+]+] to redraw the page.')
+		const editor = makeEditor('Please press ⁅⁅Ctrl⁆⁅Shift⁆⁅R⁆⁆ to redraw the page.')
 		editor.root.className = `note ${theme}`
 		editor.root.style.color = 'var(--textColor)'
 		editor.root.style.width = '400px'
@@ -78,7 +77,7 @@ describe('keyboard input rendering', () => {
 	})
 
 	it('keeps deep labels at one font size and fits a long keycap within a narrow note', () => {
-		const editor = makeEditor('[+[-⁅⹕N⹖⁆-]+] [+A deliberately long label for a narrow note with wrapping+]')
+		const editor = makeEditor('⁅⁅⁅⁅N⁆⁆⁆⁆ ⁅A deliberately long label for a narrow note with wrapping⁆')
 		editor.root.className = 'note light'
 		editor.root.style.width = '240px'
 		const outputs = Array.from(editor.root.querySelectorAll('t-keyboard'))
@@ -93,13 +92,13 @@ describe('keyboard input rendering', () => {
 	})
 
 	it('preserves Unicode source through reveal, DOM reconstruction and caret mapping', () => {
-		const source = 'Before ⁅⹕👩‍💻⹖[+N+]⁆⹕M⹖ after'
+		const source = 'Before ⁅⁅👩‍💻⁆⁅N⁆⁆⁅M⁆ after'
 		const editor = makeEditor(source)
 		const change = editor.doc.change
 		const offset = source.indexOf('👩')
 		revealContentAroundRange(editor.doc, [offset, offset], change)
 		editor.set(editor.doc.apply(change))
-		expect(editor.root.querySelector('.keyboard-source').textContent).toBe('⁅⹕👩‍💻⹖[+N+]⁆')
+		expect(editor.root.querySelector('.keyboard-source').textContent).toBe('⁅⁅👩‍💻⁆⁅N⁆⁆')
 		const delta = deltaFromDom(editor, { root: editor.root, collapseWhitespace: false })
 		expect(typewriterToText(new TextDocument(delta))).toBe(source)
 		for (const offset of [0, source.indexOf('after'), source.length]) {
@@ -107,6 +106,7 @@ describe('keyboard input rendering', () => {
 			expect(getIndexFromNodeAndOffset(editor, range.startContainer, range.startOffset)).toBe(offset)
 		}
 	})
+
 
 	it('rerenders after substituting delimiters individually and undoing', async () => {
 		const editor = makeEditor('Before [+N+] after', true) as MarkdownEditor
@@ -126,24 +126,25 @@ describe('keyboard input rendering', () => {
 		editor.modules.history.undo()
 		await wait(20)
 		expect(editor.getText()).toBe('Before [+N+] after')
-		expect(preview(editor).textContent).toBe('N')
+		expect(editor.root.querySelector('t-keyboard')).toBeNull()
 	})
 
+
 	it('keeps adjacent outer inputs separate and retains every nested group', () => {
-		const editor = makeEditor('[+N+][-N-][+[-[+A+]-]+]')
+		const editor = makeEditor('⁅N⁆⁅N⁆⁅⁅⁅A⁆⁆⁆')
 		const outputs = Array.from(editor.root.querySelectorAll('t-keyboard'))
 		expect(outputs.map(el => el.shadowRoot.textContent)).toEqual(['N', 'N', 'A'])
 	})
 
 	it('keeps literal markup safe and preserves label whitespace and Unicode', () => {
-		const source = '[+<img src=x onerror=alert(1)> **N**  👩‍💻 e\u0301+]'
+		const source = '⁅<img src=x onerror=alert(1)> **N**  👩‍💻 e\u0301⁆'
 		const editor = makeEditor(source)
 		expect(preview(editor).textContent).toBe('<img src=x onerror=alert(1)> **N**  👩‍💻 e\u0301')
 		expect(preview(editor).querySelector('img')).toBeNull()
 	})
 
 	it('updates preview content during live edits and undo', async () => {
-		const editor = makeEditor('Before [+[-N-]+] after', true) as MarkdownEditor
+		const editor = makeEditor('Before ⁅⁅N⁆⁆ after', true) as MarkdownEditor
 		editor.select(0)
 		const index = editor.getText().indexOf('N')
 		editor.change.delete([index, index + 1]).insert(index, 'M').apply()
@@ -152,18 +153,18 @@ describe('keyboard input rendering', () => {
 		editor.modules.history.undo()
 		await wait(20)
 		expect(preview(editor).textContent).toBe('N')
-		expect(editor.getText()).toBe('Before [+[-N-]+] after')
+		expect(editor.getText()).toBe('Before ⁅⁅N⁆⁆ after')
 	})
 
 	it('reconstructs exact source from the editor DOM without reading the preview', () => {
-		const source = 'Before [+[-⎇-][+👩‍💻+]+][-N-] after'
+		const source = 'Before ⁅⁅⎇⁆⁅👩‍💻⁆⁆⁅N⁆ after'
 		const editor = makeEditor(source)
 		const delta = deltaFromDom(editor, { root: editor.root, collapseWhitespace: false })
 		expect(typewriterToText(new TextDocument(delta))).toBe(source)
 	})
 
 	it('maps caret offsets around adjacent previews to the original source', () => {
-		const source = '[+[-👩‍💻-]+][+N+] after'
+		const source = '⁅⁅👩‍💻⁆⁆⁅N⁆ after'
 		const editor = makeEditor(source)
 		for (const offset of [0, source.indexOf('after'), source.length]) {
 			const range = getBrowserRange(editor, [offset, offset])
@@ -172,18 +173,18 @@ describe('keyboard input rendering', () => {
 	})
 
 	it('reveals only the selected source instance and retains its preview', () => {
-		const editor = makeEditor('[+N+] text [+N+]')
+		const editor = makeEditor('⁅N⁆ text ⁅N⁆')
 		const change = editor.doc.change
 		revealContentAroundRange(editor.doc, [2, 2], change)
 		editor.set(editor.doc.apply(change))
 		const containers = Array.from(editor.root.querySelectorAll('.inline-keyboard-container'))
 		expect(containers.map(el => el.classList.contains('revealed'))).toEqual([true, false])
-		expect(containers[0].querySelector('.keyboard-source').textContent).toBe('[+N+]')
+		expect(containers[0].querySelector('.keyboard-source').textContent).toBe('⁅N⁆')
 		expect(containers[0].querySelector('t-keyboard').shadowRoot.textContent).toBe('N')
 	})
 
 	it.each(['click', 'dblclick', 'mousedown', 'contextmenu'])('%s on a nested key requests the exact source group', eventType => {
-		const editor = makeEditor('[+[-⎇-][+N+]+][+N+]')
+		const editor = makeEditor('⁅⁅⎇⁆⁅N⁆⁆⁅N⁆')
 		const output = editor.root.querySelector('t-keyboard')
 		let captured: any
 		output.addEventListener(eventType, event => { captured = (event as any).editorSelectionRequest })
@@ -193,7 +194,7 @@ describe('keyboard input rendering', () => {
 	})
 
 	it('does not duplicate a preview when decorations split an instance', () => {
-		const source = '[+[-⎇-][+N+]+]'
+		const source = '⁅⁅⎇⁆⁅N⁆⁆'
 		const op = parseMarkdown(source).lines[0].content.ops[0]
 		const delta = new Delta([
 			{ insert: source.slice(0, 7), attributes: { ...op.attributes, decoration: { focus: { class: 'unfocused' } } } },
@@ -207,8 +208,7 @@ describe('keyboard input rendering', () => {
 	})
 
 	it.each([
-		'[+[-⎇-][+N+]+]', '# [+[-⎇-][+N+]+]', '- [+[-⎇-][+N+]+]', '> [+[-⎇-][+N+]+]',
-		'⁅⹕⎇⹖⹕N⹖⁆', '⹕⁅⎇⁆[+N+]⹖',
+		'⁅⁅⎇⁆⁅N⁆⁆', '# ⁅⁅⎇⁆⁅N⁆⁆', '- ⁅⁅⎇⁆⁅N⁆⁆', '> ⁅⁅⎇⁆⁅N⁆⁆',
 	])('exports nested semantic HTML from %s', source => {
 		const editor = makeEditor(source)
 		const exported = document.createElement('div')
@@ -221,7 +221,7 @@ describe('keyboard input rendering', () => {
 	})
 
 	it('inline HTML export preserves distinct adjacent outer inputs', () => {
-		const editor = makeEditor('[+N+][+N+]')
+		const editor = makeEditor('⁅N⁆⁅N⁆')
 		const exported = document.createElement('div')
 		exported.innerHTML = inlineToHTML(editor, editor.doc.lines[0].content)
 		expect(Array.from(exported.children).map(el => el.textContent)).toEqual(['N', 'N'])

@@ -16,12 +16,12 @@ type MatcherItem = {
 const matches: MatcherItem[] = [
 	{
 		match: /\[[+-]$/,
-		replace: ['⁅', '⹕'],
+		replace: '⁅',
 		atCaret: true
 	},
 	{
 		match: /[+-]\]$/,
-		replace: ['⹖', '⁆'],
+		replace: '⁆',
 		atCaret: true
 	},
 	{

@@ -16,8 +16,8 @@ afterEach(() => {
 
 describe('keyboard delimiter substitutions', () => {
 	it.each([
-		['[+', ['⁅', '⹕']], ['[-', ['⁅', '⹕']],
-		['+]', ['⹖', '⁆']], ['-]', ['⹖', '⁆']],
+		['[+', ['⁅']], ['[-', ['⁅']],
+		['+]', ['⁆']], ['-]', ['⁆']],
 	] as const)('offers candidates for %s when typed or requested', (trigger, options) => {
 		const handler = new UnicodeAutocompleter(null)
 		const doc = sourceDocument(trigger)
@@ -27,7 +27,7 @@ describe('keyboard delimiter substitutions', () => {
 		expect(handler.options.value).toEqual(options)
 		expect(handler.getCurrentOptionText()).toBe(options[0])
 		handler.shiftSelection(1)
-		expect(handler.getCurrentOptionText()).toBe(options[1])
+		expect(handler.getCurrentOptionText()).toBe(options[0])
 	})
 
 	it.each(['[+N+]', '[-N-]', '⁅[+N+]⁆', '[+ Space +]', '😀⹕N-]'])('targets the delimiter immediately before the caret in %s', source => {
@@ -61,8 +61,8 @@ describe('keyboard delimiter substitutions', () => {
 	})
 
 	it.each([
-		['[', '+', 'ArrowUp', '⹕'], ['[', '-', 'ArrowDown', '⹕'],
-		['⁅N+', ']', 'ArrowDown', '⁆'], ['⹕N-', ']', null, '⹖'],
+		['[', '+', 'ArrowUp', '⁅'], ['[', '-', 'ArrowDown', '⁅'],
+		['⁅N+', ']', 'ArrowDown', '⁆'], ['⁅N-', ']', null, '⁆'],
 	] as const)('accepts a substitution after typing %s%s', (before, typed, arrow, replacement) => {
 		const handler = new UnicodeAutocompleter(null)
 		const editor = new Editor({ modules: { autocomplete: autocompleteWithHandlers([handler]) } })
@@ -77,6 +77,44 @@ describe('keyboard delimiter substitutions', () => {
 		editor.root.dispatchEvent(new KeyboardEvent('shortcut', { key: 'Enter', cancelable: true }))
 		expect(editor.getText()).toBe(before.slice(0, -1) + replacement)
 		expect(autocomplete.activeHandler.value).toBeNull()
+	})
+
+	it.each([['+', 'Enter'], ['-', 'Tab']] as const)('converts a complete ASCII %s pair only when each suggestion is accepted with %s', (sign, accept) => {
+		const handler = new UnicodeAutocompleter(null)
+		const editor = new Editor({ modules: { autocomplete: autocompleteWithHandlers([handler]) } })
+		editors.push(editor)
+		editor.setRoot(document.createElement('div'))
+		editor.set(sourceDocument('['))
+		const type = (char: string) => {
+			const caret = editor.doc.selection[0]
+			editor.change.insert(caret, char).select(caret + char.length).apply(Source.input)
+		}
+		const acceptSuggestion = () => editor.root.dispatchEvent(new KeyboardEvent('shortcut', { key: accept, cancelable: true }))
+		type(sign)
+		expect(editor.getText()).toBe('[' + sign)
+		acceptSuggestion()
+		expect(editor.getText()).toBe('⁅')
+		for (const char of ['N', sign, ']']) type(char)
+		expect(editor.getText()).toBe('⁅N' + sign + ']')
+		expect(markdownToTextDocument(editor.getText()).lines[0].content.ops.some(op => op.attributes?.keyboard)).toBe(false)
+		acceptSuggestion()
+		expect(editor.getText()).toBe('⁅N⁆')
+		expect(markdownToTextDocument(editor.getText()).lines[0].content.ops[0].attributes.keyboard.children).toEqual(['N'])
+	})
+
+	it.each(['+', '-'])('keeps the ASCII %s form literal when its suggestion is dismissed', sign => {
+		const handler = new UnicodeAutocompleter(null)
+		const editor = new Editor({ modules: { autocomplete: autocompleteWithHandlers([handler]) } })
+		editors.push(editor)
+		editor.setRoot(document.createElement('div'))
+		const before = '[' + sign + 'N' + sign
+		editor.set(sourceDocument(before))
+		editor.change.insert(before.length, ']').select(before.length + 1).apply(Source.input)
+		expect((editor.modules.autocomplete as AutocompleteModule).activeHandler.value).toBe(handler)
+		editor.root.dispatchEvent(new KeyboardEvent('shortcut', { key: 'Escape', cancelable: true }))
+		expect(editor.getText()).toBe(before + ']')
+		expect((editor.modules.autocomplete as AutocompleteModule).activeHandler.value).toBeNull()
+		expect(markdownToTextDocument(editor.getText()).lines[0].content.ops.some(op => op.attributes?.keyboard)).toBe(false)
 	})
 
 	it('retains existing arrow, dash and ellipsis suggestions', () => {
