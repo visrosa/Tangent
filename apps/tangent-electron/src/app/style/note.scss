@@ -324,7 +324,6 @@ article.note {
 			&.association-list-values-collapsed:not(.revealed) .association-list-value-content:not(:has(.revealed)) {
 				white-space: nowrap;
 				overflow: hidden;
-				text-overflow: ellipsis;
 
 				code.inline_code { white-space: pre; }
 			}
@@ -381,9 +380,8 @@ article.note {
 			border-inline-start: var(--associationListBarWidth) solid var(--accentDeemphasizedBackgroundColor);
 			white-space: nowrap;
 			overflow: hidden;
-			text-overflow: ellipsis;
 			font-weight: 400;
-			&::before { content: attr(data-summary); }
+			& .association-list-summary-text::before { content: attr(data-summary); }
 		}
 
 		code.inline_code { white-space: pre-wrap; }
@@ -446,6 +444,9 @@ article.note {
 		mask-image: linear-gradient(to right, black calc(100% - 1.5em), transparent);
 		code.inline_code { white-space: pre; }
 	}
+	.folded-text-content:dir(rtl) {
+		mask-image: linear-gradient(to left, black calc(100% - 1.5em), transparent);
+	}
 	.folded-text-marker::after {
 		content: "⋯";
 		color: var(--deemphasizedTextColor);
@@ -454,7 +455,10 @@ article.note {
 	.revealed > .folded-text,
 	.folded-text:has(.revealed) {
 		display: contents;
-		> .folded-text-content { display: contents; }
+		> .folded-text-content {
+			display: contents;
+			code.inline_code { white-space: pre-wrap; }
+		}
 		> .folded-text-marker { display: none; }
 	}
 

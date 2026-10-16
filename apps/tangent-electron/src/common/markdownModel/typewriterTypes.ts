@@ -1,6 +1,6 @@
 import type { FormatType, LineType, TypesetTypes } from 'typewriter-editor/typesetting'
 import { h } from 'typewriter-editor/rendering/vdom'
-import { foldedLineChildren } from './foldedText'
+import { foldedLineChildren, foldedText } from './foldedText'
 import type { IndentDefinition } from './line'
 import { isEqual, type AttributeMap } from '@typewriter/document'
 import { isLargeList, type ListDefinition } from './list'
@@ -364,8 +364,8 @@ function getAssociationListLayouts(lineData: AssociationListLineEntry[], hidden:
 				&& hasCollapsedChildren(owner.entry[0].collapsed)
 				&& (!!associationList.hasValue || childEnd === childRow)
 
-			// A shared description's bar must cover every term, even when there
-			// are fewer descriptions than terms.
+			// A shared value's bar must cover every term, even when there
+			// are fewer values than terms.
 			const lastChild = owner.children.findLast(visible)
 			if (!associationList.hasValue && childEnd < endRow && (lastChild?.entry[0].associationList as AssociationListLineData)?.role === 'value') {
 				layouts[indices.get(lastChild.entry[2])].span += endRow - childEnd
@@ -407,7 +407,7 @@ function renderAssociationListExportItems(nodes: AssociationListTreeNode[]) {
 		else if (associationList.hasValue) {
 			const split = splitAssociationListChildren(children)
 			items.push(h('dt', getAssociationListExportProps(attributes, 'term', `${id}-term`), withoutAssociationListSourceFormatting(split.term)))
-			items.push(h('dd', getAssociationListExportProps(attributes, 'value', `${id}-definition`), split.value))
+			items.push(h('dd', getAssociationListExportProps(attributes, 'value', `${id}-value`), split.value))
 		}
 		else {
 			const split = splitAssociationListChildren(children)
@@ -532,7 +532,7 @@ const noteTypeset:TypesetTypes = {
 							contenteditable: 'false',
 							role: 'button',
 							tabindex: '0',
-							'aria-label': hasCollapsedChildren(owner.entry[0].collapsed) ? 'Expand descriptions' : 'Collapse descriptions',
+							'aria-label': hasCollapsedChildren(owner.entry[0].collapsed) ? 'Expand values' : 'Collapse values',
 							'aria-expanded': String(!hasCollapsedChildren(owner.entry[0].collapsed)),
 							'data-association-list-owner': owner.entry[2]
 						}, [])
@@ -548,23 +548,26 @@ const noteTypeset:TypesetTypes = {
 									lineChildren = [
 										h('span', { className: 'association-list-term-content' }, split.term),
 										separator,
-										h('span', { className: 'association-list-value-content' }, [bar(), ...split.value])
+										h('span', { className: 'association-list-value-content' }, [bar(), ...(valuesCollapsed[index] ? [foldedText(split.value)] : split.value)])
 									]
 								}
 								else {
+									const summary = collapsedAssociationListSummary(lineData, index, hidden)
 									lineChildren = [
 										h('span', { className: 'association-list-term-content' }, split.term),
 										separator,
 										...(valuesCollapsed[index] ? [h('span', {
 											className: 'association-list-summary',
-											'data-summary': collapsedAssociationListSummary(lineData, index, hidden)
-										}, [bar()])] : [])
+											'data-summary': summary
+										}, [bar(), foldedText([h('span', {
+											className: 'association-list-summary-text', 'data-summary': summary
+										}, [])])])] : [])
 									]
 								}
 							}
 						}
 
-						if (associationList.role === 'value' && owner) lineChildren = [bar(), ...lineChildren]
+						if (associationList.role === 'value' && owner) lineChildren = [bar(), ...foldedLineChildren(attributes, lineChildren)]
 
 						const props = getCoreLineProperties(attributes, className)
 						const layout = layouts[index]
