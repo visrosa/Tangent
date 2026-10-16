@@ -1,7 +1,7 @@
 import { StructureType, type TodoState } from 'common/indexing/indexTypes'
 import NoteParser from './NoteParser'
 import { escapeRegExp } from '@such-n-such/core'
-import { findParentDlTerm, injectDlChildren, isStartOfBlockContent, matchDlSeparator, setDlLineData, setDlTermSeparator } from './dl'
+import { findParentAssociationListTerm, injectAssociationListChildren, isStartOfBlockContent, matchAssociationListSeparator, setAssociationListLineData, setAssociationListTermSeparator } from './associationList'
 
 // Unordered glyphs are split by visual weight because large glyphs get extra
 // vertical spacing via ListForm.UnorderedLarge / .largeList styling.
@@ -280,29 +280,29 @@ export function parseListItem(char: string, parser: NoteParser): boolean {
 		})
 	}
 
-	const dlSeparator = matchDlSeparator(line, listDetail)
+	const associationListSeparator = matchAssociationListSeparator(line, listDetail)
 	const currentIndent = parser.getCurrentIndent().indent
-	if (dlSeparator) {
-		setDlTermSeparator(parser, start + dlSeparator.index)
-		const parentDlTerm = findParentDlTerm(parser, currentIndent, false)
-		setDlLineData(parser, {
+	if (associationListSeparator) {
+		setAssociationListTermSeparator(parser, start + associationListSeparator.index)
+		const parentAssociationListTerm = findParentAssociationListTerm(parser, currentIndent, false)
+		setAssociationListLineData(parser, {
 			role: 'term',
 			glyph: listDetail,
-			hasDef: dlSeparator.hasDef,
-			rootIndent: parentDlTerm?.rootIndent ?? currentIndent,
-			termIndent: parentDlTerm?.termIndent
+			hasValue: associationListSeparator.hasValue,
+			rootIndent: parentAssociationListTerm?.rootIndent ?? currentIndent,
+			termIndent: parentAssociationListTerm?.termIndent
 		})
 
-		injectDlChildren(parser)
+		injectAssociationListChildren(parser)
 	}
 	else {
-		const parentDlTerm = findParentDlTerm(parser, currentIndent)
-		if (parentDlTerm) {
-			setDlLineData(parser, {
+		const parentAssociationListTerm = findParentAssociationListTerm(parser, currentIndent)
+		if (parentAssociationListTerm) {
+			setAssociationListLineData(parser, {
 				role: 'value',
 				glyph: listDetail,
-				rootIndent: parentDlTerm.rootIndent,
-				termIndent: parentDlTerm.termIndent
+				rootIndent: parentAssociationListTerm.rootIndent,
+				termIndent: parentAssociationListTerm.termIndent
 			})
 		}
 		else {
@@ -311,12 +311,12 @@ export function parseListItem(char: string, parser: NoteParser): boolean {
 		}
 	}
 
-	if (parser.lineData.dl) {
+	if (parser.lineData.associationList) {
 		// The following space is hidden with the glyph so that wrapped lines
-		// and inline definitions share a left edge with the first line.
+		// and inline values share a left edge with the first line.
 		feed.nextByLength(listDetail.glyph.length)
 		parser.commitSpan({
-			line_format: 'dl',
+			line_format: 'associationList',
 			hidden: true
 		})
 	}

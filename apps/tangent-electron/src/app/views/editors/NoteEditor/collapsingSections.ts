@@ -71,13 +71,13 @@ export function collapsingSections(editor: Editor) {
 	}
 
 	function onBarEvent(event: MouseEvent | KeyboardEvent) {
-		const target = event.target instanceof Element ? event.target.closest<HTMLElement>('.dl-collapse-bar') : null
+		const target = event.target instanceof Element ? event.target.closest<HTMLElement>('.association-list-collapse-bar') : null
 		if (!target || !editor.root.contains(target)) return
 		if (event instanceof KeyboardEvent && event.key !== 'Enter' && event.key !== ' ') return
 		event.preventDefault()
 		event.stopPropagation()
 		if (event.type === 'mousedown') return
-		const index = editor.doc.lines.findIndex(line => line.id === target.dataset.dlOwner)
+		const index = editor.doc.lines.findIndex(line => line.id === target.dataset.associationListOwner)
 		if (index >= 0) toggleLineCollapsed(index)
 	}
 

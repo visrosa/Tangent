@@ -10,7 +10,7 @@ import { parseListItem } from './list'
 import { parseInlineMath, parseMathBlock } from './math'
 import { parseInlineFurigana } from './furigana'
 import { parseInlineGloss } from './gloss'
-import { parseDlBlock, parseDlSeparator } from './dl'
+import { parseAssociationListBlock, parseAssociationListSeparator } from './associationList'
 import { parseLink, parseRawLink } from './links'
 import { type ParsingContext, ParsingContextType, type ParsingProgram } from './parsingContext'
 import { parseTag } from './tag'
@@ -26,12 +26,12 @@ const blockPrograms: ParsingProgram[] = [
 	parseListItem,
 	parseCodeBlock,
 	parseMathBlock,
-	parseDlBlock
+	parseAssociationListBlock
 ]
 
 const inlineObjectPrograms = [
 	parseInlineMath,
-	parseDlSeparator,
+	parseAssociationListSeparator,
 	parseInlineGloss, // before furigana: an unescaped `::` wins over `|`
 	parseInlineFurigana,
 	parseLink,

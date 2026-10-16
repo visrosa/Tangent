@@ -1,6 +1,6 @@
 import { type EditorRange, Line, normalizeRange, TextChange, TextDocument } from '@typewriter/document'
 import { lineIsMultiLineFormat } from './line'
-import type { DlLineData } from './dl'
+import type { AssociationListLineData } from './associationList'
 import { deepEqual } from 'fast-equals'
 
 /**
@@ -20,10 +20,10 @@ export function compareSectionDepth(lineA: Line, lineB: Line): number | true {
 	if (indentA !== indentB) {
 		return indentA - indentB
 	}
-	const dlA = attrA.dl as DlLineData | undefined
-	const dlB = attrB.dl as DlLineData | undefined
-	if (dlA?.role === 'term' && dlB?.role === 'value' && dlB.termIndent === (attrA.indent?.indent ?? '')) return -1
-	if (dlB?.role === 'term' && dlA?.role === 'value' && dlA.termIndent === (attrB.indent?.indent ?? '')) return 1
+	const associationListA = attrA.associationList as AssociationListLineData | undefined
+	const associationListB = attrB.associationList as AssociationListLineData | undefined
+	if (associationListA?.role === 'term' && associationListB?.role === 'value' && associationListB.termIndent === (attrA.indent?.indent ?? '')) return -1
+	if (associationListB?.role === 'term' && associationListA?.role === 'value' && associationListA.termIndent === (attrB.indent?.indent ?? '')) return 1
 	
 	// Headers beat out everything
 	const headerA = attrA?.header
@@ -42,8 +42,8 @@ export function compareSectionDepth(lineA: Line, lineB: Line): number | true {
 	if (hrB) return 1
 
 	// Lists are the bottom of the totem pole
-	const listA = attrA?.list || attrA?.dl
-	const listB = attrB?.list || attrB?.dl
+	const listA = attrA?.list || attrA?.associationList
+	const listB = attrB?.list || attrB?.associationList
 	if (listA && listB) {
 		// All list types on the same indent are equivalent
 		return 0
@@ -167,11 +167,11 @@ export function isLineCollapsible(lines: Line[], lineIndex: number) {
 	if (lineIndex < 0 || lineIndex >= lines.length) return false
 
 	const line = lines[lineIndex]
-	const dl = line.attributes.dl as DlLineData | undefined
-	if (dl) {
-		// An inline definition shares its term's line, so collapsing hides it
+	const associationList = line.attributes.associationList as AssociationListLineData | undefined
+	if (associationList) {
+		// An inline value shares its term's line, so collapsing hides it
 		// even when no lines follow.
-		if (dl.role === 'term' && dl.hasDef) return true
+		if (associationList.role === 'term' && associationList.hasValue) return true
 		const next = lines[lineIndex + 1]
 		if (!next) return false
 		const comparison = compareSectionDepth(line, next)

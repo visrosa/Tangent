@@ -3,7 +3,7 @@ import noteTypeset from './typewriterTypes'
 import { getDelimiterForGlyph, getGlyphForNumber, ListForm, matchList } from './list'
 import { indentMatcher } from './matches'
 import NoteParser from './NoteParser'
-import { matchDlValueMarker } from './dl'
+import { matchAssociationListValueMarker } from './associationList'
 
 export interface IndentDefinition {
 	indent: string,
@@ -24,7 +24,7 @@ export function getLineFormatData(line: Line) {
 }
 
 export function lineHasMultiLineContext(line: Line) {
-	return line.attributes.list || line.attributes.dl
+	return line.attributes.list || line.attributes.associationList
 }
 
 export function lineIsMultiLineFormat(line: Line) {
@@ -32,7 +32,7 @@ export function lineIsMultiLineFormat(line: Line) {
 		'front_matter' in line.attributes ||
 		'math' in line.attributes ||
 		'html' in line.attributes ||
-		'dl' in line.attributes
+		'associationList' in line.attributes
 	) {
 		return true
 	}
@@ -60,13 +60,13 @@ export function getLineFormattingPrefix(line: Line, forNextLine = false): string
 			if (!result.endsWith(' ')) {
 				result += ' '
 			}
-			if (attr.dl?.role === 'value' && matchDlValueMarker(lineString.slice(match[0].length))) {
+			if (attr.associationList?.role === 'value' && matchAssociationListValueMarker(lineString.slice(match[0].length))) {
 				result += ': '
 			}
 			return result
 		}
 	}
-	else if (attr.list || attr.dl) {
+	else if (attr.list || attr.associationList) {
 		const match = matchList(lineString)
 		if (match) {
 			let nextGlyph = match.glyph
@@ -83,9 +83,9 @@ export function getLineFormattingPrefix(line: Line, forNextLine = false): string
 			// Reconstruct list start
 			return match.indent + nextGlyph + ' '
 		}
-		if (attr.dl) {
+		if (attr.associationList) {
 			const indent = attr.indent?.indent ?? ''
-			return indent + (matchDlValueMarker(lineString) ? ': ' : '')
+			return indent + (matchAssociationListValueMarker(lineString) ? ': ' : '')
 		}
 	}
 	else {
@@ -166,7 +166,7 @@ export function lineFormatEscapeMode(line: Line) {
 	if (attr.blockquote) {
 		return 'double'
 	}
-	else if (attr.list || attr.dl) {
+	else if (attr.list || attr.associationList) {
 		return 'single'
 	}
 	return 'none'

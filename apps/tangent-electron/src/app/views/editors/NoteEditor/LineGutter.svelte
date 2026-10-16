@@ -39,9 +39,9 @@ function positionOnLine(line: HTMLElement, container: HTMLElement) {
 		container.style.top = result.y + offset + 'px'
 
 		if (side === 'left'){
-			// Description-list lines are grid items indented by their column
+			// Association-list lines are grid items indented by their column
 			// rather than a margin, so measure from the grid's start instead.
-			const anchor = line.closest('.editor-description-list') as HTMLElement ?? line
+			const anchor = line.closest('.editor-association-list') as HTMLElement ?? line
 			const anchorStart = anchor.getBoundingClientRect().left
 				- parseFloat(getComputedStyle(anchor).marginLeft)
 			const inset = line.getBoundingClientRect().left - anchorStart

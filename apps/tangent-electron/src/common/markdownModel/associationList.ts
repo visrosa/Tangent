@@ -4,25 +4,25 @@ import { getInlineId } from './inline'
 import DocumentFeeder from './DocumentFeeder'
 import { lineToText } from '../typewriterUtils'
 
-export type DlLineData = {
+export type AssociationListLineData = {
 	role: 'term' | 'value'
 	glyph?: ListDefinition
-	hasDef?: boolean
+	hasValue?: boolean
 	rootIndent?: string
 	termIndent?: string
 }
 
-export type DlSeparatorData = true
+export type AssociationListSeparatorData = true
 
-export type ParentDlTerm = {
+export type ParentAssociationListTerm = {
 	rootIndent: string
 	termIndent: string
 }
 
-type DlSeparatorMatch = {
+type AssociationListSeparatorMatch = {
 	/** Offset of the separator's leading whitespace within the matched line */
 	index: number
-	hasDef: boolean
+	hasValue: boolean
 }
 
 const termSeparatorIndices = new WeakMap<NoteParser, number>()
@@ -44,11 +44,11 @@ function findUnescaped(text: string, marker: string, start: number) {
 }
 
 /**
- * Finds the first description separator that the inline parser can consume.
+ * Finds the first association separator that the inline parser can consume.
  * Inline code, links, HTML, and braced annotations consume their own contents
- * before the description-list program gets a chance to inspect them.
+ * before the association-list program gets a chance to inspect them.
  */
-function findDlSeparator(content: string) {
+function findAssociationListSeparator(content: string) {
 	for (let index = 0; index < content.length; index++) {
 		const char = content[index]
 
@@ -123,24 +123,24 @@ function findDlSeparator(content: string) {
 	return -1
 }
 
-export function matchDlSeparator(line: string, listDetail: ListDefinition | null): DlSeparatorMatch | null {
+export function matchAssociationListSeparator(line: string, listDetail: ListDefinition | null): AssociationListSeparatorMatch | null {
 	if (!listDetail) return null
 	const contentStart = listDetail.indent.length + listDetail.glyph.length + 1
 	const content = line.slice(contentStart)
-	const separator = findDlSeparator(content)
+	const separator = findAssociationListSeparator(content)
 	if (separator < 0) return null
 
 	return {
 		index: contentStart + separator,
-		hasDef: content.slice(separator + 3).trim().length > 0
+		hasValue: content.slice(separator + 3).trim().length > 0
 	}
 }
 
 /**
  * Only the first top-level separator on a term line separates; any later
- * ` :: ` is literal definition text.
+ * ` :: ` is literal value text.
  */
-export function setDlTermSeparator(parser: NoteParser, feedIndex: number) {
+export function setAssociationListTermSeparator(parser: NoteParser, feedIndex: number) {
 	termSeparatorIndices.set(parser, feedIndex)
 }
 
@@ -149,53 +149,53 @@ export function isStartOfBlockContent(parser: NoteParser) {
 		&& /^[ \t]*(> ?)+$/.test(parser.feed.text.slice(parser.lineStart, parser.feed.index)))
 }
 
-export function setDlLineData(parser: NoteParser, dl: DlLineData) {
+export function setAssociationListLineData(parser: NoteParser, associationList: AssociationListLineData) {
 	// Typewriter selects the first registered line attribute. Move blockquote
-	// behind dl so the composite dl renderer can preserve both structures.
+	// behind associationList so the composite associationList renderer can preserve both structures.
 	const blockquote = parser.lineData.blockquote
 	if (blockquote !== undefined) delete parser.lineData.blockquote
-	parser.lineData.dl = dl
+	parser.lineData.associationList = associationList
 	if (blockquote !== undefined) parser.lineData.blockquote = blockquote
 }
 
-export function matchDlValueMarker(line: string) {
+export function matchAssociationListValueMarker(line: string) {
 	return /^[ \t]*:[ \t]/.exec(line)
 }
 
-export function injectDlChildren(parser: NoteParser) {
+export function injectAssociationListChildren(parser: NoteParser) {
 	const { feed } = parser
 	if (!(feed instanceof DocumentFeeder)) return
 	const indent = parser.getCurrentIndent().indent
 	feed.injectAdjacentLinesWhile(line => {
 		const nextIndent = line.attributes.indent?.indent ?? ''
 		if ((line.attributes.blockquote ?? 0) !== (parser.lineData.blockquote ?? 0)) return false
-		const marker = matchDlValueMarker(lineToText(line).replace(/^[ \t]*(> ?)+/, ''))
-		return (nextIndent.length > indent.length && !!(line.attributes.list || line.attributes.dl || marker))
+		const marker = matchAssociationListValueMarker(lineToText(line).replace(/^[ \t]*(> ?)+/, ''))
+		return (nextIndent.length > indent.length && !!(line.attributes.list || line.attributes.associationList || marker))
 			|| (nextIndent === indent && !!marker)
 	})
 }
 
-export function findParentDlTerm(
+export function findParentAssociationListTerm(
 	parser: NoteParser,
 	currentIndent: string,
 	requireBare = true,
 	allowSameIndent = false
-): ParentDlTerm | null {
+): ParentAssociationListTerm | null {
 	for (let index = parser.builder.lines.length - 1; index >= 0; index--) {
 		const previous = parser.builder.lines[index]
 		if (previous.attributes.empty || previous.attributes.whitespace) return null
 		if ((previous.attributes.blockquote ?? 0) !== (parser.lineData.blockquote ?? 0)) return null
 
 		const previousIndent = previous.attributes.indent?.indent ?? ''
-		const dl = previous.attributes.dl as DlLineData | undefined
+		const associationList = previous.attributes.associationList as AssociationListLineData | undefined
 		if (previousIndent.length > currentIndent.length) continue
 		if (previousIndent === currentIndent) {
-			if (!allowSameIndent || dl?.role === 'value') continue
+			if (!allowSameIndent || associationList?.role === 'value') continue
 		}
 		else if (previousIndent.length === currentIndent.length) return null
-		if (dl?.role === 'term' && (!requireBare || dl.hasDef === false)) {
+		if (associationList?.role === 'term' && (!requireBare || associationList.hasValue === false)) {
 			return {
-				rootIndent: dl.rootIndent ?? previousIndent,
+				rootIndent: associationList.rootIndent ?? previousIndent,
 				termIndent: previousIndent
 			}
 		}
@@ -205,39 +205,39 @@ export function findParentDlTerm(
 	return null
 }
 
-export function parseDlBlock(_char: string, parser: NoteParser): boolean {
+export function parseAssociationListBlock(_char: string, parser: NoteParser): boolean {
 	if (!isStartOfBlockContent(parser)) return false
 	const { feed } = parser
 	const line = feed.getLineText()
 	const indent = parser.getCurrentIndent().indent
-	const marker = matchDlValueMarker(line)
+	const marker = matchAssociationListValueMarker(line)
 	if (marker) {
-		const parent = findParentDlTerm(parser, indent, true, true)
+		const parent = findParentAssociationListTerm(parser, indent, true, true)
 		if (!parent) return false
-		setDlLineData(parser, { role: 'value', ...parent })
+		setAssociationListLineData(parser, { role: 'value', ...parent })
 		feed.nextByLength(marker[0].length - 1)
-		parser.commitSpan({ line_format: 'dl', hidden: true })
+		parser.commitSpan({ line_format: 'associationList', hidden: true })
 		return true
 	}
 
-	const separator = findDlSeparator(line)
+	const separator = findAssociationListSeparator(line)
 	if (separator < 0 || !line.slice(0, separator).trim() || line.slice(separator + 3).trim()) return false
-	const parent = findParentDlTerm(parser, indent, false)
-	setDlLineData(parser, {
-		role: 'term', hasDef: false,
+	const parent = findParentAssociationListTerm(parser, indent, false)
+	setAssociationListLineData(parser, {
+		role: 'term', hasValue: false,
 		rootIndent: parent?.rootIndent ?? indent,
 		termIndent: parent?.termIndent
 	})
-	setDlTermSeparator(parser, feed.index + separator)
-	injectDlChildren(parser)
+	setAssociationListTermSeparator(parser, feed.index + separator)
+	injectAssociationListChildren(parser)
 	return false
 }
 
-export function parseDlSeparator(char: string, parser: NoteParser): boolean {
+export function parseAssociationListSeparator(char: string, parser: NoteParser): boolean {
 	if (char !== ' ' && char !== '\t') return false
 
-	const dl = parser.lineData.dl as DlLineData | undefined
-	if (dl?.role !== 'term') return false
+	const associationList = parser.lineData.associationList as AssociationListLineData | undefined
+	if (associationList?.role !== 'term') return false
 
 	const { feed } = parser
 	if (feed.index !== termSeparatorIndices.get(parser)) return false
@@ -246,11 +246,11 @@ export function parseDlSeparator(char: string, parser: NoteParser): boolean {
 	parser.commitSpan(null, 0)
 	const start = feed.index
 
-	// Include one separating space in the hidden span when a definition follows,
+	// Include one separating space in the hidden span when a value follows,
 	// but never consume the newline ending a bare term.
 	feed.nextByLength(following === ' ' || following === '\t' ? 3 : 2)
 	parser.commitSpan({
-		dl_sep: true,
+		association_separator: true,
 		hiddenGroup: getInlineId(parser, start, feed.index + feed.currentStepLength)
 	})
 

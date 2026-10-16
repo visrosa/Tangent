@@ -41,7 +41,7 @@ describe('LineGutterLeft', () => {
 		target.remove()
 	})
 
-	test('places description-list chevrons in the gutter whatever their column', async () => {
+	test('places association-list chevrons in the gutter whatever their column', async () => {
 		const wrapper = document.createElement('div')
 		wrapper.style.position = 'relative'
 		const article = document.createElement('article')
