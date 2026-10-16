@@ -6,7 +6,7 @@ Any CSS files in this folder can be activated by ticking their checkbox. Active 
 # Styling Guide
 A good reference point for how Cascading Style Sheets (CSS) works can be found at the [MDN Web Docs](https://developer.mozilla.org/en-US/docs/Web/CSS). The rest of this section will assume you have basic knowledge of writing styles with CSS.
 
-When working with styles, the development console is critical. On Mac, you can open it by pressing `Cmd+Option+I`. On Windows and Linux, you can open it with `Ctrl+Shift+I`. This will open a pane that will let you inspect all of the elements that make up Tangent's UI and see how they are styled. See the [documentation on inspecting styles](https://developer.chrome.com/docs/devtools/overview/#elements) for more information.
+When working with styles, the development console is critical. You can open it with {{shortcut:darwin=Cmd+Alt+I;other=Ctrl+Shift+I}}. This will open a pane that will let you inspect all of the elements that make up Tangent's UI and see how they are styled. See the [documentation on inspecting styles](https://developer.chrome.com/docs/devtools/overview/#elements) for more information.
 
 Note that the version of Electron that Tangent uses supports [native CSS nesting](https://www.sitepoint.com/an-introduction-to-native-css-nesting/)! This makes writing custom styles much more convenient.
 

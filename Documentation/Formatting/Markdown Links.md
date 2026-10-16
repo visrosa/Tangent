@@ -2,9 +2,9 @@ Tangent will recognize raw links and make them linkable. For example: http://tan
 
 You can create standard markdown links ([such as this](https://twitter.com/TangentNotes)) using the following syntax: `[link text](https://some.url.com)`.
 
-You can follow a link by command-clicking on Mac or control-clicking on Windows. You can also follow a link that the typing cursor is hovering over by pressing `Command+Enter` on Mac or `Control+Enter` on Windows.
+You can follow a link by {{shortcut:Mod}}-clicking it. You can also follow a link that the typing cursor is hovering over by pressing {{shortcut:Mod+Enter}}.
 
-The web link shortcut is `Command+K` on Mac and `Control+K` on Windows.
+The web link shortcut is {{shortcut:Mod+K}}.
 * Pressing the shortcut with the typing cursor on a word or a selection of text will convert that text to an empty link, such as `[your selected text]()`.
 * With a url in your clipboard, pressing the shortcut will automatically convert the current word or selected text to a full link.
 * With the typing cursor over a raw url, pressing the shortcut will convert the url to a standard link with the webpage's title.

@@ -6,4 +6,4 @@ You invoke a comment by typing two slashes: // The rest of the line after those 
 
 Comments are designed to be easily stripped out of notes when published or exported.
 
-You can press `Cmd+/` on Mac or `Ctrl+/` elsewhere to toggle comments for a line, or for multiple lines.
+You can press {{shortcut:Mod+/}} to toggle comments for a line, or for multiple lines.

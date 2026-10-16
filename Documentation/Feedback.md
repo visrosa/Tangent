@@ -10,4 +10,4 @@ The best way I can help you fix a bug is if you can be as specific as possible. 
 1. The version of Tangent you are using.
 2. A list of steps you took to make the problem happen.
 3. Screenshots of any visual errors.
-4. Screenshots of any errors in the console (which can be opened with `Cmd/Ctrl+Alt+I`).
+4. Screenshots of any errors in the console (which can be opened with {{shortcut:darwin=Cmd+Alt+I;other=Ctrl+Shift+I}}).

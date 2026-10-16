@@ -1,7 +1,7 @@
 The system-wide configuration for the [[Map View]] is found in the [[System Menu]].
 
 The **Zoom & Pan** setting defines how scrolling the Map View zooms and pans the map.
-	* __Pinch-to-Zoom__ is designed for trackpad interaction. Horizontal & vertical scrolling pans the map. Pinching in or out zooms the map in or out. In this mode, you can also hold the `Ctrl` key and scroll with the mouse wheel to zoom.
+	* __Pinch-to-Zoom__ is designed for trackpad interaction. Horizontal & vertical scrolling pans the map. Pinching in or out zooms the map in or out. In this mode, you can also hold the {{shortcut:Ctrl}} key and scroll with the mouse wheel to zoom.
 	* __Scroll-to-Zoom__ is designed for mouse scroll wheel interaction. Scrolling the scroll wheel zooms the map in and out.
 	* In either mode, you can drag on the background of the map to pan.
 

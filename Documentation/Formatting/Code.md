@@ -1,7 +1,7 @@
 # Inline Code
 Tangent supports the standard markdown formatting for inline code by surrounding text in `` `backtick characters` ``. If you want to show back-tick characters in an inline code span, you can use two back-ticks.
 
-You can toggle inline code with the `Cmd/Ctrl+\` shortcut.
+You can toggle inline code with the {{shortcut:Mod+\}} shortcut.
 
 # Code Blocks
 You can create code blocks by starting a line with three or more back-tick characters at the start and end of an area that you want to be rendered as code. On the opening line, you can also specify a language that will be used for syntax highlighting. For example:

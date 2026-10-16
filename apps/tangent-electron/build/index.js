@@ -1,41 +1,15 @@
 const { exec, spawn } = require("child_process");
-const fs = require('fs')
 const path = require("path")
 
-const AdmZip = require('adm-zip')
 
 // TODO: Make this not a copy paste
 const mode = process.env.NODE_ENV || 'production';
 const prod = mode === 'production';
 
 async function buildDocumentation() {
-	const buildPath = path.resolve(path.join(__dirname, '../__build', 'documentation.zip'))
-	try {
-		await fs.promises.stat(buildPath)
-		console.log('Documentation already built')
-	}
-	catch (e) {
-		const docPath = path.resolve(path.join(__dirname, '../../../Documentation'))
-		
-		// Copy to a new directory to do fixup
-		const docClonePath = path.resolve(path.join(__dirname, '../__build', 'Documentation'))
-		await fs.promises.cp(docPath, docClonePath, { recursive: true })
-
-		// Clean files that shouldn't be distributed
-		const rmArgs = { recursive: true, force: true }
-		await fs.promises.rm(path.join(docClonePath, '.tangent', 'generated'), rmArgs)
-		await fs.promises.rm(path.join(docClonePath, '.tangent', 'Temp'), rmArgs)
-		await fs.promises.rm(path.join(docClonePath, '.tangent', 'tangents'), rmArgs)
-		await fs.promises.rm(path.join(docClonePath, '.tangent', 'workspaces'), rmArgs)
-
-		// Create the archive
-		let zip = new AdmZip()
-		zip.addLocalFolder(docClonePath)
-		zip.writeZip(buildPath)
-
-		// Remove temp directory
-		await fs.promises.rm(docClonePath, rmArgs)
-	}
+	await require('./documentation.cjs').buildDocumentation(
+		path.resolve(__dirname, '../../../Documentation'),
+		path.resolve(__dirname, '../__build'))
 }
 
 function getViteConfigPath(configName) {

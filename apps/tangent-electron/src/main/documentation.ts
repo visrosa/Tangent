@@ -3,7 +3,7 @@ import path from 'path'
 import { app, ipcMain } from 'electron'
 import { satisfies, compareBuild } from 'semver'
 import { getWindowHandle, getWorkspace } from './workspaces'
-import AdmZip from 'adm-zip'
+import { installDocumentation } from './documentationFiles'
 import Logger from 'js-logger'
 import type WindowHandle from './WindowHandle'
 import { getOrCreateWindowForWorkspace } from './windows'
@@ -33,44 +33,14 @@ function getDocumentationSourcePath() {
 }
 
 export async function initDocumentation(force = false) {
-	const docPath = getDocumentationPath()
-	const versionPath = path.join(docPath, 'version.txt')
-	let currentDocVersion = ''
 	try {
-		currentDocVersion = await fs.promises.readFile(versionPath, 'utf-8')
+		if (await installDocumentation(getDocumentationSourcePath(), getDocumentationPath(), app.getVersion(), force)) {
+			log.info('Documentation update complete')
+		}
 	}
 	catch (err) {
-		currentDocVersion = ''
-	}
-
-	const currentAppVersion = app.getVersion()
-
-	if (currentDocVersion !== currentAppVersion || force) {
-		try {
-			log.info(`Updating documentation from ${currentDocVersion} to ${currentAppVersion}`)
-			await fs.promises.rm(docPath, {
-				recursive: true,
-				force: true
-			})
-
-			const docSource = getDocumentationSourcePath()
-			const docCopy = path.join(app.getPath('userData'), 'documentation.zip')
-			log.info(`  Copying documentation zip from ${docSource} to ${docCopy}`)
-			await fs.promises.copyFile(docSource, docCopy)
-			log.info(`  Loading zip file at ${docCopy}`)
-			const zip = new AdmZip(docCopy)
-			log.info(`  Extracting zipped documentation to ${docPath}`)
-			zip.extractAllTo(docPath)
-			log.info(`  Writing version file`)
-			await fs.promises.writeFile(versionPath, currentAppVersion)
-			log.info(`  Cleaning up`)
-			await fs.promises.rm(docCopy)
-			log.info(`Documentation update complete`)
-		}
-		catch (err) {
-			log.error('Could not set up documentation.')
-			log.error(err)
-		}
+		log.error('Could not set up documentation.')
+		log.error(err)
 	}
 }
 

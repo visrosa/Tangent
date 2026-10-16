@@ -20,7 +20,7 @@ The __Hanging Headers__ setting controls whether or not H1, H2, and H3 [[Headers
 The **Cross Out Finished Todos** setting controls whether or not the text of completed & canceled [[Todos]] will be crossed out.
 
 # Editing Options
-The **Default Bold/Italics Characters** settings let you choose which characters will be used when using the `Ctrl/Cmd+B` and `Ctrl/Cmd+I` shortcuts, respectively.
+The **Default Bold/Italics Characters** settings let you choose which characters will be used when using the {{shortcut:Mod+B}} and {{shortcut:Mod+I}} shortcuts, respectively.
 
 The **Default Complete Todo Glyph** setting lets you configure what character is placed in the checkbox when marking it as complete. `[x]` is the default value for markdown. `[+]` is offered as an alternative that does not trip up automatic RTL language detection.
 
