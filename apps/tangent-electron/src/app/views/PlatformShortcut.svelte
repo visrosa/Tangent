@@ -9,7 +9,7 @@ $: keys = shortcutPresentation(shortcut, isMac ? 'darwin' : isWindows ? 'win32' 
 </script>
 
 <kbd class="keyboard-input keyboard-display" class:keyboard-input-group={keys.length > 1}
-	aria-label={keys.map(key => key.name).join(' + ')} use:keycapHelp>
+	role="img" aria-label={keys.map(key => key.name).join(' + ')} use:keycapHelp>
 	{#if keys.length > 1}
 		{#each keys as key}<kbd class="keyboard-input" title={key.tooltip} aria-label={key.name}>{key.label}</kbd>{/each}
 	{:else}

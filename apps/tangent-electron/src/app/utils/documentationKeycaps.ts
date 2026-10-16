@@ -9,11 +9,13 @@ export function documentationKeycaps(root: HTMLElement, enabled: boolean) {
 	function describe(shadow: ShadowRoot) {
 		for (const cap of shadow.querySelectorAll('kbd:not(.keyboard-input-group)')) {
 			const key = keyPresentation(cap.textContent, platform)
+			cap.setAttribute('role', 'img')
 			cap.setAttribute('aria-label', key.name)
 			if (key.tooltip) cap.setAttribute('title', key.tooltip)
 			else cap.removeAttribute('title')
 		}
 		for (const group of shadow.querySelectorAll('kbd.keyboard-input-group')) {
+			group.setAttribute('role', 'img')
 			group.setAttribute('aria-label', Array.from(group.querySelectorAll('kbd:not(.keyboard-input-group)')).map(cap => cap.getAttribute('aria-label')).join(' + '))
 		}
 	}

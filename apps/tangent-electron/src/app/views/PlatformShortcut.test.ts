@@ -16,7 +16,7 @@ it('explains individual Settings keys and the focused binding without changing t
 		expect(Array.from(caps).map(cap => cap.getAttribute('title'))).toEqual(['Control', 'Shift', 'Plus'])
 		expect(button.querySelector('kbd').getAttribute('aria-label')).toBe('Control + Shift + Plus')
 		button.focus()
-		await wait(1100)
+		await wait(20)
 		expect(tooltips.value.at(-1)?.config.tooltip).toBe('Control + Shift + Plus')
 		button.blur()
 		expect(tooltips.value).toHaveLength(0)
