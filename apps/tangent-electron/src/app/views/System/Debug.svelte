@@ -17,7 +17,6 @@ let settings = workspace.settings
 	<div class="settingsGroup">
 		<SettingView setting={settings.debug_sendCrashReports} />
 		<SettingView setting={settings.debug_createVirtualFiles} />
-		<SettingView setting={settings.debug_sendItemsToTrash} />
 		<SettingView setting={settings.debug_ioQueue_enable} />
 		<SettingView setting={settings.debug_ioQueue_maxActive} />
 		<SettingView setting={settings.debug_maxDisplayedAnnotations} />
