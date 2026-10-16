@@ -236,3 +236,19 @@ describe('Table source and editor offsets', () => {
 		expect(editor.doc.getText(editor.doc.selection)).toContain('| --- |')
 	})
 })
+
+
+it('retains a visible fold marker for hidden table source without changing offsets', async () => {
+	const source = '| Name | Value |\n| --- | --- |\n| A | B |\n\nplain'
+	const article = document.createElement('article')
+	article.className = 'note'
+	document.body.append(article)
+	const editor = new MarkdownEditor(null, { root: article, doc: markdownToTextDocument(source) })
+	cleanups.push(() => { editor.destroy(); article.remove() })
+	editor.collapsingSections.toggleLineCollapsed(0)
+	await wait()
+	const marker = article.querySelector('.tableLine.collapse-parent .folded-text-marker')
+	expect(marker.getBoundingClientRect().width).toBeGreaterThan(0)
+	expect(getComputedStyle(marker, '::after').content).toBe('"⋯"')
+	expect(typewriterToText(new TextDocument(deltaFromDom(editor, { collapseWhitespace: false })))).toBe(source)
+})
