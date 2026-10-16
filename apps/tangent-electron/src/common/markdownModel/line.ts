@@ -32,7 +32,8 @@ export function lineIsMultiLineFormat(line: Line) {
 		'front_matter' in line.attributes ||
 		'math' in line.attributes ||
 		'html' in line.attributes ||
-		'associationList' in line.attributes
+		'associationList' in line.attributes ||
+		'table' in line.attributes
 	) {
 		return true
 	}

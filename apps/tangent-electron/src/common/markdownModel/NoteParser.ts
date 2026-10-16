@@ -7,6 +7,7 @@ import { parseBackslashEscape, parseComment, parseEmojiHighlight, parseEmphasis,
 import { parseHeader } from './header'
 import { type IndentDefinition, parseBlockquote, parseHorizontalRule } from './line'
 import { parseListItem } from './list'
+import { parseTableBlock } from './table'
 import { parseInlineMath, parseMathBlock } from './math'
 import { parseInlineFurigana } from './furigana'
 import { parseInlineGloss } from './gloss'
@@ -24,6 +25,7 @@ const blockPrograms: ParsingProgram[] = [
 	parseHorizontalRule,
 	parseBlockquote,
 	parseListItem,
+	parseTableBlock,
 	parseCodeBlock,
 	parseMathBlock,
 	parseAssociationListBlock
@@ -58,8 +60,12 @@ const basePrograms = [
 	...inlineFormattingPrograms
 ]
 
+const inlinePrograms = [...inlineObjectPrograms, ...inlineFormattingPrograms]
+
 export interface MarkdownParsingOptions {
 	filepath?: string
+	/** Parse a fragment without interpreting block syntax or front matter. */
+	inlineOnly?: boolean
 
 	/** Instructs the parser to output content as formatted retains */
 	asFormatting?: boolean
@@ -116,8 +122,8 @@ export default class NoteParser {
 	}
 
 	// TODO: Remove once https://github.com/vitejs/vite/issues/14048 is resolved
-	get defaultPrograms() { return basePrograms }
-	get defaultBlockPrograms() { return blockPrograms }
+	get defaultPrograms() { return this.options?.inlineOnly ? inlinePrograms : basePrograms }
+	get defaultBlockPrograms() { return this.options?.inlineOnly ? [] : blockPrograms }
 	get defaultInlineObjectPrograms() { return inlineObjectPrograms }
 	get defaultInlineFormattingPrograms() { return inlineFormattingPrograms }
 
@@ -131,10 +137,10 @@ export default class NoteParser {
 		this.contexts.push({
 			type: ParsingContextType.Block,
 			indent: '',
-			programs: basePrograms
+			programs: this.defaultPrograms
 		})
 
-		if (this.feed.isStartOfDocument) {
+		if (this.feed.isStartOfDocument && !this.options?.inlineOnly) {
 			parseFrontMatter(this)
 		}
 

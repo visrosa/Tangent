@@ -25,6 +25,7 @@ import TangentCodePreview from './t-code-preview' // No deletey
 import TangentMath from './t-math' // No deletey
 import TangentFurigana from './t-furigana' // No deletey
 import TangentGloss from './t-gloss' // No deletey
+import './t-table-preview'
 import { ListDefinition, listMatcher } from 'common/markdownModel/list'
 import type { Workspace } from 'app/model'
 import { getEditInfo, getLineRangeWhile, getRangeWhile, lineToText } from 'common/typewriterUtils'

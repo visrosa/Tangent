@@ -1,6 +1,10 @@
 import { repeatString } from '@such-n-such/core'
 import { anyChild } from '@such-n-such/core-browser'
 import TurndownService from 'turndown'
+import { gridTableToMarkdown } from './gridTable'
+import type { TableCell, TableModel, TableAlignment } from './tableModel'
+
+export type { TableModel, TableRow, TableCell, TableAlignment } from './tableModel'
 
 const headernames = ['H1', 'H2', 'H3', 'H4', 'H5', 'H6']
 const blocknames = ['P', 'UL', 'OL', ...headernames]
@@ -26,12 +30,124 @@ function cleanPlaceholders(text: string) {
 }
 
 let turndown = null
+const tableRows = new WeakMap<HTMLTableElement, Map<HTMLElement, string>>()
+const gridTables = new WeakMap<HTMLTableElement, string | null>()
+
+function gridTableFromHTML(table: HTMLTableElement): string | null {
+	if (gridTables.has(table)) return gridTables.get(table)
+	const rows = Array.from(table.rows)
+	const coordinates: { cell: TableCell, origin: boolean }[][] = rows.map(() => [])
+	const model: TableModel = { columns: [], head: [], body: [], foot: [] }
+	let needsGrid = false
+	for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+		const row = rows[rowIndex]
+		let groupEnd = rowIndex + 1
+		while (groupEnd < rows.length && rows[groupEnd].parentElement === row.parentElement) groupEnd++
+		let column = 0
+		for (const node of Array.from(row.cells)) {
+			while (coordinates[rowIndex][column]) column++
+			const rowSpan = node.rowSpan === 0 ? groupEnd - rowIndex : Math.min(node.rowSpan, groupEnd - rowIndex)
+			const columnSpan = node.colSpan
+			const markdown = cleanPlaceholders(getTurndown().turndown(node.innerHTML)).trim()
+			needsGrid ||= rowSpan > 1 || columnSpan > 1 || markdown.includes('\n') || !!node.querySelector('p, div, pre, ul, ol, blockquote, h1, h2, h3, h4, h5, h6, hr, table')
+			const alignment = node.style.textAlign || node.getAttribute('align')
+			const cell: TableCell = { markdown, contentType: 'block', rowSpan, columnSpan }
+			if (alignment === 'left' || alignment === 'center' || alignment === 'right') {
+				model.columns[column] ??= { alignment: alignment as TableAlignment }
+			}
+			for (let r = rowIndex; r < rowIndex + rowSpan; r++) {
+				for (let c = column; c < column + columnSpan; c++) {
+					coordinates[r][c] = { cell, origin: r === rowIndex && c === column }
+				}
+			}
+			column += columnSpan
+		}
+	}
+	if (!needsGrid) { gridTables.set(table, null); return null }
+	const width = Math.max(1, ...coordinates.map(row => row.length))
+	model.columns = Array.from({ length: width }, (_, column) => model.columns[column] ?? { alignment: null })
+	for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+		const cells: TableCell[] = []
+		for (let column = 0; column < width; column++) {
+			const coordinate = coordinates[rowIndex][column]
+			if (coordinate?.origin) cells.push(coordinate.cell)
+			else if (!coordinate) cells.push({ markdown: '', contentType: 'block', rowSpan: 1, columnSpan: 1 })
+		}
+		const section = rows[rowIndex].parentElement.nodeName === 'THEAD' ? model.head : rows[rowIndex].parentElement.nodeName === 'TFOOT' ? model.foot : model.body
+		section.push({ cells })
+	}
+	if (table.caption) model.caption = { markdown: cleanPlaceholders(getTurndown().turndown(table.caption.innerHTML)).trim(), contentType: 'inline' }
+	const result = gridTableToMarkdown(model)
+	gridTables.set(table, result)
+	return result
+}
+
+function tableCellToMarkdown(cell: Element): string {
+	return getTurndown().turndown(cell.innerHTML)
+		.replace(/\r?\n/g, ' ')
+		.replace(/(\\*)\|/g, (match, backslashes) => backslashes + (backslashes.length % 2 === 0 ? '\\' : '') + '|')
+		.trim()
+}
+
+function getTableRows(table: HTMLTableElement): Map<HTMLElement, string> {
+	let result = tableRows.get(table)
+	if (result) return result
+	const rows = Array.from(table.rows)
+	const grid: string[][] = rows.map(() => [])
+	for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+		const row = rows[rowIndex]
+		let groupEnd = rowIndex + 1
+		while (groupEnd < rows.length && rows[groupEnd].parentElement === row.parentElement) groupEnd++
+		let column = 0
+		for (const cell of Array.from(row.cells)) {
+			while (grid[rowIndex][column] !== undefined) column++
+			const rowSpan = cell.rowSpan === 0 ? groupEnd - rowIndex : Math.min(cell.rowSpan, groupEnd - rowIndex)
+			// Pipe syntax has no spans: reserve covered coordinates without duplicating content.
+			for (let rowOffset = 0; rowOffset < rowSpan; rowOffset++) {
+				for (let columnOffset = 0; columnOffset < cell.colSpan; columnOffset++) {
+					grid[rowIndex + rowOffset][column + columnOffset] = ''
+				}
+			}
+			grid[rowIndex][column] = tableCellToMarkdown(cell)
+			column += cell.colSpan
+		}
+	}
+	const width = Math.max(1, ...grid.map(row => row.length))
+	result = new Map()
+	for (let index = 0; index < rows.length; index++) {
+		const cells = Array.from({ length: width }, (_, column) => grid[index][column] ?? '')
+		let markdown = '| ' + cells.join(' | ') + ' |\n'
+		if (rows[index].parentElement?.nodeName === 'THEAD' && !rows[index].nextElementSibling) {
+			markdown += '| ' + cells.map(() => '---').join(' | ') + ' |\n'
+		}
+		result.set(rows[index], markdown)
+	}
+	tableRows.set(table, result)
+	return result
+}
+
+function tableRowToMarkdown(node: HTMLElement): string {
+	const table = node.closest('table')
+	return table ? getTableRows(table).get(node) ?? '' : ''
+}
+
 function getTurndown() {
 	if (turndown === null) {
 		turndown = new TurndownService({
 			headingStyle: 'atx',
 			hr: '---',
-			codeBlockStyle: 'fenced'
+			codeBlockStyle: 'fenced',
+			blankReplacement: function (content: string, node: HTMLElement & { isBlock: boolean }) {
+				// Blank-node handling precedes rules, including rows of empty cells.
+				if (node.nodeName === 'TR') return tableRowToMarkdown(node)
+				if (node.nodeName === 'TABLE') {
+					const table = node as HTMLTableElement & { isBlock: boolean }
+					const rows = gridTableFromHTML(table) ?? Array.from(getTableRows(table).values()).join('')
+					return '\n\n' + rows + '\n\n'
+				}
+				if (node.nodeName === 'THEAD' || node.nodeName === 'TBODY' || node.nodeName === 'TFOOT') return content
+				return node.isBlock ? '\n\n' : ''
+			}
 		})
 
 		// Copy/pasted so that headers don't have trailing blank lines
@@ -179,35 +295,30 @@ function getTurndown() {
 			}
 		})
 
-		/**
-		 * The table elements are brought in as tab-delineated rows.
-		 * If Tangent ever supports something like the GitHub table syntax,
-		 * that would be the time to convert this over.
-		 */
 		turndown.addRule('table', {
 			filter: 'table',
 			replacement: function (content: string, node: HTMLElement, options) {
-				return content + '\n'
+				return '\n\n' + (gridTableFromHTML(node as HTMLTableElement) ?? content.trim()) + '\n\n'
 			}
 		})
 
 		turndown.addRule('table-row', {
 			filter: 'tr',
 			replacement: function (content: string, node: HTMLElement, options) {
-				if (!content.trim()) {
-					return '<br>\n'
-				}
-				return content + '\n'
+				return tableRowToMarkdown(node)
+			}
+		})
+
+		turndown.addRule('table-section', {
+			filter: ['thead', 'tbody', 'tfoot'],
+			replacement: function (content: string) {
+				return content
 			}
 		})
 
 		turndown.addRule('table-header', {
 			filter: 'th',
 			replacement: function (content: string, node: HTMLElement, options) {
-				content = options.strongDelimiter + content + options.strongDelimiter
-				if (node.previousElementSibling) {
-					return '\t' + content
-				}
 				return content
 			}
 		})
@@ -215,9 +326,6 @@ function getTurndown() {
 		turndown.addRule('table-cell', {
 			filter: 'td',
 			replacement: function (content: string, node: HTMLElement, options) {
-				if (node.previousElementSibling) {
-					return '\t' + content
-				}
 				return content
 			}
 		})
