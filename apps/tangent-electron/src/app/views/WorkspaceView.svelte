@@ -1,5 +1,6 @@
 <script lang="ts">
 import { setContext } from 'svelte'
+import { documentationKeycaps } from 'app/utils/documentationKeycaps'
 import { writable } from 'svelte/store'
 import { wait } from '@such-n-such/core'
 
@@ -23,7 +24,7 @@ import LeftSidebar from './LeftSidebar.svelte'
 import SvgIcon from './smart-icons/SVGIcon.svelte'
 import ThreadHistoryListView from './summaries/ThreadHistoryListView.svelte'
 import { createCommandHandler } from 'app/model/commands/Command'
-import { shortcutDisplayString } from 'app/utils/shortcuts'
+import KeyboardShortcut from 'app/views/KeyboardShortcut.svelte'
 
 let {
 	workspace
@@ -303,7 +304,7 @@ function onViewContextMenu(event: MouseEvent) {
 							>
 								<span class="creation-rule-name"><CreationRuleName {rule}/></span>
 								{#if rule.shortcut.value}
-									<span class="shortcut">{shortcutDisplayString(rule.shortcut.value)}</span>
+									<span class="shortcut"><KeyboardShortcut shortcut={rule.shortcut.value} /></span>
 								{/if}
 							</button>
 						{/each}
@@ -486,7 +487,7 @@ function onViewContextMenu(event: MouseEvent) {
 	</nav>
 </WindowBar>
 
-<main class="WorkspaceView">
+<main class="WorkspaceView" use:documentationKeycaps={workspace.isDocumentation}>
 	<div
 		class="content"
 		class:resizing={resizingLeftSidebar}

@@ -714,6 +714,7 @@ article.note {
 		}
 	}
 
+	.inline-keyboard-container.revealed,
 	.inline-math-container.revealed,
 	.inline-furigana-container.revealed {
 		outline: 2px solid var(--textColor);
@@ -726,6 +727,7 @@ article.note {
 		padding-top: .5em;
 	}
 
+	span.keyboard-source,
 	span.math-source,
 	span.furigana-source {
 		font-family: var(--codeFontFamily);

@@ -8,7 +8,9 @@ The notes in your Thread stack up from left to right in a series of sliding pane
 
 A very full thread can be overwhelming. If you want to keep the state of your thread, but dial in on a single note, you can use one of the [[Focus Modes]].
 
+Each note panel has an [[Outline]] attached to its left edge for navigation within the note.
+
 # Shortcuts
-- `Cmd/Ctrl+Alt+Left` and `Cmd/Ctrl+Alt+Right` will jump to the previous and next note in the thread, respectively.
-- `Cmd/Ctrl+W` will close the active panel, removing it from the thread.
-- `Cmd/Ctrl+Shift+W` will close all panels _except_ for the active panel, leaving it the only item in the thread.
+- ⁅⁅Cmd/Ctrl⁆⁅Alt⁆⁅Left⁆⁆ and ⁅⁅Cmd/Ctrl⁆⁅Alt⁆⁅Right⁆⁆ will jump to the previous and next note in the thread, respectively.
+- ⁅⁅Cmd/Ctrl⁆⁅W⁆⁆ will close the active panel, removing it from the thread.
+- ⁅⁅Cmd/Ctrl⁆⁅Shift⁆⁅W⁆⁆ will close all panels _except_ for the active panel, leaving it the only item in the thread.

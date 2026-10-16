@@ -5,7 +5,7 @@ import { isMac } from 'common/platform'
 import { buildFuzzySegementMatcher } from 'common/search'
 import { Workspace } from 'app/model'
 import type { WorkspaceCommands, WorkspaceCommand } from 'app/model/commands'
-import { shortcutDisplayString } from 'app/utils/shortcuts'
+import PlatformShortcut from '../PlatformShortcut.svelte'
 import { tooltip } from 'app/utils/tooltips'
 import ShortcutsEditorCommandTooltip from './ShortcutsEditorCommandTooltip.svelte'
 import SVGIcon from '../smart-icons/SVGIcon.svelte'
@@ -190,9 +190,8 @@ function resetToDefault(key: string) {
 								<div class="bindingRow">
 									<button
 										on:click={() => startEditing(item, index) }
-										use:tooltip={"Click to set binding"}
 									>
-										{shortcutDisplayString(shortcut)}
+										<PlatformShortcut {shortcut} />
 									</button>
 									<button class="action remove subtle"
 										on:click={() => removeBinding(item, index)}

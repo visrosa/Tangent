@@ -7,6 +7,7 @@ Tangent uses a semi-custom flavor of markdown for formatting. You can:
 - [[Embedding|Embed Images (and other content)]]
 - Insert [[Code]]
 - Render [[KaTeX Equations]] for beautiful math
+- Show [[Keycaps]] with `⁅key⁆`, including nested groups
 - Add [[Furigana]] readings above text: `{漢字|かんじ}` renders like {漢字|かんじ}
 - Describe terms in prose with [[Inline Glosses]]: `{term::description}`
 - Add [[Tags]]
