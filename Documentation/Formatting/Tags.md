@@ -4,7 +4,7 @@ Tags are a categorization tool that let you organize your notes outside of a fol
 
 Tags start with the `#` character proceeded immediately by the name of the tag. Spaces are not allowed, but you can use `camelCase`, `underscore_characters`, and `dash-characters` to deliminate between words.
 
-You can ⁅Mod+Click⁆ on tags or press ⁅Mod+Enter⁆ while the editing cursor is within a tag to navigate to the set of all notes with that tag in a new pane.
+You can {{shortcut:Mod+Click}} on tags or press {{shortcut:Mod+Enter}} while the editing cursor is within a tag to navigate to the set of all notes with that tag in a new pane.
 
 
 # Child Tags
