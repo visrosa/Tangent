@@ -27,3 +27,17 @@ it('retains documentation source and recognizes prose keycaps', () => {
 	}
 	expect(count).toBeGreaterThan(0)
 })
+
+it('keeps the compatibility fixture partial substitutions literal', () => {
+	const source = readFileSync(path.resolve('../../test-files/TestWorkspace/Markdown Compatibility/Keyboard Input.md'), 'utf8')
+	const specimens = source.match(/Partially substituted pairs:[\s\S]*?(?=Recovery after)/)?.[0]
+	expect(specimens).toBeTruthy()
+	const document = markdownToTextDocument(specimens)
+	expect(document.lines.flatMap(line => line.content.ops).filter(op => op.attributes?.keyboard)).toHaveLength(0)
+	expect(typewriterToText(document)).toBe(specimens)
+	const balanced = source.match(/Quill boundaries across ordinary punctuation:.*/)?.[0]
+	expect(balanced).toBeTruthy()
+	const keycaps = markdownToTextDocument(balanced).lines.flatMap(line => line.content.ops).filter(op => op.attributes?.keyboard)
+	expect(keycaps).toHaveLength(1)
+	expect(keycaps[0].attributes.keyboard).toEqual({ children: ['N+] [+N'] })
+})

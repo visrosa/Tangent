@@ -6,7 +6,7 @@ You can also mark text to type, such as `⁅git status⁆`: ⁅git status⁆.
 
 Only `⁅` and `⁆` delimit keycaps. Typing `[+` or `[-` offers `⁅` in the Unicode completion menu; typing `+]` or `-]` offers `⁆`. Press ⁅Enter⁆ or ⁅Tab⁆ to accept, or ⁅Escape⁆ to keep what you typed. Each accepted suggestion replaces the two typed characters in your source.
 
-The ASCII forms `[+N+]` and `[-N-]` stay literal until you accept both replacements. `⹕N⹖` is also ordinary text. A partially replaced pair, such as `⁅N+]`, stays literal.
+The ASCII forms `[+N+]` and `[-N-]` stay literal until you accept both replacements. `⹕N⹖` is also ordinary text. A partially replaced pair, such as `⁅N+]`, stays literal if no matching `⁆` follows on the same line. All other punctuation is label text: `⁅N+] [+N⁆` forms one keycap.
 
 # Nesting
 

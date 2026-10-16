@@ -38,9 +38,19 @@ Literal quill label: ⁅\⁅N\⁆⁆
 
 Empty and malformed: ⁅⁆ ⁅ ⁆ ⁅⁅⁆⁆
 
-Partially substituted pairs: ⁅N+] [+N⁆ ⁅N-] [-N⁆
+Partially substituted pairs:
+
+⁅N+]
+
+[+N⁆
+
+⁅N-]
+
+[-N⁆
 
 Recovery after a closed malformed group: ⁅ ⁆ ⁅M⁆
+
+Quill boundaries across ordinary punctuation: ⁅N+] [+N⁆ is one keycap.
 
 Incomplete:
 
