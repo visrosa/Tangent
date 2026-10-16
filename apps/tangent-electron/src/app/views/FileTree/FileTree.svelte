@@ -31,7 +31,7 @@ export let directoryView: DirectoryView
 let container: HTMLElement = null
 let renameTarget: TreeNode = null
 let renameElement: HTMLElement = null
-let focusedItem: TreeNode = null
+export let focusedItem: TreeNode = null
 
 $: {
 	if (renameElement) {
