@@ -449,6 +449,8 @@ article.note {
 	}
 	.folded-text-marker::after {
 		content: "⋯";
+		font-size: var(--fontSize);
+		line-height: 1em;
 		color: var(--deemphasizedTextColor);
 		padding-inline-start: .15em;
 	}
