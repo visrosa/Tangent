@@ -132,6 +132,7 @@ export default class WindowHandle {
 		
 		let state: WorkspaceInitState = {
 			...workspace.getState(),
+			isDocumentation: this.assignedWorkspacePath === path.join(app.getPath('userData'), 'Documentation'),
 			workspaceView: this.viewState.getRawValues(),
 			globalSettings: getSettings().getRawValues(),
 			version: app.getVersion(),

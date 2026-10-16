@@ -1,5 +1,6 @@
 <script lang="ts">
 import { setContext } from 'svelte'
+import { documentationKeycaps } from 'app/utils/documentationKeycaps'
 import { writable } from 'svelte/store'
 import { wait } from '@such-n-such/core'
 
@@ -486,7 +487,7 @@ function onViewContextMenu(event: MouseEvent) {
 	</nav>
 </WindowBar>
 
-<main class="WorkspaceView">
+<main class="WorkspaceView" use:documentationKeycaps={workspace.isDocumentation}>
 	<div
 		class="content"
 		class:resizing={resizingLeftSidebar}
