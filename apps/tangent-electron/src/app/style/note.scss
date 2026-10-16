@@ -282,6 +282,9 @@ article.note {
 		mask-image: linear-gradient(to right, black calc(100% - 1.5em), transparent);
 		code.inline_code { white-space: pre; }
 	}
+	.folded-text-content:dir(rtl) {
+		mask-image: linear-gradient(to left, black calc(100% - 1.5em), transparent);
+	}
 	.folded-text-marker::after {
 		content: "⋯";
 		color: var(--deemphasizedTextColor);
@@ -290,7 +293,10 @@ article.note {
 	.revealed > .folded-text,
 	.folded-text:has(.revealed) {
 		display: contents;
-		> .folded-text-content { display: contents; }
+		> .folded-text-content {
+			display: contents;
+			code.inline_code { white-space: pre-wrap; }
+		}
 		> .folded-text-marker { display: none; }
 	}
 
