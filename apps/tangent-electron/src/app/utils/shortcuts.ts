@@ -37,6 +37,11 @@ export function shortcutDisplayString(shortcut: string) {
 	return shortcut
 }
 
+export function shortcutDisplayKeys(shortcut: string) {
+	// A trailing "+" is the key itself, not a separator.
+	return shortcut.split(/\+(?=.)/).map(shortcutDisplayString)
+}
+
 export function shortcutsHtmlString(shortcuts: string | string[]) {
 	if (Array.isArray(shortcuts)) {
 		return shortcuts.map(shortcutHtmlString).join(', ')
