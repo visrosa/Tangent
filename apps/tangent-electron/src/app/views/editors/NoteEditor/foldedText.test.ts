@@ -32,6 +32,7 @@ describe('folded text', () => {
 		await wait()
 		const folded = root.querySelector('.collapse-parent .folded-text')
 		expect(folded).not.toBeNull()
+		if (source.startsWith('- ')) expect(root.querySelector('p.list > .line_format')).not.toBeNull()
 		const content = folded.querySelector('.folded-text-content')
 		expect(getComputedStyle(content).maskImage).toContain('linear-gradient')
 		expect(getComputedStyle(folded.querySelector('.folded-text-marker'), '::after').content).toBe('"⋯"')
