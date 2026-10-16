@@ -10,6 +10,9 @@ import ShortcutInput from 'app/utils/ShortcutInput.svelte'
 import type { SelectPathOptions } from 'common/WindowApi'
 
 const workspace = getContext('workspace') as Workspace
+const settingId = $props.id()
+const labelId = settingId + '-label'
+const descriptionId = settingId + '-description'
 
 type SettingList = SettingValue<SettingType>[]
 
@@ -206,9 +209,11 @@ function toggleItem(item) {
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<h2
+		id={labelId}
 		use:tooltip={setting.description}
 		onclick={headerClick}
 	>{@html name ?? setting.name}</h2>
+	<span id={descriptionId} class="description">{setting.description}</span>
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="value grow"
@@ -218,7 +223,7 @@ function toggleItem(item) {
 		{#if effectiveValueList}
 			{#if Array.isArray($setting)}
 				<div class="range">
-					<PopUpButton name={multiItemDisplay($setting, effectiveValueList)} buttonClass="grow">
+					<PopUpButton aria-labelledby={labelId} aria-describedby={descriptionId} name={multiItemDisplay($setting, effectiveValueList)} buttonClass="grow">
 						{#snippet menu()}
 							{#each effectiveValueList as item}
 								<label>
@@ -232,6 +237,8 @@ function toggleItem(item) {
 			{:else}
 				{#if form === 'select'}
 					<select
+						aria-labelledby={labelId}
+						aria-describedby={descriptionId}
 						bind:value={$setting}
 						use:tooltip={setting.description}
 						class={inputClass}
@@ -241,9 +248,9 @@ function toggleItem(item) {
 						{/each}
 					</select>
 				{:else}
-					<div class="values buttonGroup grow">
+					<div class="values buttonGroup grow" role="group" aria-labelledby={labelId} aria-describedby={descriptionId}>
 						{#each effectiveValueList as validValue}
-							<button class:active={getValue(validValue) === $setting}
+							<button aria-pressed={getValue(validValue) === $setting} class:active={getValue(validValue) === $setting}
 								use:tooltip={getDescription(validValue)}
 								class={"grow " + inputClass}
 								onclick={() => applyValue(getValue(validValue))}>
@@ -256,6 +263,8 @@ function toggleItem(item) {
 		{:else if typeof $setting === 'number' && setting.range}
 			<div class="range group" use:tooltip={setting.description}>
 				<input type="number"
+					aria-labelledby={labelId}
+					aria-describedby={descriptionId}
 					bind:value={softValue}
 					min={setting.range.min}
 					max={setting.range.max}
@@ -265,6 +274,8 @@ function toggleItem(item) {
 					onkeydown={applySoftValue}/>
 				<input 
 					type="range"
+					aria-labelledby={labelId}
+					aria-describedby={descriptionId}
 					class={"grow " + inputClass}
 					{placeholder}
 					min={displayMin($setting)}
@@ -276,6 +287,8 @@ function toggleItem(item) {
 			<div class="buttonGroup grow" use:tooltip={setting.description}>
 				{#if form === 'textarea'}
 					<textarea
+						aria-labelledby={labelId}
+						aria-describedby={descriptionId}
 						bind:value={$setting}
 						class={"grow " + inputClass}
 						spellcheck="true"
@@ -285,6 +298,8 @@ function toggleItem(item) {
 				{:else if form === 'shortcut'}
 					<div style="display: flex; align-items: center;">
 						<ShortcutInput
+							aria-labelledby={labelId}
+							aria-describedby={descriptionId}
 							bind:value={$setting}
 							validate={onValidateShortcut}
 							class={inputClass}
@@ -292,12 +307,14 @@ function toggleItem(item) {
 					</div>
 				{:else}
 					<input type="text"
+						aria-labelledby={labelId}
+						aria-describedby={descriptionId}
 						class={"grow " + inputClass}
 						bind:value={$setting}
 						placeholder={placeholder ?? (setting.form === 'folder' ? 'Workspace Root' : '')}
 					/>
 					{#if setting.form === 'file' || setting.form === 'folder' || setting.form === 'path'}
-						<button onclick={selectPath} class={"inputButton " + inputClass}>
+						<button aria-label={`Select ${setting.name}`} onclick={selectPath} class={"inputButton " + inputClass}>
 							<SvgIcon ref={'folder.svg#folder'} size={16} />
 						</button>
 					{/if}
@@ -306,6 +323,8 @@ function toggleItem(item) {
 		{:else if typeof $setting === 'boolean'}
 			<input
 				type="checkbox"
+				aria-labelledby={labelId}
+				aria-describedby={descriptionId}
 				use:tooltip={setting.description}
 				bind:checked={$setting}
 				class={inputClass}
@@ -316,6 +335,7 @@ function toggleItem(item) {
 		{#if showReset}
 			<button
 				use:tooltip={"Reset \"" + setting.name + "\" to its default value."}
+				aria-label={`Reset ${setting.name} to default`}
 				class={"reset subtle " + inputClass}
 				onclick={() => $setting = setting.defaultValue}
 				disabled={$setting === setting.defaultValue}
@@ -325,6 +345,16 @@ function toggleItem(item) {
 </main>
 
 <style lang="scss">
+.description {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
 main {
 	display: flex;
 	flex-wrap: wrap;

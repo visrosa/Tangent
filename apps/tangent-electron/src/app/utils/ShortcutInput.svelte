@@ -9,6 +9,8 @@ interface Props {
 
 	value?: string
 	class?: string
+	'aria-labelledby'?: string
+	'aria-describedby'?: string
 }
 
 let {
@@ -74,6 +76,8 @@ function onEditKeyUp(event: KeyboardEvent) {
 	onfocus={onFocus}
 	onblur={onBlur}
 	class={props.class}
+	aria-labelledby={props['aria-labelledby']}
+	aria-describedby={props['aria-describedby']}
 	{placeholder}
 />
 {#if errorText}

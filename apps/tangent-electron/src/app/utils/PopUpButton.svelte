@@ -40,8 +40,12 @@ let {
 
 	showPopUpIndicator,
 	onDoubleClick,
+	'aria-labelledby': ariaLabelledBy,
+	'aria-describedby': ariaDescribedBy,
 }: {
 	name?: string
+	'aria-labelledby'?: string
+	'aria-describedby'?: string
 	placement?: Placement
 	buttonClass?: string
 	menuMode?: 'normal' | 'low-profile'
@@ -253,6 +257,8 @@ function onMenuCanceled(event: Event) {
 
 <button
 	bind:this={buttonElement}
+	aria-labelledby={ariaLabelledBy}
+	aria-describedby={ariaDescribedBy}
 	class={buttonClass}
 	class:open={showMenu}
 	class:has-opener={willShowPopUpIndicator}
