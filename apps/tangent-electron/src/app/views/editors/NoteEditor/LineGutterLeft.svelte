@@ -32,6 +32,7 @@ function toggleLineCollapse() {
 <LineGutter {editor} {target} side="left" let:doc>
 	{#if isLineCollapsible(doc.lines, target.index)}
 		<button class="subtle collapse"
+			on:mousedown|preventDefault
 			on:click={toggleLineCollapse}
 			use:tooltip={lineCollapseTooltip}
 		>

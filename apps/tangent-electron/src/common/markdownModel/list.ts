@@ -1,6 +1,7 @@
 import { StructureType, type TodoState } from 'common/indexing/indexTypes'
 import NoteParser from './NoteParser'
 import { escapeRegExp } from '@such-n-such/core'
+import { findParentAssociationListTerm, injectAssociationListChildren, isStartOfBlockContent, matchAssociationListSeparator, setAssociationListLineData, setAssociationListTermSeparator } from './associationList'
 
 // Unordered glyphs are split by visual weight because large glyphs get extra
 // vertical spacing via ListForm.UnorderedLarge / .largeList styling.
@@ -258,7 +259,7 @@ export function isLargeList(definition: ListDefinition) {
 }
 
 export function parseListItem(char: string, parser: NoteParser): boolean {
-	if (!parser.isStartOfContent) return false
+	if (!isStartOfBlockContent(parser)) return false
 	const line = parser.feed.getLineText()
 	const listDetail = matchList(line)
 	if (!listDetail) return false
@@ -279,16 +280,55 @@ export function parseListItem(char: string, parser: NoteParser): boolean {
 		})
 	}
 
-	// Encode the list
-	parser.lineData.list = listDetail
+	const associationListSeparator = matchAssociationListSeparator(line, listDetail)
+	const currentIndent = parser.getCurrentIndent().indent
+	if (associationListSeparator) {
+		setAssociationListTermSeparator(parser, start + associationListSeparator.index)
+		const parentAssociationListTerm = findParentAssociationListTerm(parser, currentIndent, false)
+		setAssociationListLineData(parser, {
+			role: 'term',
+			glyph: listDetail,
+			hasValue: associationListSeparator.hasValue,
+			rootIndent: parentAssociationListTerm?.rootIndent ?? currentIndent,
+			termIndent: parentAssociationListTerm?.termIndent
+		})
 
-	// Consume the line glyph
-	feed.nextByLength(listDetail.glyph.length - 1)
-	parser.commitSpan({
-		line_format: 'list',
-		hiddenGroup: true,
-		list_format: listDetail
-	})
+		injectAssociationListChildren(parser)
+	}
+	else {
+		const parentAssociationListTerm = findParentAssociationListTerm(parser, currentIndent)
+		if (parentAssociationListTerm) {
+			setAssociationListLineData(parser, {
+				role: 'value',
+				glyph: listDetail,
+				rootIndent: parentAssociationListTerm.rootIndent,
+				termIndent: parentAssociationListTerm.termIndent
+			})
+		}
+		else {
+			// Encode the list
+			parser.lineData.list = listDetail
+		}
+	}
+
+	if (parser.lineData.associationList) {
+		// The following space is hidden with the glyph so that wrapped lines
+		// and inline values share a left edge with the first line.
+		feed.nextByLength(listDetail.glyph.length)
+		parser.commitSpan({
+			line_format: 'associationList',
+			hidden: true
+		})
+	}
+	else {
+		// Consume the line glyph
+		feed.nextByLength(listDetail.glyph.length - 1)
+		parser.commitSpan({
+			line_format: 'list',
+			hiddenGroup: true,
+			list_format: listDetail
+		})
+	}
 
 	return true
 }

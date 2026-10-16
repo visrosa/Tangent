@@ -1,4 +1,5 @@
 <script lang="ts">
+import { getLineBounds } from './lineGeometry'
 import { onDestroy } from 'svelte'
 import { computePosition } from '@floating-ui/dom'
 import type MarkdownEditor from './MarkdownEditor'
@@ -25,7 +26,7 @@ $: positionOnLine(target?.element, container)
 function positionOnLine(line: HTMLElement, container: HTMLElement) {
 	if (!line || !container) return
 
-	computePosition(line, container, {
+	computePosition({ contextElement: line, getBoundingClientRect: () => getLineBounds(line) }, container, {
 		strategy: 'absolute',
 		placement: side === 'left' ? 'left-start' : 'right-start'
 	}).then(result => {
@@ -38,8 +39,13 @@ function positionOnLine(line: HTMLElement, container: HTMLElement) {
 		container.style.top = result.y + offset + 'px'
 
 		if (side === 'left'){
-			const marginLeft = parseFloat(lineStyle.marginLeft)
-			container.style.left = result.x - marginLeft + 'px'
+			// Association-list lines are grid items indented by their column
+			// rather than a margin, so measure from the grid's start instead.
+			const anchor = line.closest('.editor-association-list') as HTMLElement ?? line
+			const anchorStart = anchor.getBoundingClientRect().left
+				- parseFloat(getComputedStyle(anchor).marginLeft)
+			const inset = line.getBoundingClientRect().left - anchorStart
+			container.style.left = result.x - inset + 'px'
 		}
 		else {
 			const marginRight = parseFloat(lineStyle.marginRight)
