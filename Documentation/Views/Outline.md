@@ -1,4 +1,4 @@
-Each independently scrolling note panel has an outline attached to its left edge, before the line gutter. The outline lists the note's [[Headers]] in order and indents subsections. Repeated heading names remain separate navigation targets.
+Each independently scrolling note panel has an outline between its left title rail and the text's line gutter. On wide panels, it is centered in that space without covering the gutter controls. The outline lists the note's [[Headers]] in order and indents subsections. Repeated heading names remain separate navigation targets.
 
 Click a heading to move to that section. Headings inside folded sections remain listed and become visible when selected. The current section is highlighted as you move the text cursor or scroll through the note. Edits update the outline immediately.
 

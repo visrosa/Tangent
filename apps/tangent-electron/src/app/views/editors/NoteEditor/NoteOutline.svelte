@@ -28,6 +28,7 @@ $: {
 	stopPreference = info?.outlineExpanded.subscribe(value => preferredExpanded = value)
 }
 $: expanded = narrow ? narrowOpen : preferredExpanded
+// Reserve a little clearance for gutter hit targets even in full-width notes.
 $: onWidth(narrow || !expanded ? (titleBarVisible ? 0 : 28) : 208)
 $: onControl({ expanded, toggle })
 $: { expanded; narrow; scheduleScroll() }
@@ -65,6 +66,7 @@ function positionOutline() {
 	const article = editor.root.closest('article') ?? editor.root
 	const style = getComputedStyle(article)
 	const gutterEdge = article.getBoundingClientRect().left + parseFloat(style.paddingLeft || '0') - 32
+	// Center within the actual margin, including space outside a max-width note.
 	const available = gutterEdge - container.getBoundingClientRect().left
 	horizontalInset = Math.max(0, (available - 192) / 2)
 }
