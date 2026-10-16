@@ -24,4 +24,4 @@ export const rendererRoot = path.join(buildRoot, 'renderer')
 
 export const preloadPath = path.join(buildRoot, 'preload/preload.js')
 
-export const documentationArchivePath = path.join(buildRoot, `documentation-${process.platform}.zip`)
+export const documentationArchivePath = path.join(buildRoot, 'documentation.zip')

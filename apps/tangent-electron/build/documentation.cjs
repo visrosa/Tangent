@@ -2,50 +2,9 @@ const fs = require('fs/promises')
 const path = require('path')
 const AdmZip = require('adm-zip')
 
-const platforms = ['darwin', 'win32', 'linux']
 const excluded = new Set(['.tangent/generated', '.tangent/Temp', '.tangent/tangents', '.tangent/workspaces'])
 
-function platformShortcut(value, platform) {
-	if (!platforms.includes(platform)) throw new Error(`Unsupported documentation platform: ${platform}`)
-	if (/^(darwin|win32|linux|other)=/.test(value)) {
-		const choices = Object.fromEntries(value.split(';').map(choice => {
-			const index = choice.indexOf('=')
-			return [choice.slice(0, index).trim(), choice.slice(index + 1).trim()]
-		}))
-		value = choices[platform] ?? choices.other
-		if (!value) throw new Error(`Missing ${platform} shortcut alternative`)
-	}
-	return value.replace(/\bMod\b/g, platform === 'darwin' ? 'Cmd' : 'Ctrl')
-}
-
-function shortcutMarkdown(value, platform) {
-	return '`' + platformShortcut(value, platform) + '`'
-}
-
-function specializeDocumentation(source, platform, render = shortcutMarkdown) {
-	let fence = null, output = '', index = 0
-	const tokens = /^[ \t]*(?:>[^\S\n]*)*(`{3,}|~{3,})([^\n]*)(?:\n|$)|(`+)|\{\{shortcut:([^{}\n]+)\}\}/gm
-	for (let match; (match = tokens.exec(source));) {
-		output += source.slice(index, match.index)
-		if (fence) {
-			if (match[1]?.[0] === fence[0] && match[1].length >= fence.length && !match[2].trim()) fence = null
-			output += match[0]
-		}
-		else if (match[1]) { fence = match[1]; output += match[0] }
-		else if (match[3]) {
-			const close = new RegExp('(?<!`)' + match[3] + '(?!`)', 'g')
-			close.lastIndex = tokens.lastIndex
-			const end = close.exec(source)
-			if (end) tokens.lastIndex = end.index + end[0].length
-			output += source.slice(match.index, tokens.lastIndex)
-		}
-		else output += source[match.index - 1] === '\\' ? match[0] : render(match[4].trim(), platform)
-		index = tokens.lastIndex
-	}
-	return output + source.slice(index)
-}
-
-async function buildDocumentation(sourceRoot, buildRoot, render = shortcutMarkdown) {
+async function buildDocumentation(sourceRoot, buildRoot) {
 	const files = []
 	async function collect(directory, relative = '') {
 		for (const entry of (await fs.readdir(directory, { withFileTypes: true })).sort((a, b) => a.name.localeCompare(b.name))) {
@@ -57,16 +16,11 @@ async function buildDocumentation(sourceRoot, buildRoot, render = shortcutMarkdo
 	}
 	await collect(sourceRoot)
 	await fs.mkdir(buildRoot, { recursive: true })
-	for (const platform of platforms) {
-		const zip = new AdmZip()
-		zip.addFile('.documentation-platform.json', Buffer.from(JSON.stringify({ platform })))
-		for (const [name, data] of files) {
-			zip.addFile(name, name.endsWith('.md') ? Buffer.from(specializeDocumentation(data.toString('utf8'), platform, render)) : data)
-		}
-		// A stable timestamp makes revision checks depend on content, not rebuild time.
-		for (const entry of zip.getEntries()) entry.header.time = new Date(2020, 0, 1)
-		await fs.writeFile(path.join(buildRoot, `documentation-${platform}.zip`), zip.toBuffer())
-	}
+	const zip = new AdmZip()
+	for (const [name, data] of files) zip.addFile(name, data)
+	// A stable timestamp makes revision checks depend on content, not rebuild time.
+	for (const entry of zip.getEntries()) entry.header.time = new Date(2020, 0, 1)
+	await fs.writeFile(path.join(buildRoot, 'documentation.zip'), zip.toBuffer())
 }
 
-module.exports = { platforms, platformShortcut, shortcutMarkdown, specializeDocumentation, buildDocumentation }
+module.exports = { buildDocumentation }
