@@ -35,6 +35,8 @@ describe('folded text', () => {
 		const content = folded.querySelector('.folded-text-content')
 		expect(getComputedStyle(content).maskImage).toContain('linear-gradient')
 		expect(getComputedStyle(folded.querySelector('.folded-text-marker'), '::after').content).toBe('"⋯"')
+		expect(folded.querySelector('.folded-text-marker').getBoundingClientRect().width).toBeGreaterThan(0)
+		expect(folded.getBoundingClientRect().height).toBeGreaterThan(0)
 		expect(folded.getBoundingClientRect().width).toBeLessThanOrEqual(root.clientWidth)
 		expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
 		expect(editor.getText()).toBe(source)
