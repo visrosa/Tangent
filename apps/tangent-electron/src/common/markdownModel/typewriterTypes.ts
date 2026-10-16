@@ -303,7 +303,7 @@ const noteTypeset:TypesetTypes = {
 				const table = lineData[0][0].table as TableData
 				if (forHTML) return h('pre', { className: 'table-source' }, h('code', null, table.source))
 				const revealed = lineData.some(([attributes]) => attributes.revealed)
-				const collapsed = lineData.some(([attributes]) => isCollapsed(attributes.collapsed))
+				const collapsed = lineData.some(([attributes]) => isCollapsed(attributes.collapsed) || hasCollapsedChildren(attributes.collapsed))
 				const physicalLines = table.source.split('\n')
 				const sourceLines = lineData.map(([attributes, children, id], index) => {
 					const props = getCoreLineProperties(attributes, 'tableLine')

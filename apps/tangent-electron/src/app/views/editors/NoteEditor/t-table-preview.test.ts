@@ -247,6 +247,7 @@ it('retains a visible fold marker for hidden table source without changing offse
 	cleanups.push(() => { editor.destroy(); article.remove() })
 	editor.collapsingSections.toggleLineCollapsed(0)
 	await wait()
+	expect(getComputedStyle(article.querySelector('t-table-preview')).display).toBe('none')
 	const marker = article.querySelector('.tableLine.collapse-parent .folded-text-marker')
 	expect(marker.getBoundingClientRect().width).toBeGreaterThan(0)
 	expect(getComputedStyle(marker, '::after').content).toBe('"⋯"')
