@@ -109,6 +109,20 @@ describe('note outline', () => {
 		await wait(40)
 		expect(nav.getBoundingClientRect().top).toBeCloseTo(initial.top, 0)
 	})
+	it.each([800, 1600])('centers an untitled outline before the gutter at %ipx', async width => {
+		const { container } = setup('# Title\n- term :: value', width)
+		const article = container.querySelector('article')
+		article.style.maxWidth = '700px'
+		article.style.margin = '0 auto'
+		await wait(80)
+		const nav = container.querySelector('nav')
+		const bounds = nav.getBoundingClientRect()
+		const gutter = article.getBoundingClientRect().left + parseFloat(getComputedStyle(article).paddingLeft) - 32
+		expect(bounds.left - container.getBoundingClientRect().left).toBeCloseTo(gutter - bounds.right, 0)
+		expect(bounds.right).toBeLessThan(gutter)
+		expect(nav.textContent).not.toContain('Outline')
+		expect(nav.getAttribute('aria-label')).toBe('Note outline')
+	})
 	it('folds on narrow panels, opens on demand and preserves the saved preference', async () => {
 		const { container, info } = setup('# Title', 500)
 		await wait(40)
