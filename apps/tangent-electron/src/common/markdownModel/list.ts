@@ -1,7 +1,7 @@
 import { StructureType, type TodoState } from 'common/indexing/indexTypes'
 import NoteParser from './NoteParser'
 import { escapeRegExp } from '@such-n-such/core'
-import { findParentDlTerm, matchDlSeparator, setDlTermSeparator, type DlLineData } from './dl'
+import { findParentAssociationListTerm, matchAssociationListSeparator, setAssociationListTermSeparator, type AssociationListLineData } from './associationList'
 import DocumentFeeder from './DocumentFeeder'
 
 // Unordered glyphs are split by visual weight because large glyphs get extra
@@ -283,17 +283,17 @@ export function parseListItem(char: string, parser: NoteParser): boolean {
 		})
 	}
 
-	const dlSeparator = matchDlSeparator(line, listDetail)
+	const associationListSeparator = matchAssociationListSeparator(line, listDetail)
 	const currentIndent = parser.getCurrentIndent().indent
-	if (dlSeparator) {
-		setDlTermSeparator(parser, start + dlSeparator.index)
-		const parentDlTerm = findParentDlTerm(parser, currentIndent, false)
-		setDlLineData(parser, {
+	if (associationListSeparator) {
+		setAssociationListTermSeparator(parser, start + associationListSeparator.index)
+		const parentAssociationListTerm = findParentAssociationListTerm(parser, currentIndent, false)
+		setAssociationListLineData(parser, {
 			role: 'term',
 			glyph: listDetail,
-			hasDef: dlSeparator.hasDef,
-			rootIndent: parentDlTerm?.rootIndent ?? currentIndent,
-			termIndent: parentDlTerm?.termIndent
+			hasValue: associationListSeparator.hasValue,
+			rootIndent: parentAssociationListTerm?.rootIndent ?? currentIndent,
+			termIndent: parentAssociationListTerm?.termIndent
 		})
 
 		if (feed instanceof DocumentFeeder) {
@@ -301,18 +301,18 @@ export function parseListItem(char: string, parser: NoteParser): boolean {
 			feed.injectAdjacentLinesWhile(nextLine => {
 				const nextIndent = nextLine.attributes.indent?.indent ?? ''
 				return nextIndent.length > termIndent.length
-					&& !!(nextLine.attributes.list || nextLine.attributes.dl)
+					&& !!(nextLine.attributes.list || nextLine.attributes.associationList)
 			})
 		}
 	}
 	else {
-		const parentDlTerm = findParentDlTerm(parser, currentIndent)
-		if (parentDlTerm) {
-			setDlLineData(parser, {
+		const parentAssociationListTerm = findParentAssociationListTerm(parser, currentIndent)
+		if (parentAssociationListTerm) {
+			setAssociationListLineData(parser, {
 				role: 'value',
 				glyph: listDetail,
-				rootIndent: parentDlTerm.rootIndent,
-				termIndent: parentDlTerm.termIndent
+				rootIndent: parentAssociationListTerm.rootIndent,
+				termIndent: parentAssociationListTerm.termIndent
 			})
 		}
 		else {
@@ -321,12 +321,12 @@ export function parseListItem(char: string, parser: NoteParser): boolean {
 		}
 	}
 
-	if (parser.lineData.dl) {
+	if (parser.lineData.associationList) {
 		// The following space is hidden with the glyph so that wrapped lines
-		// and inline definitions share a left edge with the first line.
+		// and inline values share a left edge with the first line.
 		feed.nextByLength(listDetail.glyph.length)
 		parser.commitSpan({
-			line_format: 'dl',
+			line_format: 'associationList',
 			hidden: true
 		})
 	}
@@ -343,12 +343,12 @@ export function parseListItem(char: string, parser: NoteParser): boolean {
 	return true
 }
 
-function setDlLineData(parser: NoteParser, dl: DlLineData) {
+function setAssociationListLineData(parser: NoteParser, associationList: AssociationListLineData) {
 	// Typewriter selects the first registered line attribute. Move blockquote
-	// behind dl so the composite dl renderer can preserve both structures.
+	// behind associationList so the composite associationList renderer can preserve both structures.
 	const blockquote = parser.lineData.blockquote
 	if (blockquote !== undefined) delete parser.lineData.blockquote
-	parser.lineData.dl = dl
+	parser.lineData.associationList = associationList
 	if (blockquote !== undefined) parser.lineData.blockquote = blockquote
 }
 

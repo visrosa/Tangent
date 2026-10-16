@@ -247,25 +247,25 @@ article.note {
 		}
 	}
 
-	.editor-description-list {
+	.editor-association-list {
 		// Grid columns and line placement are set inline by the renderer
-		--dlBarWidth: calc(var(--fontSize) * .125);
-		--dlBarPadding: calc(var(--fontSize) * .5);
-		--dlTermGap: .45em;
+		--associationListBarWidth: calc(var(--fontSize) * .125);
+		--associationListBarPadding: calc(var(--fontSize) * .5);
+		--associationListTermGap: .45em;
 
 		margin: 0;
 		display: grid;
 		grid-auto-rows: minmax(1.3em, auto);
 		row-gap: 0;
 
-		.dl-line {
+		.association-list-line {
 			min-height: 1.3em;
 			line-height: 1.3em;
 			white-space: normal;
 			&.revealed { white-space: pre-wrap; }
 		}
 
-		.dl-term {
+		.association-list-term {
 			display: grid;
 			grid-template-columns: subgrid;
 			grid-template-rows: subgrid;
@@ -273,9 +273,9 @@ article.note {
 			font-weight: 600;
 		}
 
-		.dl-value {
-			padding-inline-start: var(--dlBarPadding);
-			border-inline-start: var(--dlBarWidth) solid var(--accentDeemphasizedBackgroundColor);
+		.association-list-value {
+			padding-inline-start: var(--associationListBarPadding);
+			border-inline-start: var(--associationListBarWidth) solid var(--accentDeemphasizedBackgroundColor);
 			transition: border-color .12s ease;
 
 			&:hover,
@@ -284,44 +284,44 @@ article.note {
 			}
 		}
 
-		.dl-term-content {
-			padding-inline-end: var(--dlTermGap);
+		.association-list-term-content {
+			padding-inline-end: var(--associationListTermGap);
 			// Keeps the box at its content width so it can be measured for alignment
 			justify-self: start;
 		}
 
-		// Line a nested term up with its parent's definition text
-		.dl-term.dl-nested .dl-term-content {
-			padding-inline-start: calc(var(--dlBarWidth) + var(--dlBarPadding));
+		// Line a nested term up with its parent's value text
+		.association-list-term.association-list-nested .association-list-term-content {
+			padding-inline-start: calc(var(--associationListBarWidth) + var(--associationListBarPadding));
 		}
 
-		.dl-inline {
+		.association-list-inline {
 
-			.dl-term-content {
+			.association-list-term-content {
 				grid-column: 1;
-				grid-row: var(--dlTermRow, 1);
+				grid-row: var(--associationListTermRow, 1);
 				align-self: start;
 				transition: color .12s ease;
 			}
 
-			.dl-definition {
+			.association-list-value-content {
 				grid-column: 3 / -1;
-				grid-row: 1 / span var(--dlDefinitionSpan, 1);
+				grid-row: 1 / span var(--associationValueSpan, 1);
 				display: block;
 				font-weight: 400;
 				min-width: 0;
 				min-height: 0;
-				padding-inline-start: var(--dlBarPadding);
-				border-inline-start: var(--dlBarWidth) solid var(--accentDeemphasizedBackgroundColor);
+				padding-inline-start: var(--associationListBarPadding);
+				border-inline-start: var(--associationListBarWidth) solid var(--accentDeemphasizedBackgroundColor);
 				transition: border-color .12s ease;
 			}
 
-			&:hover .dl-definition,
-			&:focus-within .dl-definition {
+			&:hover .association-list-value-content,
+			&:focus-within .association-list-value-content {
 				border-inline-start-color: var(--accentTextColor);
 			}
 
-			&.dl-description-collapsed:not(.revealed) .dl-definition:not(:has(.revealed)) {
+			&.association-list-values-collapsed:not(.revealed) .association-list-value-content:not(:has(.revealed)) {
 				white-space: nowrap;
 				overflow: hidden;
 				text-overflow: ellipsis;
@@ -332,63 +332,53 @@ article.note {
 
 		// Shared source wrappers overlap earlier term rows. Only their fragments
 		// should receive pointer hits, so those earlier terms remain editable.
-		.dl-shared-inline {
+		.association-list-shared-inline {
 			pointer-events: none;
 			> span { pointer-events: auto; }
-			.dl-separator { grid-row: var(--dlTermRow, 1); }
+			.association-list-separator { grid-row: var(--associationListTermRow, 1); }
 		}
 
-		.dl-separator {
+		.association-list-separator {
 			grid-column: 2;
 			align-self: center;
 			display: inline-flex;
 			align-items: baseline;
 		}
 
-		.dl-term:not(.dl-inline) .dl-term-content {
+		.association-list-term:not(.association-list-inline) .association-list-term-content {
 			grid-column: 1;
 		}
 
-		.dl-term.collapse-parent::after {
+		.association-list-term.collapse-parent::after {
 			content: none;
 		}
 
-		.dl-value, .dl-definition, .dl-summary {
+		.association-list-value, .association-list-value-content, .association-list-summary {
 			font-size: .9em;
 			color: color-mix(in srgb, var(--textColor) 85%, var(--noteBackgroundColor));
 			line-height: 1.3em;
 		}
 
-		.dl-value, .dl-definition, .dl-summary { position: relative; }
-		.dl-collapse-bar {
+		.association-list-value, .association-list-value-content, .association-list-summary { position: relative; }
+		.association-list-collapse-bar {
 			position: absolute;
 			inset-block: 0;
-			inset-inline-start: calc(-1 * var(--dlBarWidth));
-			width: var(--dlBarPadding);
+			inset-inline-start: calc(-1 * var(--associationListBarWidth));
+			width: var(--associationListBarPadding);
 			cursor: pointer;
 			font-size: 1em;
 			font-weight: 400;
 			color: var(--accentTextColor);
-			&::before {
-				content: '‹';
-				position: absolute;
-				top: 50%;
-				transform: translateY(-50%);
-				left: 0;
-				background: var(--noteBackgroundColor);
-				line-height: 1.3;
-			}
-			&[aria-expanded="false"]::before { content: '›'; }
 			&:hover, &:focus-visible { background: var(--accentDeemphasizedBackgroundColor); }
 		}
 
-		.dl-definition { min-height: 0; }
+		.association-list-value-content { min-height: 0; }
 
-		.dl-summary {
+		.association-list-summary {
 			grid-column: 3 / -1;
 			min-width: 0;
-			padding-inline-start: var(--dlBarPadding);
-			border-inline-start: var(--dlBarWidth) solid var(--accentDeemphasizedBackgroundColor);
+			padding-inline-start: var(--associationListBarPadding);
+			border-inline-start: var(--associationListBarWidth) solid var(--accentDeemphasizedBackgroundColor);
 			white-space: nowrap;
 			overflow: hidden;
 			text-overflow: ellipsis;
@@ -398,24 +388,24 @@ article.note {
 
 		code.inline_code { white-space: pre-wrap; }
 
-		.inline-dl_sep-container {
+		.inline-association_separator-container {
 			display: inline-flex;
 			align-items: baseline;
 
-			.dl_sep-source {
+			.association_separator-source {
 				font-size: 0 !important;
 				line-height: 0 !important;
 				tab-size: 0 !important;
 			}
 
-			&.revealed .dl_sep-source {
+			&.revealed .association_separator-source {
 				font-size: unset !important;
 				line-height: unset !important;
 				tab-size: unset !important;
 			}
 		}
 
-		span.dl_sep-source {
+		span.association_separator-source {
 			font-family: var(--codeFontFamily);
 			color: var(--accentTextColor);
 		}

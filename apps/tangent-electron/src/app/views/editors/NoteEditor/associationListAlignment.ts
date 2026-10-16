@@ -1,6 +1,6 @@
 import type { Editor } from 'typewriter-editor'
 import type { Line } from '@typewriter/document'
-import type { DlLineData } from 'common/markdownModel/dl'
+import type { AssociationListLineData } from 'common/markdownModel/associationList'
 
 let nextScope = 0
 
@@ -12,11 +12,11 @@ function isBlankLine(line: Line) {
 }
 
 /**
- * Description lists separated only by blank lines render as separate grids.
+ * Association lists separated only by blank lines render as separate grids.
  * This gives each such run one term width per depth by feeding the widest
  * measured term back as the minimum of every block's term track.
  */
-export function descriptionListAlignment(editor: Editor) {
+export function associationListAlignment(editor: Editor) {
 	const scope = String(nextScope++)
 	const style = document.createElement('style')
 	const observer = new ResizeObserver(align)
@@ -31,14 +31,14 @@ export function descriptionListAlignment(editor: Editor) {
 		let previousKey: string | null = null
 
 		for (const line of editor.doc.lines) {
-			const dl = line.attributes.dl as DlLineData | undefined
-			if (!dl) {
+			const associationList = line.attributes.associationList as AssociationListLineData | undefined
+			if (!associationList) {
 				previousKey = null
 				if (!isBlankLine(line)) run = null
 				continue
 			}
 
-			const key = `${line.attributes.blockquote ?? 0}:${dl.rootIndent ?? ''}`
+			const key = `${line.attributes.blockquote ?? 0}:${associationList.rootIndent ?? ''}`
 			if (key !== previousKey) {
 				if (!run || key !== runKey) {
 					run = []
@@ -54,11 +54,11 @@ export function descriptionListAlignment(editor: Editor) {
 	}
 
 	function getBlock(id: string) {
-		return editor.root.querySelector(`.editor-description-list[data-dl-block="${CSS.escape(id)}"]`)
+		return editor.root.querySelector(`.editor-association-list[data-association-list-block="${CSS.escape(id)}"]`)
 	}
 
 	function getTerms(block: Element) {
-		return Array.from(block.querySelectorAll(':scope > .dl-term > .dl-term-content')) as HTMLElement[]
+		return Array.from(block.querySelectorAll(':scope > .association-list-term > .association-list-term-content')) as HTMLElement[]
 	}
 
 	function align() {
@@ -78,19 +78,19 @@ export function descriptionListAlignment(editor: Editor) {
 					if (width === undefined) continue
 					termWidths.set(line.key, width)
 
-					const depth = Number(line.dataset.dlDepth)
+					const depth = Number(line.dataset.associationListDepth)
 					widths[depth] = Math.max(widths[depth] ?? 0, width)
 				}
 			}
 
 			const declarations = Array.from(widths.entries())
 				.filter(([_depth, width]) => width !== undefined)
-				.map(([depth, width]) => `--dlTermWidth${depth}: ${width}px;`)
+				.map(([depth, width]) => `--associationListTermWidth${depth}: ${width}px;`)
 				.join(' ')
 			if (!declarations) continue
 
 			const selectors = blocks.map(block =>
-				`[data-dl-scope="${scope}"] [data-dl-block="${CSS.escape((block as HTMLElement).dataset.dlBlock)}"]`)
+				`[data-association-list-scope="${scope}"] [data-association-list-block="${CSS.escape((block as HTMLElement).dataset.associationListBlock)}"]`)
 			rules.push(`${selectors.join(', ')} { ${declarations} }`)
 		}
 
@@ -100,7 +100,7 @@ export function descriptionListAlignment(editor: Editor) {
 
 	function onRendered() {
 		observer.disconnect()
-		for (const block of editor.root.querySelectorAll('.editor-description-list')) {
+		for (const block of editor.root.querySelectorAll('.editor-association-list')) {
 			for (const term of getTerms(block)) observer.observe(term)
 		}
 		align()
@@ -108,7 +108,7 @@ export function descriptionListAlignment(editor: Editor) {
 
 	return {
 		init() {
-			editor.root.dataset.dlScope = scope
+			editor.root.dataset.associationListScope = scope
 			document.head.appendChild(style)
 			editor.addEventListener('rendered', onRendered)
 		},
@@ -116,7 +116,7 @@ export function descriptionListAlignment(editor: Editor) {
 			editor.removeEventListener('rendered', onRendered)
 			observer.disconnect()
 			style.remove()
-			delete editor.root.dataset.dlScope
+			delete editor.root.dataset.associationListScope
 		}
 	}
 }

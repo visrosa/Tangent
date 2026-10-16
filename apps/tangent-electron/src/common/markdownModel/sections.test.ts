@@ -212,8 +212,8 @@ And some paragraph content.`)
 	})
 })
 
-describe('Description lists', () => {
-	it('Ranks description-list lines with list lines', () => {
+describe('Association lists', () => {
+	it('Ranks association-list lines with list lines', () => {
 		const doc = markdownToTextDocument(`- term ::
 	- value
 - plain item`)
@@ -223,7 +223,7 @@ describe('Description lists', () => {
 		expect(Object.keys(change)).toEqual([doc.lines[0].id, doc.lines[1].id])
 	})
 
-	it('Lets an introducing paragraph collapse the description list below it', () => {
+	it('Lets an introducing paragraph collapse the association list below it', () => {
 		const doc = markdownToTextDocument(`Intro
 - term :: definition`)
 

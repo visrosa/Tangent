@@ -59,7 +59,7 @@ test('Ending in italics', () => {
 })
 
 describe('Document-based parsing', () => {
-	describe('Description-list edits', () => {
+	describe('Association-list edits', () => {
 		test('typing a separator upgrades a list line', () => {
 			const document = parser.markdownToTextDocument('- term')
 			const [, end] = document.getLineRange(document.lines[0])
@@ -69,7 +69,7 @@ describe('Document-based parsing', () => {
 				documentEndLine: 0
 			}).lines
 
-			expect(line.attributes.dl).toMatchObject({ role: 'term', hasDef: true })
+			expect(line.attributes.associationList).toMatchObject({ role: 'term', hasValue: true })
 			expect(line.attributes.list).toBeUndefined()
 		})
 
@@ -83,7 +83,7 @@ describe('Document-based parsing', () => {
 			}).lines
 
 			expect(line.attributes.list).toBeTruthy()
-			expect(line.attributes.dl).toBeUndefined()
+			expect(line.attributes.associationList).toBeUndefined()
 		})
 
 		test('upgrading a bare term reparses its child values', () => {
@@ -96,8 +96,8 @@ describe('Document-based parsing', () => {
 			})
 
 			expect(result.lines).toHaveLength(2)
-			expect(result.lines[0].attributes.dl).toMatchObject({ role: 'term', hasDef: false })
-			expect(result.lines[1].attributes.dl).toMatchObject({ role: 'value', termIndent: '' })
+			expect(result.lines[0].attributes.associationList).toMatchObject({ role: 'term', hasValue: false })
+			expect(result.lines[1].attributes.associationList).toMatchObject({ role: 'value', termIndent: '' })
 		})
 
 		test('downgrading a bare term reparses its child values', () => {
@@ -112,7 +112,7 @@ describe('Document-based parsing', () => {
 			expect(result.lines).toHaveLength(2)
 			expect(result.lines[0].attributes.list).toBeTruthy()
 			expect(result.lines[1].attributes.list).toBeTruthy()
-			expect(result.lines[1].attributes.dl).toBeUndefined()
+			expect(result.lines[1].attributes.associationList).toBeUndefined()
 		})
 	})
 
