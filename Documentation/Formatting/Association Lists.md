@@ -28,7 +28,7 @@ Indent child terms to nest an Association List. Its first row starts beside the 
     - Venus :: The second planet
 ```
 
-Spaces or tabs can provide the indentation. Collapsing a parent summarizes its descendants; expanding restores the nested layout. If the last term in a shared group has an inline value, that value stays on its own term's row.
+Spaces or tabs can provide the indentation. Each collapsible term has its own gutter chevron. Hover near the start of its visual row; when several nesting levels share that row, their chevrons appear side by side from outermost to innermost. Tooltips identify the terms. Folding a nested term leaves its parents and siblings open. Collapsing a parent summarizes its descendants; expanding restores the nested layout and each child's own folded state. If the last term in a shared group has an inline value, that value stays on its own term's row.
 
 An alternative form uses a plain term line ending in ` ::` and values beginning with `: ` at the same indentation:
 

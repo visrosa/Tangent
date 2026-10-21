@@ -7,6 +7,7 @@ import type MarkdownEditor from './MarkdownEditor'
 export let editor: MarkdownEditor
 export let target: { element: HTMLElement, index: number }
 export let side: 'left'|'right'
+export let column = 0
 
 let doc = editor.doc
 
@@ -22,8 +23,8 @@ function onEditorChanged() {
 
 let container: HTMLElement = null
 
-$: positionOnLine(target?.element, container)
-function positionOnLine(line: HTMLElement, container: HTMLElement) {
+$: positionOnLine(target?.element, container, column)
+function positionOnLine(line: HTMLElement, container: HTMLElement, column: number) {
 	if (!line || !container) return
 
 	computePosition({ contextElement: line, getBoundingClientRect: () => getLineBounds(line) }, container, {
@@ -45,7 +46,7 @@ function positionOnLine(line: HTMLElement, container: HTMLElement) {
 			const anchorStart = anchor.getBoundingClientRect().left
 				- parseFloat(getComputedStyle(anchor).marginLeft)
 			const inset = line.getBoundingClientRect().left - anchorStart
-			container.style.left = result.x - inset + 'px'
+			container.style.left = result.x - inset - column * containerRect.width + 'px'
 		}
 		else {
 			const marginRight = parseFloat(lineStyle.marginRight)
@@ -58,7 +59,7 @@ function positionOnLine(line: HTMLElement, container: HTMLElement) {
 
 {#if target?.element}
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<div bind:this={container} class={side}>
+<div bind:this={container} class={side} data-line-gutter={side}>
 	<slot {doc} />
 </div>
 {/if}
