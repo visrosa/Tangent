@@ -1,4 +1,4 @@
-const { spawnSync } = require('child_process')
+const { execFileSync, spawnSync } = require('child_process')
 const fs = require('fs')
 const path = require('path')
 
@@ -18,8 +18,8 @@ function run(command, args, options = {}) {
 	}
 }
 
-function shouldCopy(source) {
-	const rel = path.relative(repoRoot, source)
+function shouldCopy(source, sourceRoot = repoRoot) {
+	const rel = path.relative(sourceRoot, source)
 	if (!rel) return true
 	const parts = rel.split(path.sep)
 	if (parts.includes('.tangent')) {
@@ -39,19 +39,31 @@ function shouldCopy(source) {
 	].some(excluded => parts.includes(excluded))
 }
 
-function copySourceTree(to) {
-	// Copy per top-level entry: `to` lives under dist/, and newer Node versions
-	// reject copying a directory into its own subtree before `filter` ever
-	// gets to exclude dist/.
+function copySourceTree(to, sourceRoot = repoRoot) {
+	// A local checkout may contain private ignored files and nested worktrees.
+	// Git supplies the source inventory, including each initialized submodule.
+	const submodules = execFileSync('git', ['submodule', 'status', '--recursive'], {
+		cwd: sourceRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe']
+	})
+	if (submodules.split('\n').some(line => line.startsWith('-') || line.startsWith('U'))) {
+		throw new Error('Initialize source submodules and resolve their conflicts before packaging')
+	}
+	const tracked = execFileSync('git', ['ls-files', '--cached', '--recurse-submodules', '-z'], {
+		cwd: sourceRoot,
+		encoding: 'utf8',
+		stdio: ['ignore', 'pipe', 'pipe'],
+		maxBuffer: 32 * 1024 * 1024
+	}).split('\0').filter(Boolean)
 	fs.mkdirSync(to, { recursive: true })
-	for (const entry of fs.readdirSync(repoRoot)) {
-		const source = path.join(repoRoot, entry)
-		if (!shouldCopy(source)) continue
-		fs.cpSync(source, path.join(to, entry), {
-			recursive: true,
-			verbatimSymlinks: true,
-			filter: shouldCopy
-		})
+	for (const entry of tracked) {
+		const source = path.join(sourceRoot, entry)
+		if (!shouldCopy(source, sourceRoot)) continue
+		// A missing submodule is listed as a directory; silently copying it would
+		// produce an archive that cannot build outside this checkout.
+		if (fs.lstatSync(source).isDirectory()) throw new Error(`Uninitialized source submodule: ${entry}`)
+		const destination = path.join(to, entry)
+		fs.mkdirSync(path.dirname(destination), { recursive: true })
+		fs.cpSync(source, destination, { verbatimSymlinks: true })
 	}
 }
 

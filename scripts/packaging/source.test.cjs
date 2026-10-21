@@ -1,0 +1,58 @@
+const { test } = require('node:test')
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const os = require('node:os')
+const path = require('node:path')
+const { execFileSync } = require('node:child_process')
+const { copySourceTree } = require('./lib.cjs')
+
+function fixture(t) {
+	const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'tangent-source-'))
+	t.after(() => fs.rmSync(directory, { recursive: true, force: true }))
+	const source = path.join(directory, 'source')
+	const output = path.join(directory, 'output')
+	fs.mkdirSync(source)
+	const git = (args, cwd = source) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+	git(['init', '-q'])
+	const write = (name, text) => {
+		fs.mkdirSync(path.dirname(path.join(source, name)), { recursive: true })
+		fs.writeFileSync(path.join(source, name), text)
+	}
+	return { source, output, git, write }
+}
+
+test('source inventory excludes untracked and ignored files while retaining source bytes and symlinks', t => {
+	const { source, output, git, write } = fixture(t)
+	write('.gitignore', 'private/\n')
+	write('src/a file.txt', 'tracked')
+	write('dist/tracked-cache', 'generated')
+	git(['add', '.'])
+	write('private/settings.json', 'private fixture')
+	write('AGENTS.md', 'local fixture')
+	write('.worktrees/other/source.txt', 'other checkout')
+	write('src/a file.txt', 'working tree contents')
+	fs.symlinkSync('a file.txt', path.join(source, 'src/link'))
+	git(['add', 'src/link'])
+	copySourceTree(output, source)
+	assert.deepEqual(fs.readdirSync(output).sort(), ['.gitignore', 'src'])
+	assert.equal(fs.readFileSync(path.join(output, 'src/a file.txt'), 'utf8'), 'working tree contents')
+	assert.equal(fs.readlinkSync(path.join(output, 'src/link')), 'a file.txt')
+})
+
+test('source inventory includes tracked submodule files without their local extras', t => {
+	const { source, output, git, write } = fixture(t)
+	write('dependency/code.txt', 'dependency')
+	git(['init', '-q'], path.join(source, 'dependency'))
+	git(['add', '.'], path.join(source, 'dependency'))
+	git(['-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'fixture'], path.join(source, 'dependency'))
+	git(['-c', 'protocol.file.allow=always', 'submodule', 'add', './dependency', 'lib/dependency'])
+	write('lib/dependency/local.txt', 'private fixture')
+	copySourceTree(output, source)
+	assert.equal(fs.readFileSync(path.join(output, 'lib/dependency/code.txt'), 'utf8'), 'dependency')
+	assert.equal(fs.existsSync(path.join(output, 'lib/dependency/local.txt')), false)
+	assert.equal(fs.existsSync(path.join(output, 'lib/dependency/.git')), false)
+	fs.rmSync(path.join(source, 'lib/dependency/code.txt'))
+	assert.throws(() => copySourceTree(output, source), /ENOENT/)
+	git(['submodule', 'deinit', '-f', 'lib/dependency'])
+	assert.throws(() => copySourceTree(output, source), /Initialize source submodules/)
+})
