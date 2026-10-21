@@ -8,6 +8,10 @@ import MarkdownView from './MarkdownView'
 import { tooltips } from 'app/utils/tooltips'
 import type TangentFootnote from './t-footnote'
 import type { TangentLink } from './t-link'
+import Settings from 'common/settings/Settings'
+import { footnoteModule } from './footnoteModule'
+import { page } from 'vitest/browser'
+import type { Workspace } from 'app/model'
 import 'app/style/note.scss'
 import '../../../../../static/global.css'
 
@@ -28,6 +32,66 @@ afterEach(() => editors.splice(0).forEach(editor => { const root = editor.root; 
 function elements(editor: MarkdownEditor) { return Array.from(editor.root.querySelectorAll<TangentFootnote>('t-footnote')) }
 
 describe('footnote rendering', () => {
+	it('keeps the return control clickable after following a reference into a folded section', async () => {
+		const source = 'A[^a]\nagain[^a]\n\n# Sources\n[^a]: Definition'
+		const editor = mount(source)
+		await wait()
+		editor.collapsingSections.toggleLineCollapsed(3)
+		await wait()
+		await page.getByRole('button', { name: 'Go to footnote a: Definition', exact: true }).nth(1).click()
+		await wait(30)
+		expect(editor.doc.selection[0]).toBe(source.indexOf('[^a]:'))
+		const marker = elements(editor).at(-1)
+		expect(marker.classList.contains('revealed')).toBe(true)
+		expect(getComputedStyle(marker).display).not.toBe('none')
+		await page.getByRole('button', { name: 'Return from footnote a', exact: true }).click()
+		await wait(30)
+		expect(editor.doc.selection[0]).toBe(source.indexOf('[^a]', source.indexOf('again')))
+		expect(docFromDom(editor, editor.root).getText()).toBe(source)
+		editor.select(source.indexOf('[^a]:') + 2)
+		await wait()
+		expect(editor.root.querySelector('.footnote-source.revealed')).not.toBeNull()
+		expect(getComputedStyle(elements(editor).at(-1)).display).not.toBe('none')
+	})
+
+	it('switches numeric references live and reveals authored IDs on hover and focus', async () => {
+		const source = 'A[^MiXeD][^42][^mixed][^missing]\n[^mixed]: Alpha\n[^42]: Beta'
+		const settings = new Settings()
+		const root = document.createElement('article')
+		root.className = 'note'
+		document.body.append(root)
+		const editor = new MarkdownEditor(null, { modules: {
+			footnotes: editor => footnoteModule(editor, settings.numericFootnoteReferences)
+		} })
+		editors.push(editor)
+		editor.setRoot(root)
+		editor.set(markdownToTextDocument(source))
+		await wait()
+		expect(elements(editor)[0].shadowRoot.querySelector('button').textContent).toBe('MiXeD')
+		settings.numericFootnoteReferences.set(true)
+		await wait()
+		const buttons = elements(editor).map(el => el.shadowRoot.querySelector<HTMLButtonElement>('button'))
+		const visibleText = (button: HTMLButtonElement) => Array.from(button.children)
+			.filter(child => getComputedStyle(child).display !== 'none').map(child => child.textContent).join('')
+		expect(buttons.slice(0, 3).map(visibleText)).toEqual(['1', '2', '1'])
+		expect(buttons[3]).toBeNull()
+		expect(buttons[4].textContent).toBe('mixed ↩')
+		expect(buttons[0].getAttribute('aria-label')).toBe('Go to footnote 1 (MiXeD): Alpha')
+		await page.getByRole('button', { name: 'Go to footnote 1 (MiXeD): Alpha', exact: true }).hover()
+		expect(visibleText(buttons[0])).toBe('MiXeD')
+		await page.getByRole('button', { name: 'Go to footnote 2 (42): Beta', exact: true }).hover()
+		expect(visibleText(buttons[0])).toBe('1')
+		expect(visibleText(buttons[1])).toBe('42')
+		buttons[2].focus()
+		expect(visibleText(buttons[2])).toBe('mixed')
+		buttons[2].blur()
+		expect(visibleText(buttons[2])).toBe('1')
+		expect(docFromDom(editor, root).getText()).toBe(source)
+		settings.numericFootnoteReferences.set(false)
+		await wait()
+		expect(elements(editor)[0].shadowRoot.querySelector('button').textContent).toBe('MiXeD')
+	})
+
 	it('uses literal mnemonic keys and assigned numbers only for decimal-only keys', async () => {
 		const source = 'A[^MiXeD][^x2][^字][^42][^٣]\n[^mixed]: Alpha\n[^x2]: Beta\n[^字]: Gamma\n[^42]: Delta\n[^٣]: Epsilon'
 		const editor = mount(source)
@@ -83,6 +147,30 @@ describe('footnote rendering', () => {
 		expect(view.doc.selection[0]).toBe(9)
 		view.destroy()
 		root.remove()
+	})
+	it('uses the workspace preference in read-only views and shadow previews', async () => {
+		const settings = new Settings()
+		settings.numericFootnoteReferences.set(true)
+		const root = document.createElement('article')
+		document.body.append(root)
+		const view = new MarkdownView({ workspace: { settings } as Workspace })
+		try {
+			view.setRoot(root)
+			const source = 'text[^source]\n[^source]: definition'
+			view.set(markdownToTextDocument(source), Source.api)
+			const preview = root.querySelector('.line').attachShadow({ mode: 'open' })
+			const marker = document.createElement('t-footnote')
+			marker.setAttribute('footnote-key', 'source')
+			preview.append(marker)
+			await wait()
+			expect(root.querySelector('t-footnote').shadowRoot.querySelector('.number').textContent).toBe('1')
+			expect(marker.shadowRoot.querySelector('.number').textContent).toBe('1')
+			marker.shadowRoot.querySelector<HTMLButtonElement>('button').click()
+			expect(view.doc.selection[0]).toBe(source.indexOf('[^source]:'))
+			settings.numericFootnoteReferences.set(false)
+			await wait()
+			expect(marker.shadowRoot.querySelector('button').textContent).toBe('source')
+		} finally { view.destroy(); root.remove() }
 	})
 	it('isolates numbered output and preserves document offsets and DOM reconstruction', async () => {
 		const source = 'A[^a][^a] Z\n\n[^a]: **Bold** text'
