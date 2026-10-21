@@ -1,9 +1,12 @@
 import { readFileSync, readdirSync } from 'fs'
 import path from 'path'
+import { fileURLToPath } from 'url'
 import { expect, it } from 'vitest'
 import { scanKeyboardSpan } from './keyboard'
 import { markdownToTextDocument } from './parser'
 import { typewriterToText } from 'common/typewriterUtils'
+
+const repositoryRoot = fileURLToPath(new URL('../../../../../', import.meta.url))
 
 function* documents(directory: string): Generator<string> {
 	for (const entry of readdirSync(directory, { withFileTypes: true })) {
@@ -15,7 +18,7 @@ function* documents(directory: string): Generator<string> {
 
 it('retains documentation source and recognizes prose keycaps', () => {
 	let count = 0
-	for (const filename of documents(path.resolve('../../Documentation'))) {
+	for (const filename of documents(path.join(repositoryRoot, 'Documentation'))) {
 		const source = readFileSync(filename, 'utf8')
 		expect(typewriterToText(markdownToTextDocument(source)), filename).toBe(source)
 		if (filename.endsWith('Keycaps.md')) continue
@@ -29,7 +32,7 @@ it('retains documentation source and recognizes prose keycaps', () => {
 })
 
 it('keeps the compatibility fixture partial substitutions literal', () => {
-	const source = readFileSync(path.resolve('../../test-files/TestWorkspace/Markdown Compatibility/Keyboard Input.md'), 'utf8')
+	const source = readFileSync(path.join(repositoryRoot, 'test-files/TestWorkspace/Markdown Compatibility/Keyboard Input.md'), 'utf8')
 	const specimens = source.match(/Partially substituted pairs:[\s\S]*?(?=Recovery after)/)?.[0]
 	expect(specimens).toBeTruthy()
 	const document = markdownToTextDocument(specimens)
