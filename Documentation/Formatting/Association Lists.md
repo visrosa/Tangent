@@ -30,6 +30,6 @@ Indent child terms to nest an Association List. Its first row starts beside the 
 
 Spaces or tabs can provide the indentation. Collapsing a parent summarizes its descendants; expanding restores the nested layout. If the last term in a shared group has an inline value, that value stays on its own term's row.
 
-Terms use the normal note font and text color. Values are slightly smaller and muted. Ordinary extra spacing collapses when rendered; entering a line reveals its exact Markdown and spacing for editing. Explicit code spacing and authored nonbreaking spaces retain their meaning.
+Terms use the normal note font and text color. Values are slightly smaller and muted. A small gap separates neighboring value bars; a value shared by several terms keeps one continuous bar. Ordinary extra spacing collapses when rendered; entering a line reveals its exact Markdown and spacing for editing. Explicit code spacing and authored nonbreaking spaces retain their meaning.
 
 Use the gutter chevron to collapse a term. Its values remain as a single-line summary, fading toward a trailing `⋯`. Inline code retains its spacing without wrapping in a collapsed value. Expanding restores their layout, and moving the caret into a folded region reveals its source. Collapsing does not change the note text.

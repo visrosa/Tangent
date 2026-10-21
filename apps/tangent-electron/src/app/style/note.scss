@@ -256,7 +256,7 @@ article.note {
 		margin: 0;
 		display: grid;
 		grid-auto-rows: minmax(1.3em, auto);
-		row-gap: 0;
+		row-gap: .2em;
 
 		.association-list-line {
 			min-height: 1.3em;
