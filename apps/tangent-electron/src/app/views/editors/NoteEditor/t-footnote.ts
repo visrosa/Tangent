@@ -5,7 +5,7 @@ import type { ResolvedFootnote } from 'common/markdownModel/footnotes'
 
 const styles = new CSSStyleSheet()
 styles.replaceSync(`
-	:host(.revealed) { display: none; }
+	:host(.revealed:not([footnote-definition])) { display: none; }
 	button { font: inherit; font-size: .75em; vertical-align: super; line-height: 1; color: var(--accentTextColor); border: 0; padding: 0 .15em; background: none; cursor: pointer; }
 	button.definition { vertical-align: baseline; }
 	button:hover { text-decoration: underline; }

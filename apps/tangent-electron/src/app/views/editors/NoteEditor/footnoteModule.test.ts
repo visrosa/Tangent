@@ -32,6 +32,28 @@ afterEach(() => editors.splice(0).forEach(editor => { const root = editor.root; 
 function elements(editor: MarkdownEditor) { return Array.from(editor.root.querySelectorAll<TangentFootnote>('t-footnote')) }
 
 describe('footnote rendering', () => {
+	it('keeps the return control clickable after following a reference into a folded section', async () => {
+		const source = 'A[^a]\nagain[^a]\n\n# Sources\n[^a]: Definition'
+		const editor = mount(source)
+		await wait()
+		editor.collapsingSections.toggleLineCollapsed(3)
+		await wait()
+		await page.getByRole('button', { name: 'Go to footnote a: Definition', exact: true }).nth(1).click()
+		await wait(30)
+		expect(editor.doc.selection[0]).toBe(source.indexOf('[^a]:'))
+		const marker = elements(editor).at(-1)
+		expect(marker.classList.contains('revealed')).toBe(true)
+		expect(getComputedStyle(marker).display).not.toBe('none')
+		await page.getByRole('button', { name: 'Return from footnote a', exact: true }).click()
+		await wait(30)
+		expect(editor.doc.selection[0]).toBe(source.indexOf('[^a]', source.indexOf('again')))
+		expect(docFromDom(editor, editor.root).getText()).toBe(source)
+		editor.select(source.indexOf('[^a]:') + 2)
+		await wait()
+		expect(editor.root.querySelector('.footnote-source.revealed')).not.toBeNull()
+		expect(getComputedStyle(elements(editor).at(-1)).display).not.toBe('none')
+	})
+
 	it('switches numeric references live and reveals authored IDs on hover and focus', async () => {
 		const source = 'A[^MiXeD][^42][^mixed][^missing]\n[^mixed]: Alpha\n[^42]: Beta'
 		const settings = new Settings()
