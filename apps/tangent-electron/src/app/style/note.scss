@@ -256,12 +256,13 @@ article.note {
 		// its query container so both bounds refer to the same available width.
 		--associationListTermLimit: min(18em, calc(50cqi / var(--associationListDepthCount, var(--associationListBlockDepthCount, 1))));
 		--associationListTermTrackLimit: min(18em, calc(50% / var(--associationListDepthCount, var(--associationListBlockDepthCount, 1))));
+		--associationListRowGap: calc(var(--fontSize) * .2);
 
 		margin: 0;
 		display: grid;
 		container-type: inline-size;
 		grid-auto-rows: minmax(1.3em, auto);
-		row-gap: .2em;
+		row-gap: var(--associationListRowGap);
 
 		.association-list-line {
 			min-width: 0;
@@ -379,6 +380,15 @@ article.note {
 			font-weight: 400;
 			color: var(--accentTextColor);
 			&:hover, &:focus-visible { background: var(--accentDeemphasizedBackgroundColor); }
+			&.association-list-bar-joined::after {
+				content: '';
+				position: absolute;
+				inset-block-start: 100%;
+				inset-inline-start: calc(var(--associationListBarWidth) / 3);
+				width: calc(var(--associationListBarWidth) / 3);
+				height: var(--associationListRowGap);
+				background: var(--accentDeemphasizedBackgroundColor);
+			}
 		}
 
 		.association-list-value-content { min-height: 0; }

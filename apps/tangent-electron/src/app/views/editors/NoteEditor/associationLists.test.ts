@@ -866,6 +866,63 @@ describe('shared term and value geometry', () => {
 
 describe('Association List bar controls', () => {
 	test.each([
+		'- term ::\n\t- first value\n\t- child :: nested value\n\t- last value',
+		'- term ::\n\t- first value\n\n- term ::\n\t- second value'
+	])('leaves breaks across subtrees and separate groups: %s', source => {
+		const { editor, root } = createMarkdownEditor(source)
+		try { expect(root.querySelector('.association-list-bar-joined')).toBeNull() }
+		finally { editor.destroy() }
+	})
+
+	test.runIf(markdownToTextDocument('Term ::').lines[0].attributes.associationList)(
+		'connects nested colon values within their own term', async () => {
+			const source = 'Contents ::\n: First value\n: Second value\nContext ::\n: Design ::\n  : First section\n  : Second section\n: Tasks ::\n  : Task section'
+			const { editor, root } = createMarkdownEditor(source)
+			const article = mountInNote(root)
+			try {
+				await wait()
+				const bars = Array.from(root.querySelectorAll('.association-list-collapse-bar'))
+				expect(bars.map(bar => bar.classList.contains('association-list-bar-joined'))).toEqual([true, false, true, false, false])
+				expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+			} finally { editor.destroy(); article.remove() }
+		}
+	)
+
+	test.each([
+		'- term ::\n\t- first value\n\t- ' + 'a wrapped second value '.repeat(12) + '\n\t- third value\n- other :: final',
+		'- parent ::\n\t- child ::\n\t\t- first value\n\t\t- second value\n\t\t- third value\n\t- sibling :: final',
+		'- first term ::\n- shared term ::\n\t- first value\n\t- second value\n\t- third value\n- other :: final'
+	])('connects only consecutive values of the same owner: %s', async source => {
+		const { editor, root } = createMarkdownEditor(source)
+		const article = mountInNote(root)
+		article.style.width = '400px'
+		try {
+			await wait()
+			const bars = Array.from(root.querySelectorAll<HTMLElement>('.association-list-collapse-bar'))
+			expect(bars).toHaveLength(4)
+			expect(bars.map(bar => bar.classList.contains('association-list-bar-joined'))).toEqual([true, true, false, false])
+			for (let index = 0; index < 2; index++) {
+				const bar = bars[index]
+				const connector = getComputedStyle(bar, '::after')
+				const width = parseFloat(getComputedStyle(bar.parentElement).borderInlineStartWidth)
+				const rect = bar.getBoundingClientRect()
+				expect(parseFloat(connector.width)).toBeCloseTo(width / 3, 1)
+				expect(parseFloat(connector.insetInlineStart)).toBeCloseTo(width / 3, 1)
+				expect(rect.bottom + parseFloat(connector.height)).toBeCloseTo(bars[index + 1].getBoundingClientRect().top, 1)
+				expect(bar.dataset.associationListOwner).toBe(bars[index + 1].dataset.associationListOwner)
+				expect(connector.backgroundColor).not.toBe('rgba(0, 0, 0, 0)')
+			}
+			bars[0].click()
+			await wait()
+			expect(root.querySelector('.association-list-bar-joined')).toBeNull()
+			root.querySelector<HTMLElement>('.association-list-collapse-bar').click()
+			await wait()
+			expect(root.querySelectorAll('.association-list-bar-joined')).toHaveLength(2)
+			expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+		} finally { editor.destroy(); article.remove() }
+	})
+
+	test.each([
 		'- first :: ' + 'a wrapped value '.repeat(20) + '\n- second :: next',
 		'- first ::\n\t- ' + 'a wrapped value '.repeat(20) + '\n- second ::\n\t- next',
 		'- parent ::\n\t- first :: one\n\t- second :: two'

@@ -375,7 +375,22 @@ function getAssociationListLayouts(lineData: AssociationListLineEntry[], hidden:
 		return nextRow
 	}
 	place(buildAssociationListTree(lineData), 1)
-	return { layouts, valuesCollapsed, groupedTerms, owners }
+	const joinedValues = new Set<string>()
+	let previous: { id: string, endRow: number } | undefined
+	lineData.forEach(([attributes, , id], index) => {
+		const layout = layouts[index]
+		if (!layout) return
+		const data = attributes.associationList as AssociationListLineData
+		if (data.role !== 'value' && !data.hasValue) {
+			previous = undefined
+			return
+		}
+		if (previous?.endRow === layout.row && owners.get(previous.id) === owners.get(id)) {
+			joinedValues.add(previous.id)
+		}
+		previous = { id, endRow: layout.row + (data.hasValue ? layout.valueSpan : layout.span) }
+	})
+	return { layouts, valuesCollapsed, groupedTerms, owners, joinedValues }
 }
 
 function getAssociationListExportProps(attributes: AttributeMap, role: AssociationListLineData['role'], key: string) {
@@ -512,7 +527,7 @@ const noteTypeset:TypesetTypes = {
 					const hidden = lineData.map(([attributes]) => isCollapsed(attributes.collapsed)
 						&& !attributes.collapsedReveal)
 					const columns = getAssociationListColumns(lineData)
-					const { layouts, valuesCollapsed, groupedTerms, owners } = getAssociationListLayouts(lineData, hidden)
+					const { layouts, valuesCollapsed, groupedTerms, owners, joinedValues } = getAssociationListLayouts(lineData, hidden)
 
 					const lines = lineData.map(([attributes, children, id], index) => {
 						const sourceLine = editor.doc.getLineBy(id)
@@ -530,7 +545,7 @@ const noteTypeset:TypesetTypes = {
 
 						const owner = owners.get(id)
 						const bar = () => h('span', {
-							className: 'association-list-collapse-bar',
+							className: 'association-list-collapse-bar' + (joinedValues.has(id) ? ' association-list-bar-joined' : ''),
 							contenteditable: 'false',
 							role: 'button',
 							tabindex: '0',
