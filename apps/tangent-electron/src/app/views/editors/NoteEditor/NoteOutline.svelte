@@ -8,6 +8,7 @@ export let editor: MarkdownEditor
 export let container: HTMLElement
 export let info: NoteViewInfo = null
 export let extraTop = 0
+export let gutterWidth = 32
 export let onNavigate: (position: number) => void
 export let onWidth: (width: number) => void = () => {}
 export let onControl: (control: NoteOutlineControl | null) => void = () => {}
@@ -31,7 +32,7 @@ $: expanded = narrow ? narrowOpen : preferredExpanded
 // Reserve a little clearance for gutter hit targets even in full-width notes.
 $: onWidth(narrow || !expanded ? (titleBarVisible ? 0 : 28) : 208)
 $: onControl({ expanded, toggle })
-$: { expanded; narrow; scheduleScroll() }
+$: { expanded; narrow; gutterWidth; scheduleScroll() }
 
 function refresh(event?) {
 	headings = getOutlineHeadings(editor.doc)
@@ -65,7 +66,7 @@ function positionOutline() {
 	}
 	const article = editor.root.closest('article') ?? editor.root
 	const style = getComputedStyle(article)
-	const gutterEdge = article.getBoundingClientRect().left + parseFloat(style.paddingLeft || '0') - 32
+	const gutterEdge = article.getBoundingClientRect().left + parseFloat(style.paddingLeft || '0') - gutterWidth
 	// Center within the actual margin, including space outside a max-width note.
 	const available = gutterEdge - container.getBoundingClientRect().left
 	horizontalInset = Math.max(0, (available - 192) / 2)
@@ -146,7 +147,7 @@ onDestroy(() => {
 </div>
 
 <style>
-.outline-anchor { position: sticky; height: 0; margin-left: calc(-1 * var(--outlineWidth)); z-index: 11; }
+.outline-anchor { position: sticky; height: 0; margin-left: calc(-1 * (var(--outlineWidth) + var(--lineGutterExtraWidth, 0px))); z-index: 11; }
 nav { width: 28px; display: flex; flex-direction: column; background: var(--noteBackgroundColor); box-sizing: border-box; cursor: default; }
 nav.expanded { width: 192px; }
 nav.inTitleBar:not(.expanded) { display: none; }

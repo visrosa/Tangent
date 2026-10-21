@@ -111,6 +111,7 @@ export let onScrollRequest: ScrollToCallback = null
 export let onKeyboardExit: KeyboardExitCallback = null
 
 let container: HTMLElement
+let gutterWidth = 32
 let outlineWidth = 0
 $: outlineControl = state.outlineControl
 $: hasOutline = layout === 'fill' && !!outlineControl
@@ -1482,10 +1483,11 @@ function updateCodeBlockSizing(pre: HTMLElement, context: CodeBlockSizingContext
 	class:typewriter={focusLevel >= FocusLevel.Typewriter}
 	style={`--noteWidthMax: ${$maxWidth}px;`}
 	style:--extraTop={extraTop + 'px'}
+	style:--lineGutterExtraWidth={`${Math.max(0, gutterWidth - 32)}px`}
 	style:--outlineWidth={`${hasOutline ? outlineWidth : 0}px`}
 >
 	{#if container && editorElement && hasOutline}
-		<NoteOutline {editor} {container} info={$outlineInfo} {extraTop}
+		<NoteOutline {editor} {container} info={$outlineInfo} {extraTop} {gutterWidth}
 			onWidth={width => outlineWidth = width}
 			onControl={control => outlineControl?.set(control)}
 			onNavigate={navigateOutline} />
@@ -1572,7 +1574,7 @@ function updateCodeBlockSizing(pre: HTMLElement, context: CodeBlockSizingContext
 
 <style lang="scss">
 main {
-	padding-left: var(--outlineWidth, 0px);
+	padding-left: calc(var(--outlineWidth, 0px) + var(--lineGutterExtraWidth, 0px));
 	position: relative;
 
 	text-align: unset;
