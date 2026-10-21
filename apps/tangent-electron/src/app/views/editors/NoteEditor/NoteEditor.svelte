@@ -1,5 +1,4 @@
 <script lang="ts">
-import { getLineBounds } from './lineGeometry'
 import { getContext, onDestroy, tick } from 'svelte'
 import {
 	DecorateEvent,
@@ -56,8 +55,7 @@ import { revealContentAroundRange } from './editorModule';
 import { fly } from 'svelte/transition';
 import { derived } from 'svelte/store';
 import { EmbedFile } from 'app/model';
-import LineGutterLeft from './LineGutterLeft.svelte';
-import LineGutterRight from './LineGutterRight.svelte';
+import LineGutters from './LineGutters.svelte';
 import { dropTooltip, requestTooltip, type TooltipConfig } from 'app/utils/tooltips';
 import YamlTooltip from './YamlTooltip.svelte';
 import TemplateTokenTooltip from './TemplateTokenTooltip.svelte';
@@ -1015,64 +1013,6 @@ function onEditorMouseOut(event: MouseEvent) {
 	}
 }
 
-/////////////////////////////
-// Line gutter adornments //
-///////////////////////////
-type LineTarget = { element: HTMLElement, index: number }
-let leftHoverdLineTarget: LineTarget = null
-let rightHoveredLineTarget: LineTarget = null
-
-function onMouseMove(event: MouseEvent) {
-
-	const bounds = editorElement.getBoundingClientRect()
-	const lines = editorElement.querySelectorAll('.line')
-
-	const count = lines.length
-
-	let clearLeft = true
-	let clearRight = true
-	
-	for (let i = 0 ; i < count; i++) {
-		const lineElement = lines.item(i) as HTMLElement
-		const lineBounds = getLineBounds(lineElement)
-
-		const leftBound = Math.min(bounds.left, lineBounds.left)
-		const rightBound = Math.max(bounds.right, lineBounds.right)
-
-		if (event.clientY > lineBounds.top && event.clientY <= lineBounds.bottom) {
-			if (event.clientX > leftBound - 50 && event.clientX < lineBounds.left + 150) {
-				if (leftHoverdLineTarget?.element !== lineElement) {
-					leftHoverdLineTarget = {
-						element: lineElement,
-						index: i
-					}
-				}
-				clearLeft = false
-			}
-
-			if (event.clientX > lineBounds.right - 150 && event.clientX < rightBound + 50) {
-				if (rightHoveredLineTarget?.element !== lineElement) {
-					rightHoveredLineTarget = {
-						element: lineElement,
-						index: i
-					}
-				}
-				clearRight = false
-			}
-			break
-		}
-	}
-
-	if (clearLeft) leftHoverdLineTarget = null
-	if (clearRight) rightHoveredLineTarget = null
-}
-
-function onMouseLeave(event: MouseEvent) {
-	if (leftHoverdLineTarget) leftHoverdLineTarget = null
-	if (rightHoveredLineTarget) rightHoveredLineTarget = null
-}
-//// End ////
-
 function onContextMenu(event: MouseEvent) {
 	// Holy sweet baby jesus this function though..
 	const menu: ContextMenuConstructorOptions[] = []
@@ -1435,8 +1375,6 @@ function updateCodeBlockSizing(pre: HTMLElement, context: CodeBlockSizingContext
 <main
 	on:mousedown={onMouseDown}
 	on:mouseup={selectFromVerticalPosition}
-	on:mousemove={onMouseMove}
-	on:mouseleave={onMouseLeave}
 	on:wheel={onWheel}
 	on:keydown={onNoteKeydown}
 	bind:this={container}
@@ -1498,8 +1436,7 @@ function updateCodeBlockSizing(pre: HTMLElement, context: CodeBlockSizingContext
 			<TemplateTokenAutocompleteMenu {handler} />
 		{/if}
 	</AutoCompleteMenu>
-	<LineGutterLeft {editor} target={leftHoverdLineTarget} />
-	<LineGutterRight {editor} target={rightHoveredLineTarget} />
+	<LineGutters {editor} {container} />
 </main>
 
 {#if fallbackErrors?.length}
