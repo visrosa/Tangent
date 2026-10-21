@@ -10,6 +10,22 @@ export function getLineBounds(line: HTMLElement): DOMRect {
 
 export type LineTarget = { element: HTMLElement, index: number }
 
+export function getGutterColumnCount(lines: HTMLElement[]) {
+	const edges: [number, number][] = []
+	for (const line of lines) {
+		const bounds = getLineBounds(line)
+		if (bounds.height > 0) edges.push([bounds.top, 1], [bounds.bottom, -1])
+	}
+	edges.sort((a, b) => a[0] - b[0] || a[1] - b[1])
+	let active = 0
+	let columns = 1
+	for (const [, change] of edges) {
+		active += change
+		columns = Math.max(columns, active)
+	}
+	return columns
+}
+
 export function getLineGutterTargets(root: HTMLElement, point: { x: number, y: number }) {
 	const bounds = root.getBoundingClientRect()
 	const left: LineTarget[] = []

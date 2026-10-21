@@ -29,20 +29,22 @@ function setup(source: string) {
 	const editor = new MarkdownEditor(null, { root, doc: markdownToTextDocument(source) })
 	const collapsed = new WritableStore<number[]>([])
 	editor.collapsingSections.setCollapsedStateStore(collapsed)
+	let gutterWidth = 32
 	let component
-	flushSync(() => { component = mount(LineGutters, { target, props: { editor, container } }) })
+	flushSync(() => { component = mount(LineGutters, { target, props: { editor, container, onWidth: width => gutterWidth = width } }) })
 	cleanups.push(async () => { await unmount(component); editor.destroy(); container.remove() })
 	const terms = () => Array.from(root.querySelectorAll<HTMLElement>('.association-list-term-content'))
 	const buttons = () => Array.from(target.querySelectorAll<HTMLButtonElement>('[data-line-gutter="left"] button'))
-	return { editor, root, target, container, collapsed, terms, buttons }
+	return { editor, root, target, container, collapsed, terms, buttons, gutterWidth: () => gutterWidth }
 }
 
 describe('Association List gutter access', () => {
 	test('gives overlapping nested terms independent controls and preserves ancestor and sibling state', async () => {
 		const source = '- Parent ::\n  - Child ::\n    - Grandchild :: First value\n    - Sibling :: Second value\n- Other :: Third value'
-		const { editor, root, collapsed, terms, buttons } = setup(source)
+		const { editor, root, collapsed, terms, buttons, gutterWidth } = setup(source)
 		await page.elementLocator(terms()[0]).hover()
 		await wait(30)
+		expect(gutterWidth()).toBe(80)
 		expect(buttons().map(button => button.getAttribute('aria-label'))).toEqual([
 			'Collapse Parent', 'Collapse Child', 'Collapse Grandchild'
 		])
@@ -62,6 +64,7 @@ describe('Association List gutter access', () => {
 		expect(isLineCollapsed(editor.doc.lines[3])).toBe(true)
 		expect(isLineCollapsed(editor.doc.lines[4])).toBe(false)
 		expect(buttons().map(button => button.getAttribute('aria-label'))).toEqual(['Collapse Parent', 'Expand Child'])
+		expect(gutterWidth()).toBe(56)
 		await page.getByRole('button', { name: 'Expand Child', exact: true }).click()
 		await wait()
 		expect(editor.collapsingSections.lineHasCollapsedChildren(2)).toBe(true)
