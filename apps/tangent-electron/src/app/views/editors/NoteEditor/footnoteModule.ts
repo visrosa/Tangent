@@ -2,12 +2,15 @@ import { type Editor, Source } from 'typewriter-editor'
 import { normalizeFootnoteKey, resolveFootnotes } from 'common/markdownModel/footnotes'
 import './t-footnote'
 import type TangentFootnote from './t-footnote'
+import type { Readable } from 'svelte/store'
 
-export function footnoteModule(editor: Editor) {
+export function footnoteModule(editor: Editor, numericReferences?: Readable<boolean>) {
 	let document = null
 	let notes = resolveFootnotes([])
 	let queued = false
 	let disposed = false
+	let numeric = false
+	let unsubscribe: () => void
 	const origins = new Map<string, { lineId: string, group?: string }>()
 	const elements = new Set<TangentFootnote>()
 	function resolve(event: Event) {
@@ -35,7 +38,7 @@ export function footnoteModule(editor: Editor) {
 				const line = editor.doc.lines[index]
 				if (line && editor.doc.getLineRange(line)[0] !== note.start) note = null
 			}
-			element.update(note)
+			element.update(note, numeric)
 		}
 	}
 	function schedule() {
@@ -82,6 +85,10 @@ export function footnoteModule(editor: Editor) {
 	const observer = new MutationObserver(schedule)
 	return {
 		init() {
+			unsubscribe = numericReferences?.subscribe(value => {
+				numeric = value
+				schedule()
+			})
 			editor.on('changed', schedule)
 			editor.root.addEventListener('footnote-resolve', resolve)
 			editor.root.addEventListener('footnote-navigate', navigate as EventListener)
@@ -90,6 +97,7 @@ export function footnoteModule(editor: Editor) {
 		},
 		destroy() {
 			disposed = true
+			unsubscribe?.()
 			observer.disconnect()
 			editor.off('changed', schedule)
 			editor.root?.removeEventListener('footnote-resolve', resolve)
