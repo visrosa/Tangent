@@ -143,10 +143,12 @@ describe('footnote rendering', () => {
 		view.set(markdownToTextDocument('text[^a]\n[^a]: definition'), Source.api)
 		await wait()
 		expect(root.querySelector('t-footnote').shadowRoot.querySelector('button').textContent).toBe('a')
-		root.querySelector('t-footnote').shadowRoot.querySelector<HTMLButtonElement>('button').click()
-		expect(view.doc.selection[0]).toBe(9)
-		view.destroy()
-		root.remove()
+		try {
+			await page.getByRole('button', { name: 'Go to footnote a: definition', exact: true }).click()
+			expect(view.doc.selection[0]).toBe(9)
+			await page.getByRole('button', { name: 'Return from footnote a', exact: true }).click()
+			expect(view.doc.selection[0]).toBe(4)
+		} finally { view.destroy(); root.remove() }
 	})
 	it('uses the workspace preference in read-only views and shadow previews', async () => {
 		const settings = new Settings()
