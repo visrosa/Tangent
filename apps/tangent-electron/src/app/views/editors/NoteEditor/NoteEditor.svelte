@@ -109,6 +109,7 @@ export let onScrollRequest: ScrollToCallback = null
 export let onKeyboardExit: KeyboardExitCallback = null
 
 let container: HTMLElement
+let gutterWidth = 32
 
 let _lastFile: NoteFile
 let _lastFileLoadState: FileLoadState = null
@@ -1386,6 +1387,7 @@ function updateCodeBlockSizing(pre: HTMLElement, context: CodeBlockSizingContext
 	class:typewriter={focusLevel >= FocusLevel.Typewriter}
 	style={`--noteWidthMax: ${$maxWidth}px;`}
 	style:--extraTop={extraTop + 'px'}
+	style:--lineGutterExtraWidth={`${Math.max(0, gutterWidth - 32)}px`}
 >
 	<div class="extraTop" style={`height: ${effectiveExtraTop}px;`}></div>
 	<WorkspaceFileHeader
@@ -1436,7 +1438,7 @@ function updateCodeBlockSizing(pre: HTMLElement, context: CodeBlockSizingContext
 			<TemplateTokenAutocompleteMenu {handler} />
 		{/if}
 	</AutoCompleteMenu>
-	<LineGutters {editor} {container} />
+	<LineGutters {editor} {container} onWidth={width => gutterWidth = width} />
 </main>
 
 {#if fallbackErrors?.length}
@@ -1468,6 +1470,7 @@ function updateCodeBlockSizing(pre: HTMLElement, context: CodeBlockSizingContext
 <style lang="scss">
 main {
 	position: relative;
+	padding-left: calc(var(--outlineWidth, 0px) + var(--lineGutterExtraWidth, 0px));
 
 	text-align: unset;
 
