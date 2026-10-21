@@ -252,7 +252,10 @@ article.note {
 		--associationListBarWidth: calc(var(--fontSize) * .125);
 		--associationListBarPadding: calc(var(--fontSize) * .5);
 		--associationListTermGap: .45em;
-		--associationListTermLimit: min(18em, calc(50cqi / var(--associationListDepthCount, 1)));
+		// Tracks resolve percentages against this grid; descendant content uses
+		// its query container so both bounds refer to the same available width.
+		--associationListTermLimit: min(18em, calc(50cqi / var(--associationListDepthCount, var(--associationListBlockDepthCount, 1))));
+		--associationListTermTrackLimit: min(18em, calc(50% / var(--associationListDepthCount, var(--associationListBlockDepthCount, 1))));
 
 		margin: 0;
 		display: grid;
@@ -288,6 +291,7 @@ article.note {
 		}
 
 		.association-list-term-content {
+			box-sizing: border-box;
 			padding-inline-end: var(--associationListTermGap);
 			min-width: 0;
 			max-inline-size: var(--associationListTermLimit);

@@ -69,16 +69,18 @@ export function associationListAlignment(editor: Editor) {
 		for (const run of getRuns()) {
 			const blocks = run.map(getBlock).filter(Boolean)
 			const widths: number[] = []
+			let depthCount = 1
 			for (const block of blocks) {
 				for (const term of getTerms(block)) {
 					const line = term.parentElement as HTMLElement & { key?: string }
+					const depth = Number(line.dataset.associationListDepth)
+					depthCount = Math.max(depthCount, depth + 1)
 					const width = line.classList.contains('revealed')
 						? previousWidths.get(line.key)
 						: term.getBoundingClientRect().width
 					if (width === undefined) continue
 					termWidths.set(line.key, width)
 
-					const depth = Number(line.dataset.associationListDepth)
 					widths[depth] = Math.max(widths[depth] ?? 0, width)
 				}
 			}
@@ -91,7 +93,7 @@ export function associationListAlignment(editor: Editor) {
 
 			const selectors = blocks.map(block =>
 				`[data-association-list-scope="${scope}"] [data-association-list-block="${CSS.escape((block as HTMLElement).dataset.associationListBlock)}"]`)
-			rules.push(`${selectors.join(', ')} { ${declarations} }`)
+			rules.push(`${selectors.join(', ')} { --associationListDepthCount: ${depthCount}; ${declarations} }`)
 		}
 
 		const text = rules.join('\n')
