@@ -63,6 +63,18 @@ function findAssociationListSeparator(content: string) {
 			continue
 		}
 
+		if (char === '⁅') {
+			// Keycaps consume the whole candidate, including incomplete spans.
+			let depth = 1
+			while (++index < content.length) {
+				const current = content[index]
+				if (current === '\\' && ['\\', '⁅', '⁆'].includes(content[index + 1])) index++
+				else if (current === '⁅') depth++
+				else if (current === '⁆' && --depth === 0) break
+			}
+			continue
+		}
+
 		if (char === '$') {
 			const marker = content[index + 1] === '$' ? '$$' : '$'
 			const contentStart = index + marker.length
