@@ -10,6 +10,9 @@ styles.replaceSync(`
 	button.definition { vertical-align: baseline; }
 	button:hover { text-decoration: underline; }
 	button:focus-visible { outline: 2px solid var(--accentColor); outline-offset: 2px; }
+	.key { display: none; }
+	button:is(:hover, :focus) .number { display: none; }
+	button:is(:hover, :focus) .key { display: inline; }
 `)
 
 export default class TangentFootnote extends HTMLElement {
@@ -54,7 +57,7 @@ export default class TangentFootnote extends HTMLElement {
 		this.dispatchEvent(new CustomEvent('footnote-resolve', { bubbles: true, composed: true }))
 	}
 
-	update(note: ResolvedFootnote) {
+	update(note: ResolvedFootnote, numericReferences = false) {
 		this.resolved = note
 		const definition = this.hasAttribute('footnote-definition')
 		if (note?.number) {
@@ -62,9 +65,20 @@ export default class TangentFootnote extends HTMLElement {
 			button.type = 'button'
 			const key = this.getAttribute('footnote-key') ?? note.key
 			const label = /^\p{Decimal_Number}+$/u.test(key) ? String(note.number) : key
-			button.textContent = label + (definition ? ' ↩' : '')
+			if (numericReferences && !definition) {
+				const number = document.createElement('span')
+				number.className = 'number'
+				number.textContent = String(note.number)
+				const original = document.createElement('span')
+				original.className = 'key'
+				original.textContent = key
+				button.append(number, original)
+			} else {
+				button.textContent = label + (definition ? ' ↩' : '')
+			}
 			button.className = definition ? 'definition' : ''
-			button.setAttribute('aria-label', definition ? `Return from footnote ${label}` : `Go to footnote ${label}: ${note.text}`)
+			const referenceLabel = numericReferences ? `${note.number} (${key})` : label
+			button.setAttribute('aria-label', definition ? `Return from footnote ${label}` : `Go to footnote ${referenceLabel}: ${note.text}`)
 			this.output.replaceChildren(button)
 		}
 		else {

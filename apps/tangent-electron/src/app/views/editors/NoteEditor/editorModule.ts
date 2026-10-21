@@ -196,8 +196,8 @@ export default function editorModule(editor: Editor, options: {
 	// `editorModule` is allowed to do this as its the primary module and can know about
 	// all default modules in MarkdownEditor
 	const markdownEditor = editor as MarkdownEditor
-	const footnotes = footnoteModule(editor)
 	const { workspace } = options
+	const footnotes = footnoteModule(editor, workspace?.settings?.numericFootnoteReferences)
 
 	let allowVerification = true
 	let verificationInstructions: (VerificationInstruction<unknown>)[] = []

@@ -13,6 +13,8 @@ An observation[^source], mentioned again[^source].
 
 References with a name, such as `[^source]` or `[^uax15]`, display that literal key in superscript. Digit-only keys display their assigned number, ordered by first reference in the note. Repeated references resolve to the same definition. References use the color and hover underline of internal links. Keys stay exactly as written in your Markdown, and matching ignores case.
 
+Enable **Numeric Footnote References** in **Settings → Notes → Appearance** to show every resolved reference as a number in order of first appearance. Hover over a number or focus it with the keyboard to reveal its original ID, including its case. Definition labels keep their usual IDs, and the setting does not change your Markdown. The option is off by default and applies immediately to notes and read-only previews.
+
 Hover over a reference to preview its definition. Click it to jump to the definition; click the definition's return marker to go back to the reference you followed. Move the text cursor into a marker to edit its original syntax. A folded destination becomes visible when you navigate to it.
 
 Definitions stay where you wrote them. They can precede or follow their references, and an optional `Sources` heading remains available in the [[Outline]]. Indent continuation paragraphs by four spaces or a tab. Definition content uses Tangent's usual Markdown formatting; the hover preview displays its source as text.
