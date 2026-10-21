@@ -252,11 +252,12 @@ article.note {
 		--associationListBarWidth: calc(var(--fontSize) * .125);
 		--associationListBarPadding: calc(var(--fontSize) * .5);
 		--associationListTermGap: .45em;
+		--associationListRowGap: calc(var(--fontSize) * .2);
 
 		margin: 0;
 		display: grid;
 		grid-auto-rows: minmax(1.3em, auto);
-		row-gap: .2em;
+		row-gap: var(--associationListRowGap);
 
 		.association-list-line {
 			min-height: 1.3em;
@@ -369,6 +370,15 @@ article.note {
 			font-weight: 400;
 			color: var(--accentTextColor);
 			&:hover, &:focus-visible { background: var(--accentDeemphasizedBackgroundColor); }
+			&.association-list-bar-joined::after {
+				content: '';
+				position: absolute;
+				inset-block-start: 100%;
+				inset-inline-start: calc(var(--associationListBarWidth) / 3);
+				width: calc(var(--associationListBarWidth) / 3);
+				height: var(--associationListRowGap);
+				background: var(--accentDeemphasizedBackgroundColor);
+			}
 		}
 
 		.association-list-value-content { min-height: 0; }
