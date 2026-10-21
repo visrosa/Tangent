@@ -252,13 +252,16 @@ article.note {
 		--associationListBarWidth: calc(var(--fontSize) * .125);
 		--associationListBarPadding: calc(var(--fontSize) * .5);
 		--associationListTermGap: .45em;
+		--associationListTermLimit: min(18em, calc(50cqi / var(--associationListDepthCount, 1)));
 
 		margin: 0;
 		display: grid;
+		container-type: inline-size;
 		grid-auto-rows: minmax(1.3em, auto);
 		row-gap: 0;
 
 		.association-list-line {
+			min-width: 0;
 			min-height: 1.3em;
 			line-height: 1.3em;
 			white-space: normal;
@@ -286,6 +289,9 @@ article.note {
 
 		.association-list-term-content {
 			padding-inline-end: var(--associationListTermGap);
+			min-width: 0;
+			max-inline-size: var(--associationListTermLimit);
+			overflow-wrap: anywhere;
 			// Keeps the box at its content width so it can be measured for alignment
 			justify-self: start;
 		}
