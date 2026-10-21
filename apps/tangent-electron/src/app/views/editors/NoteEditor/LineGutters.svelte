@@ -1,19 +1,44 @@
 <script lang="ts">
-import { onDestroy, tick } from 'svelte'
+import { onDestroy, onMount, tick } from 'svelte'
 import { isLineCollapsible } from 'common/markdownModel/sections'
-import { getLineGutterTargets, type LineTarget } from './lineGeometry'
+import { getGutterColumnCount, getLineGutterTargets, type LineTarget } from './lineGeometry'
 import type MarkdownEditor from './MarkdownEditor'
 import LineGutterLeft from './LineGutterLeft.svelte'
 import LineGutterRight from './LineGutterRight.svelte'
 
 export let editor: MarkdownEditor
 export let container: HTMLElement
+export let onWidth: (width: number) => void = () => {}
 
 let host: HTMLElement
 let point: { x: number, y: number } = null
 let left: LineTarget[] = []
 let right: LineTarget = null
 let disposed = false
+let width = 32
+let frame = 0
+
+function updateWidth() {
+	if (!editor.root) return
+	const lines = Array.from(editor.root.querySelectorAll<HTMLElement>('.line'))
+		.filter((element, index) => editor.doc.lines[index]?.attributes.associationList && isLineCollapsible(editor.doc.lines, index))
+	// Each fixed-size chevron occupies 24px including its gutter padding.
+	const required = getGutterColumnCount(lines) * 24 + 8
+	if (required !== width) {
+		width = required
+		onWidth(width)
+	}
+}
+
+function scheduleLayout() {
+	if (frame) return
+	frame = requestAnimationFrame(async () => {
+		frame = 0
+		updateWidth()
+		await tick()
+		if (!disposed) refresh()
+	})
+}
 
 function refresh() {
 	if (!point || !editor.root) return
@@ -53,11 +78,28 @@ $: setHost(container)
 
 async function onEditorChanged() {
 	await tick()
-	if (!disposed) refresh()
+	if (!disposed) scheduleLayout()
 }
 editor.on('changed', onEditorChanged)
+onMount(() => {
+	const observer = new ResizeObserver(scheduleLayout)
+	function observeRoot() {
+		observer.disconnect()
+		if (editor.root) observer.observe(editor.root)
+		scheduleLayout()
+	}
+	editor.on('root', observeRoot)
+	observeRoot()
+	editor.addEventListener('rendered', scheduleLayout)
+	return () => {
+		observer.disconnect()
+		editor.off('root', observeRoot)
+		editor.removeEventListener('rendered', scheduleLayout)
+	}
+})
 onDestroy(() => {
 	disposed = true
+	cancelAnimationFrame(frame)
 	setHost(null)
 	editor.off('changed', onEditorChanged)
 })
