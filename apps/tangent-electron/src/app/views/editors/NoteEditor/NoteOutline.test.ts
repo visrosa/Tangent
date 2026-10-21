@@ -17,10 +17,11 @@ import '../../../../../static/global.css'
 const cleanups: (() => Promise<void>)[] = []
 afterEach(async () => { for (const cleanup of cleanups.splice(0)) await cleanup() })
 
-function setup(source: string, width = 800, titleSidebar = false) {
+function setup(source: string, width = 800, titleSidebar = false, gutterWidth = 32) {
 	void TangentEmbed
 	const container = document.createElement('main')
 	container.style.cssText = `width:${width}px;height:300px;overflow:auto;box-sizing:border-box;position:relative;`
+	container.style.setProperty('--lineGutterExtraWidth', Math.max(0, gutterWidth - 32) + 'px')
 	const root = document.createElement('article')
 	root.className = 'note'
 	root.style.whiteSpace = 'pre-wrap'
@@ -43,9 +44,9 @@ function setup(source: string, width = 800, titleSidebar = false) {
 	const component = mount(NoteOutline, {
 		target: container, anchor: root,
 		props: {
-			editor, container, info,
+			editor, container, info, gutterWidth,
 			onControl: value => control.set(value),
-			onWidth: width => { container.style.setProperty('--outlineWidth', width + 'px'); container.style.paddingLeft = width + 'px' },
+			onWidth: width => { container.style.setProperty('--outlineWidth', width + 'px'); container.style.paddingLeft = width + Math.max(0, gutterWidth - 32) + 'px' },
 			onNavigate: position => editor.select(position)
 		}
 	})
@@ -123,6 +124,16 @@ describe('note outline', () => {
 		expect(nav.textContent).not.toContain('Outline')
 		expect(nav.getAttribute('aria-label')).toBe('Note outline')
 	})
+	it.each([800, 1600])('keeps a three-control gutter clear at %ipx', async width => {
+		const { container } = setup('# Title\nBody', width, false, 80)
+		const article = container.querySelector('article')
+		article.style.maxWidth = '700px'
+		article.style.margin = '0 auto'
+		await wait(80)
+		const textStart = article.getBoundingClientRect().left + parseFloat(getComputedStyle(article).paddingLeft)
+		expect(container.querySelector('nav').getBoundingClientRect().right).toBeLessThan(textStart - 80)
+	})
+
 	it('folds on narrow panels, opens on demand and preserves the saved preference', async () => {
 		const { container, info } = setup('# Title', 500)
 		await wait(40)
