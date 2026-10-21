@@ -1,6 +1,6 @@
 import { type EditorRange, Line, normalizeRange, TextChange, TextDocument } from '@typewriter/document'
 import { lineIsMultiLineFormat } from './line'
-import type { AssociationListLineData } from './associationList'
+import { getAssociationListTermKey, type AssociationListLineData } from './associationList'
 import { deepEqual } from 'fast-equals'
 
 /**
@@ -22,8 +22,8 @@ export function compareSectionDepth(lineA: Line, lineB: Line): number | true {
 	}
 	const associationListA = attrA.associationList as AssociationListLineData | undefined
 	const associationListB = attrB.associationList as AssociationListLineData | undefined
-	if (associationListA?.role === 'term' && associationListB?.role === 'value' && associationListB.termIndent === (attrA.indent?.indent ?? '')) return -1
-	if (associationListB?.role === 'term' && associationListA?.role === 'value' && associationListA.termIndent === (attrB.indent?.indent ?? '')) return 1
+	if (associationListA?.role === 'term' && associationListB?.termIndent === getAssociationListTermKey(attrA.indent?.indent ?? '', associationListA)) return -1
+	if (associationListB?.role === 'term' && associationListA?.termIndent === getAssociationListTermKey(attrB.indent?.indent ?? '', associationListB)) return 1
 	
 	// Headers beat out everything
 	const headerA = attrA?.header

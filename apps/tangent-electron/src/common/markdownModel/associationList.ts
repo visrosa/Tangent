@@ -7,6 +7,7 @@ import { lineToText } from '../typewriterUtils'
 export type AssociationListLineData = {
 	role: 'term' | 'value'
 	glyph?: ListDefinition
+	marker?: ':'
 	hasValue?: boolean
 	rootIndent?: string
 	termIndent?: string
@@ -162,6 +163,12 @@ export function matchAssociationListValueMarker(line: string) {
 	return /^[ \t]*:[ \t]/.exec(line)
 }
 
+// A plain term and its colon-prefixed child can share source indentation.
+// The marker distinguishes their ownership keys without changing source bytes.
+export function getAssociationListTermKey(indent: string, data: AssociationListLineData) {
+	return indent + (data.marker ?? '')
+}
+
 export function injectAssociationListChildren(parser: NoteParser) {
 	const { feed } = parser
 	if (!(feed instanceof DocumentFeeder)) return
@@ -190,13 +197,13 @@ export function findParentAssociationListTerm(
 		const associationList = previous.attributes.associationList as AssociationListLineData | undefined
 		if (previousIndent.length > currentIndent.length) continue
 		if (previousIndent === currentIndent) {
-			if (!allowSameIndent || associationList?.role === 'value') continue
+			if (!allowSameIndent || associationList?.role === 'value' || associationList?.marker === ':') continue
 		}
 		else if (previousIndent.length === currentIndent.length) return null
 		if (associationList?.role === 'term' && (!requireBare || associationList.hasValue === false)) {
 			return {
 				rootIndent: associationList.rootIndent ?? previousIndent,
-				termIndent: previousIndent
+				termIndent: getAssociationListTermKey(previousIndent, associationList)
 			}
 		}
 		return null
@@ -214,7 +221,16 @@ export function parseAssociationListBlock(_char: string, parser: NoteParser): bo
 	if (marker) {
 		const parent = findParentAssociationListTerm(parser, indent, true, true)
 		if (!parent) return false
-		setAssociationListLineData(parser, { role: 'value', ...parent })
+		const content = line.slice(marker[0].length)
+		const separator = findAssociationListSeparator(content)
+		const isTerm = separator >= 0 && !!content.slice(0, separator).trim() && !content.slice(separator + 3).trim()
+		setAssociationListLineData(parser, isTerm
+			? { role: 'term', marker: ':', hasValue: false, ...parent }
+			: { role: 'value', ...parent })
+		if (isTerm) {
+			setAssociationListTermSeparator(parser, feed.index + marker[0].length + separator)
+			injectAssociationListChildren(parser)
+		}
 		feed.nextByLength(marker[0].length - 1)
 		parser.commitSpan({ line_format: 'associationList', hidden: true })
 		return true

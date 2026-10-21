@@ -60,7 +60,7 @@ export function getLineFormattingPrefix(line: Line, forNextLine = false): string
 			if (!result.endsWith(' ')) {
 				result += ' '
 			}
-			if (attr.associationList?.role === 'value' && matchAssociationListValueMarker(lineString.slice(match[0].length))) {
+			if (attr.associationList && matchAssociationListValueMarker(lineString.slice(match[0].length))) {
 				result += ': '
 			}
 			return result

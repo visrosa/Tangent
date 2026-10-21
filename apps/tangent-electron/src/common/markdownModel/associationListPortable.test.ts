@@ -3,8 +3,52 @@ import { markdownToTextDocument, parseMarkdown } from './parser'
 import { getLineFormattingPrefix } from './line'
 import { collapseSection, compareSectionDepth, isLineCollapsible } from './sections'
 import { typewriterToText } from 'common/typewriterUtils'
+import { TextDocument } from '@typewriter/document'
 
 describe('portable Association Lists', () => {
+	test.each(['  ', '\t'])('nests colon terms and values using %j indentation', indent => {
+		const source = `Catalog ::\n: First ::\n${indent}: Chapter ::\n${indent}${indent}: A nested value\n${indent}: Another chapter ::\n${indent}${indent}: Another value\n: Second ::\n${indent}: A sibling value\n: A root value\nNext ::\n: A separate value`
+		const document = markdownToTextDocument(source)
+		expect(document.lines.map(line => line.attributes.associationList?.role)).toEqual([
+			'term', 'term', 'term', 'value', 'term', 'value', 'term', 'value', 'value', 'term', 'value'
+		])
+		expect(document.lines.map(line => line.attributes.associationList?.termIndent)).toEqual([
+			undefined, '', ':', indent + ':', ':', indent + ':', '', ':', '', undefined, ''
+		])
+		expect(typewriterToText(document)).toBe(source)
+		expect(Object.keys(collapseSection(document, document.lines[1]))).toEqual(document.lines.slice(1, 6).map(line => line.id))
+		expect(Object.keys(collapseSection(document, document.lines[0]))).toEqual(document.lines.slice(0, 9).map(line => line.id))
+	})
+
+	test('retains inline separators in colon values as literal source', () => {
+		const document = markdownToTextDocument('Catalog ::\n: First ::\n  : Chapter :: A literal description')
+		expect(document.lines[2].attributes.associationList).toMatchObject({ role: 'value', termIndent: ':' })
+		expect(document.lines[2].content.ops.some(op => op.attributes?.association_separator)).toBe(false)
+	})
+
+	test('handles quoted colon terms, nested list terms and continuation', () => {
+		const document = markdownToTextDocument('Catalog ::\n: First ::\n  - Chapter ::\n    : A value')
+		expect(document.lines.map(line => line.attributes.associationList?.role)).toEqual(['term', 'term', 'term', 'value'])
+		expect(document.lines[2].attributes.associationList.termIndent).toBe(':')
+		expect(document.lines[3].attributes.associationList.termIndent).toBe('  ')
+		const quoted = markdownToTextDocument('> Catalog ::\n> : First ::')
+		expect(quoted.lines[1].attributes.associationList).toMatchObject({ role: 'term', marker: ':', termIndent: '' })
+		expect(getLineFormattingPrefix(quoted.lines[1], true)).toBe('> : ')
+	})
+
+	test.each([' ::', ''])('incrementally reparses nested ownership when a colon term becomes %j', suffix => {
+		const source = 'Catalog ::\n: First\n  : A value\n: Second ::\n  : Another value'
+		const initial = markdownToTextDocument(source)
+		const offset = source.indexOf('First') + 'First'.length
+		const withTerm = initial.apply(initial.change.insert(offset, ' ::'))
+		const parsed = new TextDocument(parseMarkdown(withTerm, { documentStartLine: 1, documentEndLine: 1 }).lines)
+		expect(parsed.lines[2].attributes.associationList?.termIndent).toBe(':')
+		const edited = suffix ? parsed : parsed.apply(parsed.change.delete([offset, offset + 3]))
+		const result = parseMarkdown(edited, { documentStartLine: 1, documentEndLine: 1 })
+		const full = markdownToTextDocument(typewriterToText(edited))
+		expect(result.lines.map(line => line.attributes)).toEqual(full.lines.map(line => line.attributes))
+	})
+
 	test.each([
 		'requires ::\n: electron\n: npm\n: typewriter',
 		'- requires ::\n: electron\n: npm\n: typewriter',

@@ -65,6 +65,56 @@ function textLeft(element: Element, text: string) {
 }
 
 describe('association-list HTML', () => {
+	test('exports nested colon terms with distinct same-indent ownership', () => {
+		const source = 'Catalog ::\n: Volume ::\n  : Chapter ::\n    : Text\n: Index ::\n  : Entries\n: General note'
+		expect(structure(render(source).querySelector('dl.association-list'))).toEqual([
+			['DT', 'Catalog'], ['SUBTREE', [
+				['DT', 'Volume'], ['SUBTREE', [['DT', 'Chapter'], ['DD', 'Text']]],
+				['DT', 'Index'], ['DD', 'Entries']
+			]], ['DD', 'General note']
+		])
+		const { editor, documentModel } = createEditor(source)
+		const restored = docFromHTML(editor, docToHTML(editor, documentModel))
+		expect(restored.lines.map(line => line.attributes.associationList))
+			.toEqual(documentModel.lines.map(line => line.attributes.associationList))
+	})
+
+	test('keeps nested colon source keyed, editable and independently collapsible', async () => {
+		const source = 'Catalog ::\n: Volume ::\n  : Chapter ::\n    : Text\n: Index ::\n  : Entries\nplain'
+		const { editor, root } = createMarkdownEditor(source)
+		const article = mountInNote(root)
+		const lines = () => Array.from(root.querySelectorAll('.association-list-line')) as HTMLElement[]
+		try {
+			expect(lines().map(line => (line as any).key)).toEqual(editor.doc.lines.slice(0, -1).map(line => line.id))
+			expect(lines().filter(line => line.dataset.associationListDepth).map(line => line.dataset.associationListDepth)).toEqual(['0', '1', '2', '1'])
+			const bars = Array.from(root.querySelectorAll('.association-list-collapse-bar')) as HTMLElement[]
+			expect(bars.map(bar => bar.dataset.associationListOwner)).toEqual([editor.doc.lines[2].id, editor.doc.lines[4].id])
+			bars[0].click()
+			await wait()
+			expect(getComputedStyle(lines()[3]).display).toBe('none')
+			expect(getComputedStyle(lines()[4]).display).not.toBe('none')
+			editor.collapsingSections.toggleLineCollapsed(2)
+			await wait()
+			for (const label of ['Catalog', 'Volume', 'Chapter', 'Text', 'Index', 'Entries']) {
+				const position = source.indexOf(label) + 1
+				editor.select(position)
+				await wait()
+				expect(editor.doc.selection).toEqual([position, position])
+				expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+			}
+			editor.select(source.indexOf('Chapter') + 'Chapter'.length + 1)
+			await wait()
+			expect(root.querySelectorAll('.association_separator-source.revealed')).toHaveLength(1)
+			editor.select(source.indexOf('Text'))
+			editor.insert('Edited ')
+			await wait()
+			expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source.replace('Text', 'Edited Text') + '\n')
+		} finally {
+			editor.destroy()
+			article.remove()
+		}
+	})
+
 	test('keeps a later separator as literal value text', () => {
 		const container = render('- 🜨 :: Terra or Earth :: Alchemical symbol for antimony')
 		const list = container.querySelector('dl.association-list')

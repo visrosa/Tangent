@@ -9,7 +9,7 @@ import type { CodeData } from './code'
 import type { MathData } from './math'
 import type { FuriganaData } from './furigana'
 import type { GlossData } from './gloss'
-import type { AssociationListLineData, AssociationListSeparatorData } from './associationList'
+import { getAssociationListTermKey, type AssociationListLineData, type AssociationListSeparatorData } from './associationList'
 import { hiddenGroupEmbedFormat } from './hiddenGroupEmbed'
 import { getHiddenGroupAttributes } from './inline'
 import { hasCollapsedChildren, isCollapsed } from './sections'
@@ -285,7 +285,7 @@ function getAssociationListColumns(lineData: AssociationListLineEntry[]) {
 		if (associationList.role === 'value') return { start: 2 * parentDepth + 3, depth: undefined }
 
 		const depth = parentDepth + 1
-		termDepths.set(attributes.indent?.indent ?? '', depth)
+		termDepths.set(getAssociationListTermKey(attributes.indent?.indent ?? '', associationList), depth)
 		maxDepth = Math.max(maxDepth, depth)
 		return { start: 2 * depth + 1, depth }
 	})
@@ -306,7 +306,7 @@ function buildAssociationListTree(lineData: AssociationListLineEntry[]): Associa
 			: latestTermByIndent.get(associationList.termIndent)
 
 		;(parent?.children ?? roots).push(node)
-		if (associationList.role === 'term') latestTermByIndent.set(attributes.indent?.indent ?? '', node)
+		if (associationList.role === 'term') latestTermByIndent.set(getAssociationListTermKey(attributes.indent?.indent ?? '', associationList), node)
 	}
 
 	return roots
@@ -383,6 +383,7 @@ function getAssociationListExportProps(attributes: AttributeMap, role: Associati
 	const props = getCoreLineProperties(attributes, `association-list-${role}`)
 	props.key = key
 	props['data-association-list-role'] = role
+	if (associationList.marker) props['data-association-list-marker'] = associationList.marker
 	if (associationList.hasValue !== undefined) props['data-association-list-has-value'] = String(associationList.hasValue)
 	if (associationList.termIndent !== undefined) props['data-association-list-term-indent'] = associationList.termIndent
 	if (associationList.rootIndent !== undefined) props['data-association-list-root-indent'] = associationList.rootIndent
@@ -470,6 +471,7 @@ const noteTypeset:TypesetTypes = {
 				if (hasValue !== null) associationList.hasValue = hasValue === 'true'
 
 				const termIndent = node.getAttribute('data-association-list-term-indent')
+				if (node.getAttribute('data-association-list-marker') === ':') associationList.marker = ':'
 				if (termIndent !== null) associationList.termIndent = termIndent
 
 				const rootIndent = node.getAttribute('data-association-list-root-indent')
@@ -583,6 +585,7 @@ const noteTypeset:TypesetTypes = {
 						if (depth !== undefined) props['data-association-list-depth'] = String(depth)
 						props.key = id
 						props['data-association-list-role'] = associationList.role
+						if (associationList.marker) props['data-association-list-marker'] = associationList.marker
 						if (associationList.hasValue !== undefined) props['data-association-list-has-value'] = String(associationList.hasValue)
 						if (associationList.termIndent !== undefined) props['data-association-list-term-indent'] = associationList.termIndent
 						if (associationList.rootIndent !== undefined) props['data-association-list-root-indent'] = associationList.rootIndent
