@@ -30,3 +30,17 @@ Terra ::
 Solar System ::
 	Terrestrial planets ::
 	: Rocky planets closer to the Sun
+
+Library ::
+: Volume ::
+  : Chapter ::
+    : A chapter description
+  : Appendix ::
+    : Supplementary material
+: Index ::
+  : Alphabetical entries
+
+References ::
+: A reference collection with a long descriptive title ::
+  : A chapter with another long descriptive title ::
+    : A readable description that should retain enough space to wrap normally in a narrow note.
