@@ -7,6 +7,10 @@ on:
       - "tangent-v*"
       - "tangent-dev"
 
+concurrency:
+  group: linux-packaging-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   linux-packages:
     name: Build Linux packages
@@ -82,6 +86,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
+          # Queued runs need not start in push order. Only the current rolling
+          # tag may replace its assets, even after a successful older build.
+          if [[ "$GITHUB_REF_NAME" == "tangent-dev" ]]; then
+            current_sha=$(git ls-remote origin refs/tags/tangent-dev | cut -f1)
+            if [[ "$current_sha" != "$GITHUB_SHA" ]]; then
+              echo "Skipping superseded tangent-dev build $GITHUB_SHA."
+              exit 0
+            fi
+          fi
+
           RELEASE_FLAGS=""
           RELEASE_NOTES=$'Linux packages from this fork are provided as-is and not supported by the upstream project.\nUpstream: https://github.com/suchnsuch/Tangent\nRPM packages are currently untested. If you use an RPM-based distribution, please report results or issues.'
           ASSETS="apps/tangent-electron/dist/*-linux.tar.gz apps/tangent-electron/dist/*.deb apps/tangent-electron/dist/*.rpm dist/gentoo-source/*-gentoo-source.tar.gz dist/gentoo-source/*-gentoo-vendor.tar.zst"
