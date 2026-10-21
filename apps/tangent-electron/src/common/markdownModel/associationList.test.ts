@@ -9,6 +9,22 @@ import { getLineFormattingPrefix, lineFormatEscapeMode, lineHasMultiLineContext 
 
 describe('matchAssociationListSeparator', () => {
 	test.each([
+		'- ⁅A :: B⁆',
+		'- ⁅⁅A :: B⁆⁅C :: D⁆⁆',
+		String.raw`- ⁅A \⁆ :: B⁆`,
+		'- ⁅A :: B',
+		'- ⁅ ⁆',
+	])('keeps separators inside keycap candidates literal: %s', source => {
+		expect(matchAssociationListSeparator(source, matchList(source))).toBeNull()
+		expect(markdownToTextDocument(source).lines[0].attributes.associationList).toBeUndefined()
+	})
+
+	test.each(['⁅A :: B⁆', '⁅⁅A :: B⁆⁅C⁆⁆', String.raw`⁅A \⁆ :: B⁆`])('finds a separator after a keycap candidate: %s', keycap => {
+		const source = '- ' + keycap + ' :: value'
+		expect(matchAssociationListSeparator(source, matchList(source))).toEqual({ index: keycap.length + 2, hasValue: true })
+	})
+
+	test.each([
 		['- term :: value', { index: 6, hasValue: true }],
 		['- term\t::\tvalue', { index: 6, hasValue: true }],
 		['- term ::', { index: 6, hasValue: false }],
