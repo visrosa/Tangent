@@ -115,6 +115,30 @@ describe('association-list HTML', () => {
 		}
 	})
 
+	test.skipIf(!noteTypeset.formats.some(format => typeof format !== 'string' && format.name === 'keyboard'))
+	.each([false, true])('preserves keycaps containing separators with a real term separator: %s', async term => {
+		const source = '- ⁅A :: B⁆' + (term ? ' :: Value' : '')
+		const { editor, root } = createMarkdownEditor(source)
+		const article = mountInNote(root)
+		try {
+			await wait()
+			expect(!!editor.doc.lines[0].attributes.associationList).toBe(term)
+			const output = root.querySelector('t-keyboard')
+			expect(output.shadowRoot.querySelector('kbd').textContent).toBe('A :: B')
+			expect(root.querySelectorAll('.association_separator-source')).toHaveLength(term ? 1 : 0)
+			if (term) {
+				const list = render(source).querySelector('dl.association-list')
+				expect(list.querySelector('dt kbd').textContent).toBe('A :: B')
+				expect(list.querySelector('dd').textContent).toBe('Value')
+			}
+			editor.select(source.indexOf('B'))
+			editor.insert('Edited ')
+			await wait()
+			expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join(''))
+				.toBe(source.replace('B', 'Edited B') + '\n')
+			expect(!!editor.doc.lines[0].attributes.associationList).toBe(term)
+		} finally { editor.destroy(); article.remove() }
+	})
 	test('keeps a later separator as literal value text', () => {
 		const container = render('- 🜨 :: Terra or Earth :: Alchemical symbol for antimony')
 		const list = container.querySelector('dl.association-list')
