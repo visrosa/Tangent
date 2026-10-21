@@ -755,6 +755,24 @@ describe('association-list alignment', () => {
 		article.remove()
 	})
 
+	test('aligns blocks of different depths while resizing a long-label run', async () => {
+		const source = '- A long root label requiring a bounded column :: one\n\n- x :: two\n  - y ::\n    - z :: A nested description'
+		const { editor, root } = createMarkdownEditor(source)
+		const article = mountInNote(root)
+		try {
+			for (const width of [640, 360, 1100]) {
+				article.style.width = `${width}px`
+				await settle()
+				const values = root.querySelectorAll('.association-list-value-content')
+				expect(values[0].getBoundingClientRect().left).toBeCloseTo(values[1].getBoundingClientRect().left, 0)
+				expect(values[2].getBoundingClientRect().width).toBeGreaterThan(width * .3)
+			}
+		} finally {
+			editor.destroy()
+			article.remove()
+		}
+	})
+
 	test('keeps lists separated by other lines independent', async () => {
 		const { article, valueLeft } = await mountMarkdownEditor('- x :: one\nparagraph\n- a longer term :: two')
 
