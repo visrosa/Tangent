@@ -594,14 +594,14 @@ const noteTypeset:TypesetTypes = {
 
 					// associationListAlignment sets the widths to align blocks separated by blank lines
 					const termTracks = Array.from({ length: columns.maxDepth + 1 },
-						(_track, depth) => `minmax(var(--associationListTermWidth${depth}, 0px), max-content) max-content`)
+						(_track, depth) => `minmax(min(var(--associationListTermWidth${depth}, 0px), var(--associationListTermLimit)), max-content) max-content`)
 					const rootIndent = lineData[0][0].indent?.indentSize ?? 0
 					return wrap(h('div', {
 						className: revealed
 							? 'association-list editor-association-list revealed'
 							: 'association-list editor-association-list',
 						'data-association-list-block': lineData[0][2],
-						style: `grid-template-columns:${termTracks.join(' ')} minmax(0, 1fr);`
+						style: `--associationListDepthCount:${columns.maxDepth + 1};grid-template-columns:${termTracks.join(' ')} minmax(0, 1fr);`
 							+ `margin-inline-start:calc(var(--spaceWidth) * ${rootIndent});`
 					}, lines))
 				}

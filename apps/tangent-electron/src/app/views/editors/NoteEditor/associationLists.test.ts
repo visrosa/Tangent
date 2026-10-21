@@ -687,6 +687,24 @@ plain`
 })
 
 describe('association-list alignment', () => {
+	test.each([360, 640, 1100])('keeps long nested labels and values readable at %ipx', width => {
+		const source = '- Catalog ::\n  - A long reference label with several words ::\n    - Another very long label for a nested reference ::\n      - AnUnbrokenReferenceIdentifierThatMustWrap :: A readable description with enough words to wrap normally.\n- Summary :: A final value'
+		const { editor, root } = createEditor(source)
+		const article = mountInNote(root)
+		article.style.width = `${width}px`
+		const block = root.querySelector('.editor-association-list') as HTMLElement
+		const terms = root.querySelectorAll('.association-list-term-content')
+		const value = root.querySelector('.association-list-inline .association-list-value-content') as HTMLElement
+		expect(value.getBoundingClientRect().width).toBeGreaterThan(width * .3)
+		for (const term of terms) {
+			expect(term.getBoundingClientRect().right).toBeLessThanOrEqual(block.getBoundingClientRect().right + 1)
+			expect(term.scrollWidth).toBeLessThanOrEqual(term.clientWidth + 1)
+		}
+		expect(block.scrollWidth).toBeLessThanOrEqual(block.clientWidth + 1)
+		expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+		article.remove()
+	})
+
 	const settle = async () => {
 		for (let frame = 0; frame < 3; frame++) await new Promise(resolve => requestAnimationFrame(resolve))
 	}
