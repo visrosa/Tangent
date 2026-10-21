@@ -866,6 +866,26 @@ describe('shared term and value geometry', () => {
 
 describe('Association List bar controls', () => {
 	test.each([
+		'- first :: ' + 'a wrapped value '.repeat(20) + '\n- second :: next',
+		'- first ::\n\t- ' + 'a wrapped value '.repeat(20) + '\n- second ::\n\t- next',
+		'- parent ::\n\t- first :: one\n\t- second :: two'
+	])('separates neighboring value bars without changing source: %s', async source => {
+		const { editor, root } = createMarkdownEditor(source)
+		const article = mountInNote(root)
+		article.style.width = '400px'
+		try {
+			await wait()
+			const values = Array.from(root.querySelectorAll('.association-list-value, .association-list-value-content'))
+			expect(values).toHaveLength(2)
+			const first = values[0].getBoundingClientRect()
+			const second = values[1].getBoundingClientRect()
+			expect(second.top - first.bottom).toBeGreaterThan(2)
+			expect(second.left).toBeCloseTo(first.left, 0)
+			expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+		} finally { editor.destroy(); article.remove() }
+	})
+
+	test.each([
 		'- first ::\n- second :: inline\n\t- more\n- other :: remains',
 		'- first ::\n- second ::\n\t- value\n\t- more\n- other :: remains',
 		'- parent ::\n\t- child :: nested\n\t\t- more\n- other :: remains'

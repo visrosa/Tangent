@@ -261,7 +261,7 @@ article.note {
 		display: grid;
 		container-type: inline-size;
 		grid-auto-rows: minmax(1.3em, auto);
-		row-gap: 0;
+		row-gap: .2em;
 
 		.association-list-line {
 			min-width: 0;
