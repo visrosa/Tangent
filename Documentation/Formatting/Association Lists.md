@@ -43,6 +43,6 @@ The trailing `::` identifies each term immediately; it does not depend on a late
 
 Plain and list-marked terms can mix. A colon value may also be indented under a bare term, and plain terms can use indented list items for values. Nested plain terms and their colon values follow the same layout, collapse, and export rules as list-marked terms. Enter continues `: ` values; pressing Enter again on an empty value exits the list.
 
-Terms use the normal note font and text color. Values are slightly smaller and muted. Ordinary extra spacing collapses when rendered; entering a line reveals its exact Markdown and spacing for editing. Explicit code spacing and authored nonbreaking spaces retain their meaning.
+Terms use the normal note font and text color. Values are slightly smaller and muted. A small gap separates neighboring value bars; a value shared by several terms keeps one continuous bar. Ordinary extra spacing collapses when rendered; entering a line reveals its exact Markdown and spacing for editing. Explicit code spacing and authored nonbreaking spaces retain their meaning.
 
 Use the gutter chevron to collapse a term. Its values remain as a single-line summary, fading toward a trailing `⋯`. Inline code retains its spacing without wrapping in a collapsed value. Expanding restores their layout, and moving the caret into a folded region reveals its source. Collapsing does not change the note text.
