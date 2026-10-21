@@ -5,6 +5,16 @@ import { typewriterToText } from 'common/typewriterUtils'
 import { matchTableRow } from 'common/markdownModel/table'
 
 describe('HTML table paste and reopen', () => {
+	it.each(['<tr><td>A</td></tr>', '<thead><tr><th>Heading</th></tr></thead><tbody><tr><td>A</td></tr></tbody>'])('retains a simple captioned table after paste and reopen: %s', rows => {
+		const markdown = htmlToMarkdown('<table><caption>An <strong>example</strong></caption>' + rows + '</table>')
+		const reopened = markdownToTextDocument(typewriterToText(markdownToTextDocument(markdown)))
+		const model = reopened.lines[0].attributes.table.model
+		expect(model.caption.markdown).toBe('An **example**')
+		expect(model.body[0].cells[0].markdown).toBe('A')
+		expect(model.head).toHaveLength(rows.startsWith('<thead>') ? 1 : 0)
+		expect(typewriterToText(reopened)).toBe(markdown)
+	})
+
 	it('preserves header, empty cells, and escaped pipes through note serialization', () => {
 		const html = '<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td>a|b</td><td></td></tr></tbody></table>'
 		const markdown = htmlToMarkdown(html)

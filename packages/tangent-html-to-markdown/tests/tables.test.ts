@@ -2,6 +2,11 @@ import { describe, expect, it } from 'vitest'
 import htmlToMarkdown from '../src'
 
 describe('HTML tables', () => {
+	it('preserves captions on otherwise simple tables', () => {
+		expect(htmlToMarkdown('<table><caption>An <em>example</em></caption><tr><td>A</td></tr></table>'))
+			.toBe('+---+\n| A |\n+---+\n\n: An _example_')
+	})
+
 	it('converts header and body rows', () => {
 		expect(htmlToMarkdown('<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td>a</td><td>b</td></tr></tbody></table>'))
 			.toBe('| A | B |\n| --- | --- |\n| a | b |')

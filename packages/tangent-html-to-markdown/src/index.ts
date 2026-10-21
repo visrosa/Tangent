@@ -38,7 +38,7 @@ function gridTableFromHTML(table: HTMLTableElement): string | null {
 	const rows = Array.from(table.rows)
 	const coordinates: { cell: TableCell, origin: boolean }[][] = rows.map(() => [])
 	const model: TableModel = { columns: [], head: [], body: [], foot: [] }
-	let needsGrid = false
+	let needsGrid = !!table.caption
 	for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
 		const row = rows[rowIndex]
 		let groupEnd = rowIndex + 1
