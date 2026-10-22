@@ -41,6 +41,7 @@ function toggleLineCollapse() {
 <LineGutter {editor} {target} {column} side="left" let:doc>
 	{#if isLineCollapsible(doc.lines, target.index)}
 		<button class="subtle collapse"
+			class:shared-group={target.element.classList.contains('association-list-shared-owner')}
 			aria-label={`${lineHasCollapsedChildren(doc.lines[target.index]) ? 'Expand' : 'Collapse'} ${lineName}`}
 			aria-expanded={!lineHasCollapsedChildren(doc.lines[target.index])}
 			on:mousedown|preventDefault
@@ -57,5 +58,12 @@ button {
 	padding: 4px 2px;
 	display: flex;
 	align-items: center;
+}
+
+button.shared-group {
+	box-sizing: border-box;
+	height: 100%;
+	align-items: flex-start;
+	padding-block-start: calc((var(--lineGutterLineHeight) - 16px) / 2);
 }
 </style>

@@ -354,7 +354,7 @@ article.note {
 
 		// Shared source wrappers overlap earlier term rows. Only their fragments
 		// should receive pointer hits, so those earlier terms remain editable.
-		.association-list-shared-inline {
+		.association-list-shared-owner {
 			pointer-events: none;
 			> span { pointer-events: auto; }
 			.association-list-separator { grid-row: var(--associationListTermRow, 1); }
@@ -370,7 +370,7 @@ article.note {
 		.association-list-term:not(.association-list-inline) .association-list-term-content {
 			grid-column: 1;
 			// Spread wrapped-label sizing across the subtree instead of its first child.
-			grid-row: 1 / -1;
+			grid-row: var(--associationListTermRow, 1) / -1;
 		}
 
 		.association-list-term.collapse-parent::after {
@@ -409,6 +409,7 @@ article.note {
 
 		.association-list-summary {
 			grid-column: 3 / -1;
+			grid-row: 1 / -1;
 			min-width: 0;
 			padding-inline-start: var(--associationListBarPadding);
 			border-inline-start: var(--associationListBarWidth) solid var(--accentDeemphasizedBackgroundColor);
