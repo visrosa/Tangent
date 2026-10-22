@@ -1,6 +1,5 @@
 import type { FormatType, LineType, TypesetTypes } from 'typewriter-editor/typesetting'
 import { h } from 'typewriter-editor/rendering/vdom'
-import { foldedLineChildren } from './foldedText'
 import type { IndentDefinition } from './line'
 import { isEqual, type AttributeMap } from '@typewriter/document'
 import { isLargeList, type ListDefinition } from './list'
@@ -92,7 +91,7 @@ function revealableLine(lineName: string, elementName: string = 'div'): LineType
 			return h(
 				elementName,
 				getCoreLineProperties(attributes, lineName),
-				foldedLineChildren(attributes, children))
+				children)
 		},
 		fromDom: defaultLineFromDom(lineName)
 	}
@@ -203,7 +202,7 @@ const noteTypeset:TypesetTypes = {
 			name: 'line',
 			selector: 'p',
 			render: (attributes, children) => {
-				return h('p', getCoreLineProperties(attributes), foldedLineChildren(attributes, children))
+				return h('p', getCoreLineProperties(attributes), children)
 			},
 			fromDom: defaultLineFromDom('line')
 		},
@@ -211,7 +210,7 @@ const noteTypeset:TypesetTypes = {
 			name: 'header',
 			selector: 'h1, h2, h3, h4, h5, h6',
 			defaultFollows: true,
-			render: (attributes, children) => h(`h${attributes.header}`, getCoreLineProperties(attributes), foldedLineChildren(attributes, children)),
+			render: (attributes, children) => h(`h${attributes.header}`, getCoreLineProperties(attributes), children),
 			fromDom: defaultLineFromDom('header') // Technically incorrect, but will be re-parsed anyhow
 		},
 		{
@@ -232,7 +231,7 @@ const noteTypeset:TypesetTypes = {
 					props.className += ' checkbox ' + listData.todoState
 				}
 
-				return h('p', props, foldedLineChildren(attributes, children))
+				return h('p', props, children)
 			},
 			fromDom: defaultLineFromDom('list')
 		},
@@ -265,7 +264,7 @@ const noteTypeset:TypesetTypes = {
 					props.style = `--innerLineIndent: ${indent};` // Replace indent
 					props.key = id
 
-					return h('p', props, foldedLineChildren(attributes, children))
+					return h('p', props, children)
 				})
 
 				let className = 'depth-' + depth
@@ -313,7 +312,7 @@ const noteTypeset:TypesetTypes = {
 					let props = getCoreLineProperties(attributes, 'codeLine')
 					props.key = id
 
-					return h('div', props, foldedLineChildren(attributes, children))
+					return h('div', props, children)
 				})
 
 				const codeData = lineData[0][0].code as CodeData
@@ -391,7 +390,7 @@ const noteTypeset:TypesetTypes = {
 					else if (attributes.end) {
 						props.className += ' end'
 					}
-					return h('div', props, foldedLineChildren(attributes, children))
+					return h('div', props, children)
 				})
 				return h('div', { className: 'frontMatter', spellcheck: false }, h('code', null, children))
 			}
@@ -419,7 +418,7 @@ const noteTypeset:TypesetTypes = {
 					let props = getCoreLineProperties(attributes, 'mathLine')
 					props.key = id
 
-					return h('div', props, foldedLineChildren(attributes, children))
+					return h('div', props, children)
 				})
 
 				let containerClass = 'math-block-container output-container'
