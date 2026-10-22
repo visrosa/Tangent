@@ -79,7 +79,7 @@ article.note {
 		margin-bottom: rhythmUnit(.5);
 		font-weight: 600;
 	}
-	
+
 	h2.line {
 		padding: 0;
 		font-size: 150%;
@@ -187,7 +187,7 @@ article.note {
 					line-height: 0;
 					tab-size: 0; // Without this, tabs are always rendered. Silly.
 				}
-				
+
 				&:not(.checkbox)::after {
 					font-size: 100%;
 					position: absolute;
@@ -268,39 +268,49 @@ article.note {
 
 	}
 
-	.folded-text {
-		display: inline-grid;
-		grid-template-columns: minmax(0, auto) auto;
-		max-width: 100%;
-		vertical-align: top;
-		text-indent: 0;
-		white-space: nowrap;
-	}
-	.folded-text-content {
-		min-width: 0;
-		overflow: hidden;
-		white-space: nowrap;
-		mask-image: linear-gradient(to right, black calc(100% - 1.5em), transparent);
-		code.inline_code { white-space: pre; }
-	}
-	.folded-text-content:dir(rtl) {
-		mask-image: linear-gradient(to left, black calc(100% - 1.5em), transparent);
-	}
-	.folded-text-marker::after {
-		content: "⋯";
+	.line.collapse-parent:not(.association-list-line)::after {
+		content: "…";
 		font-size: var(--fontSize);
-		line-height: 1em;
 		color: var(--deemphasizedTextColor);
-		padding-inline-start: .15em;
+		padding-inline-start: .5em;
+		line-height: 1em;
 	}
-	.revealed > .folded-text,
-	.folded-text:has(.revealed) {
-		display: contents;
-		> .folded-text-content {
-			display: contents;
-			code.inline_code { white-space: pre-wrap; }
+
+	.editor-association-list {
+		.folded-text {
+			display: inline-grid;
+			grid-template-columns: minmax(0, auto) auto;
+			max-width: 100%;
+			vertical-align: top;
+			text-indent: 0;
+			white-space: nowrap;
 		}
-		> .folded-text-marker { display: none; }
+		.folded-text-content {
+			min-width: 0;
+			overflow: hidden;
+			white-space: nowrap;
+			mask-image: linear-gradient(to right, black calc(100% - 1.5em), transparent);
+			code.inline_code { white-space: pre; }
+		}
+		.folded-text-content:dir(rtl) {
+			mask-image: linear-gradient(to left, black calc(100% - 1.5em), transparent);
+		}
+		.folded-text-marker::after {
+			content: "⋯";
+			font-size: var(--fontSize);
+			line-height: 1em;
+			color: var(--deemphasizedTextColor);
+			padding-inline-start: .15em;
+		}
+		.revealed > .folded-text,
+		.folded-text:has(.revealed) {
+			display: contents;
+			> .folded-text-content {
+				display: contents;
+				code.inline_code { white-space: pre-wrap; }
+			}
+			> .folded-text-marker { display: none; }
+		}
 	}
 
 	// This second term allows hidden contents of lines to remain hidden when a set of lines is revealed by an outer block
@@ -350,7 +360,7 @@ article.note {
 		&.start, &.end {
 			height: rhythmUnit(1);
 			position: relative;
-			
+
 			&:not(.revealed):not(.collapse-parent)::after {
 				content: "";
 				display: block;
@@ -365,10 +375,19 @@ article.note {
 			}
 		}
 
-		&.start.collapse-parent .folded-text-content::before {
-			content: "Front matter";
+		&.start.collapse-parent::after {
+			content: "--- front matter ---";
 			font-style: italic;
-			color: var(--deemphasizedTextColor);
+			font-weight: 200;
+			display: inline-block;
+			border-top: 1px solid var(--deemphasizedTextColor);
+			border-bottom: 1px solid var(--deemphasizedTextColor);
+			opacity: .5;
+			line-height: rhythmUnit(1);
+			position: absolute;
+			left: 0;
+			right: .5em;
+			height: rhythmUnit(1);
 		}
 
 	}
@@ -473,7 +492,7 @@ article.note {
 				padding: .075em .3em;
 				background: var(--accentBackgroundColor);
 				border: 1px solid var(--accentBackgroundColor);
-				
+
 				&:not(.last) {
 					padding-inline-end: 0;
 					border-inline-end: none;
@@ -498,7 +517,7 @@ article.note {
 						inset-inline-start: 0.45em;
 						inset-block-start: 50%;
 						transform: translateY(-50%);
-						
+
 						background: var(--noteBackgroundColor);
 						border-radius: .25em;
 					}
@@ -717,7 +736,7 @@ article.note {
 	.line {
 		padding-inline-start: fontUnit(.5);
 	}
-	
+
 	h1, h2, h3, h4, h5, h6 {
 		&.line {
 			padding: 0;
@@ -752,7 +771,7 @@ t-link {
 		&:not(.start):not(.end) {
 			color: inherit;
 		}
-		
+
 		&.hidden.revealed {
 			color: inherit;
 		}
@@ -851,7 +870,7 @@ t-link[form="wiki"] {
 			font-size: 0;
 			min-height: 0;
 
-			
+
 			--lineIndent: 0;
 			t-embed {
 				margin-inline-start: calc(var(--spaceWidth) * var(--lineIndent));
@@ -898,7 +917,7 @@ t-embed {
 		float: left;
 		margin-right: 1em;
 	}
-	
+
 	&.float-right {
 		float: right;
 		margin-left: 1em;
