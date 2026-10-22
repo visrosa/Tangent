@@ -336,6 +336,57 @@ describe('association-list HTML', () => {
 		expect(collapsed()).toEqual([false, false, false, false, false, true])
 	})
 
+	test('removes rows reserved by hidden inline descendants', async () => {
+		const source = `- Devices ::
+  - Disk :: Floppy disk
+    - Alias :: Flexible disk
+    - Origin :: Office symbols
+  - Disc :: Optical disc
+    - Origin :: Office symbols
+  - Drive :: Hard disk
+- Next :: Other devices`
+		const { editor, root } = createMarkdownEditor(source)
+		const article = mountInNote(root)
+		article.style.width = '800px'
+		const lines = () => Array.from(root.querySelectorAll<HTMLElement>('.association-list-line'))
+		const block = () => root.querySelector<HTMLElement>('.editor-association-list')
+		const rowCount = () => getComputedStyle(block()).gridTemplateRows.split(' ').length
+		const termBounds = (index: number) => lines()[index].querySelector('.association-list-term-content').getBoundingClientRect()
+		try {
+			editor.collapsingSections.toggleLineCollapsed(1)
+			editor.collapsingSections.toggleLineCollapsed(4)
+			await wait(20)
+			expect(rowCount()).toBe(4)
+			const gap = parseFloat(getComputedStyle(block()).rowGap)
+			expect(termBounds(4).top - termBounds(1).bottom).toBeCloseTo(gap, 0)
+			expect(termBounds(6).top - termBounds(4).bottom).toBeCloseTo(gap, 0)
+			for (const index of [2, 3, 5]) {
+				expect(getComputedStyle(lines()[index]).display).toBe('none')
+				expect(lines()[index].style.gridRow).toBe('')
+			}
+			editor.collapsingSections.toggleLineCollapsed(0)
+			await wait(20)
+			expect(rowCount()).toBe(2)
+			editor.collapsingSections.toggleLineCollapsed(0)
+			await wait(20)
+			expect(rowCount()).toBe(4)
+			expect(editor.collapsingSections.lineHasCollapsedChildren(1)).toBe(true)
+			expect(editor.collapsingSections.lineHasCollapsedChildren(4)).toBe(true)
+			editor.collapsingSections.toggleLineCollapsed(1)
+			await wait(20)
+			expect(rowCount()).toBe(6)
+			editor.select(source.lastIndexOf('Office symbols'))
+			await wait(20)
+			expect(getComputedStyle(lines()[5]).display).not.toBe('none')
+			expect(rowCount()).toBe(7)
+			editor.select(source.length)
+			await wait(20)
+			expect(rowCount()).toBe(6)
+			expect(editor.getText()).toBe(source)
+			expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+		} finally { editor.destroy(); article.remove() }
+	})
+
 	test('aligns expanded values with compact values and shrinks the term when collapsed', async () => {
 		const { editor, root } = createMarkdownEditor(`- 🜨 ::
   - Terra or Earth
