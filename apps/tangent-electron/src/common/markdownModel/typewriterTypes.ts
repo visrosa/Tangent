@@ -347,7 +347,7 @@ function getAssociationListLayouts(lineData: AssociationListLineEntry[], hidden:
 			}
 			owners.set(owner.entry[2], owner)
 			const terms = group.filter(visible)
-			const childRow = nextRow + (associationList.hasValue ? 1 : 0)
+			const childRow = nextRow + (associationList.hasValue && visible(owner) ? 1 : 0)
 			const childEnd = place(owner.children, childRow)
 			const endRow = Math.max(nextRow + terms.length, childEnd)
 			terms.forEach((term, offset) => {
