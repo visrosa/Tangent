@@ -12,7 +12,7 @@ void TangentEmbed
 const cleanup: (() => void)[] = []
 afterEach(() => cleanup.splice(0).forEach(fn => fn()))
 
-describe('folded text', () => {
+describe('ordinary section folding', () => {
 	it.each([
 		'# A long **heading** with `inline code` and enough text to overflow the available width\nbody',
 		'- A long **parent** with `inline code` and enough text to overflow the available width\n  - child',
@@ -21,7 +21,7 @@ describe('folded text', () => {
 		'```js\nconst example = true\n```',
 		'$$\nx + y\n$$',
 		'---\ntitle: Example\n---'
-	])('preserves source and offsets while fading a folded %s', async source => {
+	])('preserves ordinary collapse presentation and source for %s', async source => {
 		const root = document.createElement('article')
 		root.className = 'note'
 		root.style.cssText = 'width:280px;white-space:pre-wrap;'
@@ -30,15 +30,13 @@ describe('folded text', () => {
 		cleanup.push(() => { editor.destroy(); root.remove() })
 		editor.collapsingSections.toggleLineCollapsed(0)
 		await wait()
-		const folded = root.querySelector('.collapse-parent .folded-text')
-		expect(folded).not.toBeNull()
+		const parent = root.querySelector('.collapse-parent')
+		expect(parent).not.toBeNull()
+		expect(root.querySelector('.folded-text')).toBeNull()
+		expect(getComputedStyle(parent).maskImage).toBe('none')
+		expect(getComputedStyle(parent, '::after').content).toBe(source.startsWith('---')
+			? '"--- front matter ---"' : '"…"')
 		if (source.startsWith('- ')) expect(root.querySelector('p.list > .line_format')).not.toBeNull()
-		const content = folded.querySelector('.folded-text-content')
-		expect(getComputedStyle(content).maskImage).toContain('linear-gradient')
-		expect(getComputedStyle(folded.querySelector('.folded-text-marker'), '::after').content).toBe('"⋯"')
-		expect(folded.querySelector('.folded-text-marker').getBoundingClientRect().width).toBeGreaterThan(0)
-		expect(folded.getBoundingClientRect().height).toBeGreaterThan(0)
-		expect(folded.getBoundingClientRect().width).toBeLessThanOrEqual(root.clientWidth)
 		expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
 		expect(editor.getText()).toBe(source)
 		editor.collapsingSections.toggleLineCollapsed(0)
