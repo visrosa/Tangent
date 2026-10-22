@@ -181,19 +181,19 @@ describe('association-list HTML', () => {
 		try {
 			expect(structure(render(source).querySelector('dl.association-list')))
 				.toEqual([['DT', 'Term1'], ['DT', 'Term2'], ['DD', 'Describes both']])
-			expect(lines().map(line => line.style.gridRow)).toEqual(['1', '2', '1 / span 2'])
+			expect(lines().map(line => line.style.gridRow)).toEqual(['1', '1 / span 2', '1 / span 2'])
 			expect(lines()[0].classList.contains('association-list-group-term')).toBe(true)
 			expect(lines()[2].getBoundingClientRect().top).toBe(lines()[0].getBoundingClientRect().top)
 			expect(lines()[2].getBoundingClientRect().bottom).toBe(lines()[1].getBoundingClientRect().bottom)
 			editor.collapsingSections.toggleLineCollapsed(1)
 			await wait()
-			expect(lines().map(line => line.style.gridRow)).toEqual(['1', '2', ''])
+			expect(lines().map(line => line.style.gridRow)).toEqual(['1', '1 / span 2', ''])
 			expect(lines()[1].querySelector('.association-list-summary').getAttribute('data-summary')).toBe('Describes both')
 			expect(lines().slice(0, 2).every(line => getComputedStyle(line).display !== 'none')).toBe(true)
 			expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
 			editor.collapsingSections.toggleLineCollapsed(1)
 			await wait()
-			expect(lines().map(line => line.style.gridRow)).toEqual(['1', '2', '1 / span 2'])
+			expect(lines().map(line => line.style.gridRow)).toEqual(['1', '1 / span 2', '1 / span 2'])
 		} finally {
 			editor.destroy()
 			article.remove()
@@ -226,10 +226,10 @@ describe('association-list HTML', () => {
 	})
 
 	test.each([
-		['plain', 'uses ::\nrequires ::\n: electron\n: npm\nplain', ['1', '2', '1', '2']],
-		['mixed', '- uses ::\nrequires ::\n: electron\n: npm\nplain', ['1', '2', '1', '2']],
+		['plain', 'uses ::\nrequires ::\n: electron\n: npm\nplain', ['1', '1 / span 2', '1', '2']],
+		['mixed', '- uses ::\nrequires ::\n: electron\n: npm\nplain', ['1', '1 / span 2', '1', '2']],
 		['nested', 'System ::\n\tPlanet ::\n\t: A nested value\nplain', ['1', '1', '1']],
-		['quoted', '> uses ::\n> requires ::\n> : electron\n> : npm\nplain', ['1', '2', '1', '2']],
+		['quoted', '> uses ::\n> requires ::\n> : electron\n> : npm\nplain', ['1', '1 / span 2', '1', '2']],
 	])('renders, edits and collapses %s portable forms', async (_name, source, rows) => {
 		const { editor, root } = createMarkdownEditor(source)
 		const article = mountInNote(root)
@@ -309,9 +309,9 @@ describe('association-list HTML', () => {
 	})
 
 	test.each([
-		['more terms', '- first ::\n- second ::\n- third ::\n\t- value one\n\t- value two\n- next :: final', ['1', '2', '3', '1', '2 / span 2', '4']],
-		['more values', '- first ::\n- second ::\n\t- value one\n\t- value two\n\t- value three\n- next :: final', ['1', '2 / span 2', '1', '2', '3', '4']],
-		['nested shared terms', '- parent ::\n\t- first ::\n\t- second ::\n\t\t- value\n- next :: final', ['1 / span 2', '1', '2', '1 / span 2', '3']],
+		['more terms', '- first ::\n- second ::\n- third ::\n\t- value one\n\t- value two\n- next :: final', ['1', '2', '1 / span 3', '1', '2 / span 2', '4']],
+		['more values', '- first ::\n- second ::\n\t- value one\n\t- value two\n\t- value three\n- next :: final', ['1', '1 / span 3', '1', '2', '3', '4']],
+		['nested shared terms', '- parent ::\n\t- first ::\n\t- second ::\n\t\t- value\n- next :: final', ['1 / span 2', '1', '1 / span 2', '1 / span 2', '3']],
 		['an inline owner', '- first ::\n- second :: inline\n\t- child :: value\n- next :: final', ['1', '1 / span 2', '2', '3']],
 		['separate subtrees', '- first ::\n\t- child ::\n\t\t- value\n- second ::\n\t- second value', ['1', '1', '1', '2', '2']],
 	])('keeps group and subtree boundaries with %s', (_name, source, rows) => {
@@ -323,7 +323,7 @@ describe('association-list HTML', () => {
 	})
 
 	test.each([
-		['shared', '- Term1 ::\n- Term2 ::\n\t- Describes both', ['1', '2', '1 / span 2']],
+		['shared', '- Term1 ::\n- Term2 ::\n\t- Describes both', ['1', '1 / span 2', '1 / span 2']],
 		['nested', '- Term1 ::\n\t- Term1.1 ::\n\t\t- Desc1.1', ['1', '1', '1']],
 	])('keeps the %s structure while typing and editing', async (_name, source, rows) => {
 		const { editor, root } = createMarkdownEditor('')
@@ -878,7 +878,7 @@ describe('shared term and value geometry', () => {
 			const value = Array.from(root.querySelectorAll<HTMLElement>('.association-list-value-content, .association-list-value')).find(element => element.textContent.includes('value'))
 			expect(value.getBoundingClientRect().top).toBeCloseTo(first.getBoundingClientRect().top, 0)
 			expect(second.getBoundingClientRect().top).toBeGreaterThan(first.getBoundingClientRect().top)
-			expect(getLineBounds(second.parentElement).top).toBeCloseTo(second.getBoundingClientRect().top, 0)
+			expect(getLineBounds(second.parentElement).top).toBeCloseTo(first.getBoundingClientRect().top, 0)
 			for (const term of [first, second]) {
 				const rect = term.getBoundingClientRect()
 				expect(term.contains(document.elementFromPoint(rect.left + 2, rect.top + 2))).toBe(true)

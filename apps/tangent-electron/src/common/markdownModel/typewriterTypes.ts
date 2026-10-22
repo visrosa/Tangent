@@ -353,9 +353,9 @@ function getAssociationListLayouts(lineData: AssociationListLineEntry[], hidden:
 			terms.forEach((term, offset) => {
 				const row = nextRow + offset
 				layouts[indices.get(term.entry[2])] = {
-					row: term === owner && associationList.hasValue ? nextRow : row,
-					span: term === owner ? endRow - (associationList.hasValue ? nextRow : row) : 1,
-					termRow: term === owner && associationList.hasValue ? offset + 1 : undefined,
+					row: term === owner ? nextRow : row,
+					span: term === owner ? endRow - nextRow : 1,
+					termRow: term === owner ? offset + 1 : undefined,
 					valueSpan: term === owner && associationList.hasValue && childEnd === childRow ? terms.length : 1
 				}
 			})
@@ -539,6 +539,7 @@ const noteTypeset:TypesetTypes = {
 						let className = `association-list-line association-list-${associationList.role}`
 						if (associationList.termIndent !== undefined) className += ' association-list-nested'
 						if (groupedTerms.has(id)) className += ' association-list-group-term'
+						if (layouts[index]?.termRow > 1) className += ' association-list-shared-owner'
 						if (valuesCollapsed[index]) className += ' association-list-values-collapsed'
 
 						const owner = owners.get(id)
@@ -559,7 +560,6 @@ const noteTypeset:TypesetTypes = {
 
 								if (associationList.hasValue) {
 									className += ' association-list-inline'
-									if (layouts[index]?.termRow > 1) className += ' association-list-shared-inline'
 									lineChildren = [
 										h('span', { className: 'association-list-term-content' }, split.term),
 										separator,

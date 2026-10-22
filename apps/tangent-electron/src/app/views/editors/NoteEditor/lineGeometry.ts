@@ -1,9 +1,10 @@
 export function getLineBounds(line: HTMLElement): DOMRect {
 	const bounds = line.getBoundingClientRect()
 	if (!line.classList.contains('association-list-term')) return bounds
+	if (line.classList.contains('association-list-shared-owner')) return bounds
 	const term = line.querySelector(':scope > .association-list-term-content')
 	if (!term) return bounds
-	// Source wrappers can span descendants or shared values; the gutter belongs to the term.
+	// Ordinary parents span descendants, but their gutter belongs to the term.
 	const termBounds = term.getBoundingClientRect()
 	return new DOMRect(bounds.x, termBounds.y, bounds.width, termBounds.height)
 }
