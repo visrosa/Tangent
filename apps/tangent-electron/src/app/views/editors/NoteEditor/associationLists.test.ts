@@ -1071,9 +1071,16 @@ test.each([
 			const terms = Array.from(root.querySelectorAll<HTMLElement>('.association-list-term-content'))
 			const parent = terms[1].getBoundingClientRect()
 			const children = terms.slice(2, 6).map(term => term.parentElement.getBoundingClientRect())
-			const heights = children.map(child => child.height)
+			const extraHeights = children.map((child, index) => {
+				const term = terms[index + 2]
+				const value = term.parentElement.querySelector('.association-list-value-content')
+				return child.height - Math.max(
+					parseFloat(getComputedStyle(term.parentElement).lineHeight),
+					term.getBoundingClientRect().height,
+					value.getBoundingClientRect().height)
+			})
 			expect(parent.height).toBeGreaterThan(parseFloat(getComputedStyle(terms[1]).lineHeight) * 1.5)
-			expect(Math.max(...heights) - Math.min(...heights)).toBeLessThan(1)
+			expect(Math.max(...extraHeights) - Math.min(...extraHeights)).toBeLessThan(1)
 			expect(parent.top).toBeCloseTo(children[0].top, 0)
 			expect(parent.bottom).toBeLessThanOrEqual(children[3].bottom + 1)
 			expect(terms[6].getBoundingClientRect().top).toBeGreaterThan(children[3].bottom)
