@@ -294,7 +294,7 @@ article.note {
 		.association-list-term-content {
 			box-sizing: border-box;
 			font-weight: 400;
-			font-style: italic;
+			font-style: normal;
 			padding-inline-end: var(--associationListTermGap);
 			min-width: 0;
 			max-inline-size: var(--associationListTermLimit);
@@ -310,7 +310,7 @@ article.note {
 
 		[data-association-list-depth="1"] > .association-list-term-content {
 			font-weight: 600;
-			font-style: normal;
+			font-style: italic;
 		}
 
 		// Line a nested term up with its parent's value text
