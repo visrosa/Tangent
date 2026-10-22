@@ -12,6 +12,7 @@ import { getLineBounds } from './lineGeometry'
 import { deltaFromDom } from 'typewriter-editor'
 import '../../../../../static/global.css'
 import 'app/style/note.scss'
+import 'app/style/input.scss'
 
 const cleanups: (() => Promise<void>)[] = []
 afterEach(async () => { for (const cleanup of cleanups.splice(0)) await cleanup() })
@@ -39,6 +40,36 @@ function setup(source: string) {
 }
 
 describe('Association List gutter access', () => {
+	test.each(['', 'inline value'])('anchors a shared group at its first term with a full-height hover target: %s', async inline => {
+		const source = `- uses ::\n- requires :: ${inline}\n  - npm\n  - typescript\n  - electron\n- other :: remains`
+		const { editor, root, terms, buttons, collapsed } = setup(source)
+		await page.elementLocator(terms()[0]).hover()
+		await wait(30)
+		expect(buttons().map(button => button.getAttribute('aria-label'))).toEqual(['Collapse requires'])
+		const owner = terms()[1].parentElement
+		const group = getLineBounds(owner)
+		const button = buttons()[0]
+		expect(button.getBoundingClientRect().top).toBeCloseTo(terms()[0].getBoundingClientRect().top, 0)
+		expect(button.getBoundingClientRect().height).toBeCloseTo(group.height, 0)
+		const icon = button.querySelector('svg').getBoundingClientRect()
+		expect(icon.top + icon.height / 2).toBeCloseTo(group.top + parseFloat(getComputedStyle(owner).lineHeight) / 2, 0)
+		await page.elementLocator(button).hover({ position: { x: 5, y: button.clientHeight - 4 } })
+		await expect.poll(() => getComputedStyle(button).backgroundColor).not.toBe('rgba(0, 0, 0, 0)')
+		expect(buttons()).toHaveLength(1)
+		await page.elementLocator(button).click()
+		await wait()
+		expect(collapsed.value).toEqual([1])
+		const summary = root.querySelector<HTMLElement>('.association-list-summary, .association-list-value-content')
+		expect(summary.getBoundingClientRect().top).toBeCloseTo(terms()[0].getBoundingClientRect().top, 0)
+		expect(terms()[1].getBoundingClientRect().top).toBeGreaterThan(terms()[0].getBoundingClientRect().top)
+		expect(buttons()[0].getBoundingClientRect().top).toBeCloseTo(terms()[0].getBoundingClientRect().top, 0)
+		await page.elementLocator(terms()[2]).hover()
+		await wait(30)
+		expect(buttons().map(button => button.getAttribute('aria-label'))).toEqual(['Collapse other'])
+		expect(editor.getText()).toBe(source)
+		expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+	})
+
 	test('gives overlapping nested terms independent controls and preserves ancestor and sibling state', async () => {
 		const source = '- Parent ::\n  - Child ::\n    - Grandchild :: First value\n    - Sibling :: Second value\n- Other :: Third value'
 		const { editor, root, collapsed, terms, buttons, gutterWidth } = setup(source)

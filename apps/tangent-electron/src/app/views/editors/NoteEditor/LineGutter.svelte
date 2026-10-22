@@ -26,6 +26,8 @@ let container: HTMLElement = null
 $: positionOnLine(target?.element, container, column)
 function positionOnLine(line: HTMLElement, container: HTMLElement, column: number) {
 	if (!line || !container) return
+	const sharedGroup = side === 'left' && line.classList.contains('association-list-shared-owner')
+	container.style.height = sharedGroup ? getLineBounds(line).height + 'px' : ''
 
 	computePosition({ contextElement: line, getBoundingClientRect: () => getLineBounds(line) }, container, {
 		strategy: 'absolute',
@@ -33,9 +35,10 @@ function positionOnLine(line: HTMLElement, container: HTMLElement, column: numbe
 	}).then(result => {
 		const lineStyle = getComputedStyle(line)
 		const lineHeight = parseFloat(lineStyle.lineHeight)
+		container.style.setProperty('--lineGutterLineHeight', lineHeight + 'px')
 
 		const containerRect = container.getBoundingClientRect()
-		const offset = (lineHeight - containerRect.height) / 2
+		const offset = sharedGroup ? 0 : (lineHeight - containerRect.height) / 2
 
 		container.style.top = result.y + offset + 'px'
 
