@@ -1088,3 +1088,61 @@ test.each([
 		}
 	} finally { editor.destroy(); article.remove() }
 })
+
+
+test.each([
+	['colon', `Solar System ::
+: Terrestrial planets ::
+	: Mercury ::
+		: The innermost planet
+	: Venus ::
+		: The second planet
+	: Earth ::
+		: The third planet, home to liquid water and life
+	: Mars ::
+		: The fourth planet, known as the Red Planet
+: Jovian planets ::
+	: Jupiter ::
+		: The largest planet and a massive gas giant`],
+	['mixed', `Solar System ::
+	- Terrestrial planets ::
+		- Mercury :: The innermost planet
+		- Venus :: The second planet
+		- Earth :: The third planet, home to liquid water and life
+		- Mars :: The fourth planet, known as the Red Planet
+	- Jovian planets ::
+		- Jupiter :: The largest planet and a massive gas giant`]
+])('keeps wrapped portable parents from enlarging their first child: %s', async (_syntax, source) => {
+	const { editor, root } = createMarkdownEditor(source)
+	const article = mountInNote(root)
+	article.style.cssText = 'font-family:Arial;font-size:20px;--fontSize:20px;'
+	try {
+		for (const width of [640, 420, 800]) {
+			article.style.width = `${width}px`
+			await wait(30)
+			const terms = Array.from(root.querySelectorAll<HTMLElement>('.association-list-term-content'))
+			const parent = terms[1].getBoundingClientRect()
+			if (width <= 640) expect(parent.height).toBeGreaterThan(26)
+			for (const term of terms.slice(2, 6)) {
+				const line = term.parentElement
+				const value = line.classList.contains('association-list-inline')
+					? line.querySelector('.association-list-value-content')
+					: line.nextElementSibling
+				const contentHeight = Math.max(26, term.getBoundingClientRect().height, value.getBoundingClientRect().height)
+				expect(line.getBoundingClientRect().height).toBeCloseTo(contentHeight, 0)
+			}
+			const block = root.querySelector('.editor-association-list').getBoundingClientRect()
+			expect(block.width).toBeLessThanOrEqual(width)
+			for (const term of terms) expect(term.getBoundingClientRect().right).toBeLessThanOrEqual(block.right + 1)
+			expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+		}
+		const parentIndex = editor.doc.lines.findIndex(line => line.content.ops.some(op => typeof op.insert === 'string' && op.insert.includes('Terrestrial')))
+		editor.collapsingSections.toggleLineCollapsed(parentIndex)
+		await wait(20)
+		expect(editor.collapsingSections.lineHasCollapsedChildren(parentIndex)).toBe(true)
+		editor.collapsingSections.toggleLineCollapsed(parentIndex)
+		await wait(20)
+		expect(editor.getText()).toBe(source)
+		expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+	} finally { editor.destroy(); article.remove() }
+})
