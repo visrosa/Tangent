@@ -287,7 +287,7 @@ article.note {
 
 		.association-list-term-content {
 			font-weight: 400;
-			font-style: italic;
+			font-style: normal;
 			padding-inline-end: var(--associationListTermGap);
 			// Keeps the box at its content width so it can be measured for alignment
 			justify-self: start;
@@ -300,7 +300,7 @@ article.note {
 
 		[data-association-list-depth="1"] > .association-list-term-content {
 			font-weight: 600;
-			font-style: normal;
+			font-style: italic;
 		}
 
 		// Line a nested term up with its parent's value text
