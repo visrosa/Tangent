@@ -467,6 +467,13 @@ export default function editorModule(editor: Editor, options: {
 			// Apply selection reveal
 			if (doc.selection) {
 				revealContentAroundRange(doc, doc.selection.slice() as EditorRange, change)
+				if (editor.enabled) {
+					for (const line of doc.getLinesAt(doc.selection)) {
+						if (line.attributes.associationList) {
+							change.formatLine(doc.getLineRange(line), { associationListEditing: true }, true)
+						}
+					}
+				}
 			}
 			
 			revealDecorator.apply()

@@ -434,6 +434,54 @@ article.note {
 		}
 	}
 
+	.editor-association-list.association-list-editing {
+		display: block;
+		margin-inline-start: 0 !important;
+		container-type: normal;
+
+		> .association-list-line,
+		> .association-list-line.collapsed {
+			display: block;
+			white-space: pre-wrap;
+			line-height: rhythmUnit(1);
+			min-height: rhythmUnit(1);
+			font-weight: 400;
+			font-size: 1em;
+			color: var(--textColor);
+			border: 0;
+			padding: 0;
+			pointer-events: auto;
+			&.collapsed-revealed { opacity: 1; }
+
+			> .association-list-term-content,
+			> .association-list-separator,
+			> .association-list-value-content {
+				display: inline;
+				padding: 0;
+				border: 0;
+				font-size: 1em;
+				line-height: inherit;
+				color: inherit;
+				white-space: inherit;
+				overflow: visible;
+			}
+		}
+
+		.inline-association_separator-container { display: inline; }
+		.line_format, .association_separator-source {
+			font-size: inherit !important;
+			line-height: inherit !important;
+			tab-size: inherit !important;
+		}
+		.association-list-collapse-bar, .association-list-summary,
+		.folded-text-marker { display: none; }
+		.folded-text, .folded-text-content, .folded-text-source,
+		.folded-text-content[data-overflow] {
+			display: contents;
+			mask-image: none;
+		}
+	}
+
 	// We want large lists to have extra space around them, but we don't want extra space when adjacent to blank lines.
 	// We also don't want extra space between a large list item and a child normal list item.
 	// Technically a large followed by a small sibling also doesn't have space, but I'm okay with that slight glitch.
