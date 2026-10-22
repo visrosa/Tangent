@@ -1,5 +1,6 @@
 export function getLineBounds(line: HTMLElement): DOMRect {
 	const bounds = line.getBoundingClientRect()
+	if (line.parentElement?.classList.contains('association-list-editing')) return bounds
 	if (!line.classList.contains('association-list-term')) return bounds
 	if (line.classList.contains('association-list-shared-owner')) return bounds
 	const term = line.querySelector(':scope > .association-list-term-content')
