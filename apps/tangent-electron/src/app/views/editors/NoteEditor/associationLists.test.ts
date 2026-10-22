@@ -959,3 +959,39 @@ test.each([
 		expect(editor.getText()).toBe(source)
 	} finally { editor.destroy(); article.remove() }
 })
+
+
+test.each([
+	'Terrestrial planets',
+	'A parent label tall enough to require more height than all four child rows combined'
+])('shares wrapped parent height across child rows: %s', async label => {
+	const source = `- Solar System ::
+  - ${label} ::
+    - Mercury :: 1
+    - Venus :: 2
+    - Earth :: 3
+    - Mars :: 4
+  - Jovian planets ::
+    - Jupiter :: A gas giant`
+	const { editor, root } = createMarkdownEditor(source)
+	const article = mountInNote(root)
+	article.style.cssText = 'width:640px;font-family:Arial;font-size:20px;--fontSize:20px;'
+	const parentTerm = root.querySelectorAll<HTMLElement>('.association-list-term-content')[1]
+	parentTerm.style.maxInlineSize = '110px'
+	try {
+		for (const width of [640, 420, 800]) {
+			article.style.width = `${width}px`
+			await wait(30)
+			const terms = Array.from(root.querySelectorAll<HTMLElement>('.association-list-term-content'))
+			const parent = terms[1].getBoundingClientRect()
+			const children = terms.slice(2, 6).map(term => term.parentElement.getBoundingClientRect())
+			const heights = children.map(child => child.height)
+			expect(parent.height).toBeGreaterThan(parseFloat(getComputedStyle(terms[1]).lineHeight) * 1.5)
+			expect(Math.max(...heights) - Math.min(...heights)).toBeLessThan(1)
+			expect(parent.top).toBeCloseTo(children[0].top, 0)
+			expect(parent.bottom).toBeLessThanOrEqual(children[3].bottom + 1)
+			expect(terms[6].getBoundingClientRect().top).toBeGreaterThan(children[3].bottom)
+			expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+		}
+	} finally { editor.destroy(); article.remove() }
+})
