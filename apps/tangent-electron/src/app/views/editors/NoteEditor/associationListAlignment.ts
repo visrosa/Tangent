@@ -75,7 +75,7 @@ export function associationListAlignment(editor: Editor) {
 					const line = term.parentElement as HTMLElement & { key?: string }
 					const depth = Number(line.dataset.associationListDepth)
 					depthCount = Math.max(depthCount, depth + 1)
-					const width = line.classList.contains('revealed')
+					const width = block.classList.contains('association-list-editing') || line.classList.contains('revealed')
 						? previousWidths.get(line.key)
 						: term.getBoundingClientRect().width
 					if (width === undefined) continue

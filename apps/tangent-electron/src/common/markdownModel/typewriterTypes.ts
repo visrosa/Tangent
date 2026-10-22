@@ -524,6 +524,7 @@ const noteTypeset:TypesetTypes = {
 				}
 
 				if (!forHTML) {
+					const editing = lineData.some(([attributes]) => attributes.associationListEditing)
 					const hidden = lineData.map(([attributes]) => isCollapsed(attributes.collapsed)
 						&& !attributes.collapsedReveal)
 					const columns = getAssociationListColumns(lineData)
@@ -612,9 +613,9 @@ const noteTypeset:TypesetTypes = {
 						(_track, depth) => `minmax(min(var(--associationListTermWidth${depth}, 0px), var(--associationListTermTrackLimit)), max-content) max-content`)
 					const rootIndent = lineData[0][0].indent?.indentSize ?? 0
 					return wrap(h('div', {
-						className: revealed
+						className: (revealed
 							? 'association-list editor-association-list revealed'
-							: 'association-list editor-association-list',
+							: 'association-list editor-association-list') + (editing ? ' association-list-editing' : ''),
 						'data-association-list-block': lineData[0][2],
 						style: `--associationListBlockDepthCount:${columns.maxDepth + 1};grid-template-columns:${termTracks.join(' ')} minmax(0, 1fr);`
 							+ `margin-inline-start:calc(var(--spaceWidth) * ${rootIndent});`
