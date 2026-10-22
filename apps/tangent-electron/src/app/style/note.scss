@@ -485,10 +485,16 @@ article.note {
 			min-width: 0;
 			overflow: hidden;
 			white-space: nowrap;
-			mask-image: linear-gradient(to right, black calc(100% - 1.5em), transparent);
 			code.inline_code { white-space: pre; }
 		}
-		.folded-text-content:dir(rtl) {
+		.folded-text-source {
+			display: inline-block;
+			width: max-content;
+		}
+		.folded-text-content[data-overflow] {
+			mask-image: linear-gradient(to right, black calc(100% - 1.5em), transparent);
+		}
+		.folded-text-content[data-overflow]:dir(rtl) {
 			mask-image: linear-gradient(to left, black calc(100% - 1.5em), transparent);
 		}
 		.folded-text-marker::after {
@@ -503,6 +509,7 @@ article.note {
 			display: contents;
 			> .folded-text-content {
 				display: contents;
+				> .folded-text-source { display: contents; }
 				code.inline_code { white-space: pre-wrap; }
 			}
 			> .folded-text-marker { display: none; }
