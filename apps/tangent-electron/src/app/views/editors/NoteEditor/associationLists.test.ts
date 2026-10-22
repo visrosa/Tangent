@@ -429,6 +429,41 @@ describe('association-list HTML', () => {
 		article.remove()
 	})
 
+	test.each([
+		['inline value', '- term :: A reference in `catalog.txt`', 0],
+		['summary', '- term ::\n  - A reference in catalog.txt', 0],
+		['value with children', '- term ::\n  - A reference in `catalog.txt`\n    - extra detail', 1]
+	])('fades a collapsed %s only while its text overflows', async (_name, source: string, owner: number) => {
+		const { editor, root } = createMarkdownEditor(source)
+		const article = mountInNote(root)
+		article.style.cssText = 'width:900px;font-family:Arial;'
+		const clip = () => root.querySelector<HTMLElement>('.folded-text-content')
+		try {
+			editor.collapsingSections.toggleLineCollapsed(owner)
+			await wait(30)
+			expect(getComputedStyle(clip()).maskImage).toBe('none')
+			expect(getComputedStyle(root.querySelector('.folded-text-marker'), '::after').content).toBe('"⋯"')
+			article.style.width = '180px'
+			await wait(30)
+			expect(getComputedStyle(clip()).maskImage).toContain('linear-gradient')
+			article.style.width = '380px'
+			await wait(30)
+			expect(getComputedStyle(clip()).maskImage).toBe('none')
+			article.style.setProperty('--fontSize', '36px')
+			await wait(30)
+			expect(getComputedStyle(clip()).maskImage).toContain('linear-gradient')
+			article.style.setProperty('--fontSize', '16px')
+			for (const line of root.querySelectorAll('.association-list-line')) line.setAttribute('dir', 'rtl')
+			article.style.width = '180px'
+			await wait(30)
+			expect(getComputedStyle(clip()).maskImage).toContain('to left')
+			article.style.width = '900px'
+			await wait(30)
+			expect(getComputedStyle(clip()).maskImage).toBe('none')
+			expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
+		} finally { editor.destroy(); article.remove() }
+	})
+
 	test('keeps an inline value on one clipped line while its term is collapsed', async () => {
 		const { editor, root } = createMarkdownEditor('- 🜨 :: Terra or Earth\nplain')
 		const article = mountInNote(root)
@@ -871,7 +906,7 @@ describe('Association List bar controls', () => {
 			expect(getComputedStyle(bar(), '::before').content).toBe('none')
 			const preview = root.querySelector('.folded-text')
 			expect(getComputedStyle(preview.querySelector('.folded-text-marker'), '::after').content).toBe('"⋯"')
-			expect(getComputedStyle(preview.querySelector('.folded-text-content')).maskImage).toContain('linear-gradient')
+			expect(getComputedStyle(preview.querySelector('.folded-text-content')).maskImage).toBe('none')
 			expect(deltaFromDom(editor, { collapseWhitespace: false }).ops.map(op => op.insert).join('')).toBe(source + '\n')
 			bar().dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
 			await wait(20)

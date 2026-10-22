@@ -3,7 +3,9 @@ import { hasCollapsedChildren } from './sections'
 
 export function foldedText(children: any[]) {
 	return h('span', { className: 'folded-text' }, [
-		h('span', { className: 'folded-text-content' }, children),
+		h('span', { className: 'folded-text-content' }, [
+			h('span', { className: 'folded-text-source' }, children)
+		]),
 		h('span', { className: 'folded-text-marker', contentEditable: false, 'aria-hidden': 'true' })
 	])
 }
