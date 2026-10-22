@@ -357,6 +357,8 @@ article.note {
 
 		.association-list-term:not(.association-list-inline) .association-list-term-content {
 			grid-column: 1;
+			// Spread wrapped-label sizing across the subtree instead of its first child.
+			grid-row: 1 / -1;
 		}
 
 		.association-list-term.collapse-parent::after {
