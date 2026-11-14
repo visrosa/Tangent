@@ -9,6 +9,6 @@ There are multiple sections:
 * [[Maps]]
 * [[Notes]]
 * [[Custom Styles]]
-* [[Dictionary]]
+* [[Language & Spelling]]
 * [[Updates]]
 * [[Debug]]

@@ -24,18 +24,9 @@ The **Default Bold/Italics Characters** settings let you choose which characters
 
 The **Default Complete Todo Glyph** setting lets you configure what character is placed in the checkbox when marking it as complete. `[x]` is the default value for markdown. `[+]` is offered as an alternative that does not trip up automatic RTL language detection.
 
-Enabling **Change List Glyphs on Indent** will automatically change the glyph used for a list when you indent a list under a parent. See [[Lists]] for more information.
-
 Enabling **Inter-Text Underscore Emphasis** allows underscore characters to affect formatting when surrounded on both sides by text. See [[Bold and Italics#Inter-Text Underscores]] for more information.
 
-The __Use Spell Check__ toggle will control whether or not spell check should be enabled across your notes.
-
-__Additional Spell Check Languages__ lets you add additional languages to your spell check dictionary in addition to the default language of your system. Unfortunately, this option is _not_ available on Mac.
-
-## Smart Paragraph Breaks
-Enabling the __Smart Paragraph Breaks__ option will automatically insert a blank link when you press Enter in a paragraph. Additionally, deleting a paragraph with Backspace in front of any empty line will delete the empty line automatically.
-
-When this setting is enabled, holding Shift while pressing Enter or Backspace will avoid this automatic behavior.
+Spell check, smart paragraph breaks and list glyph behavior are configured under [[Language & Spelling]].
 
 # Code Options
 **Extra Wide Code** allows code blocks to expand outside of the normal width of a note. This can be very helpful when looking at code from verbose codebases.
