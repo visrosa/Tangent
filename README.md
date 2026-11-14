@@ -1,4 +1,16 @@
 # Tangent
+
+## Linux Packaging Fork
+
+This is [visrosa/Tangent](https://github.com/visrosa/Tangent), a fork of [suchnsuch/Tangent](https://github.com/suchnsuch/Tangent) that adds Linux packaging on top of the upstream monorepo: Gentoo ebuilds, plus `.deb`/`.rpm`/tarball builds for other distros. Packaging artifacts here are maintained independently and provided as-is, with no guarantees or support commitments from either this fork or the upstream Tangent maintainers.
+
+- **Gentoo**: install via the [tangent-overlay](https://github.com/visrosa/tangent-overlay) unofficial overlay — stable and pre-release ebuilds, plus a live `-9999` ebuild that tracks this fork's `dev` branch for daily-driving unmerged feature work ahead of any tagged release.
+- **Debian/Ubuntu, RPM-based distros, and generic Linux**: `.deb`, `.rpm`, and `.tar.gz` builds are attached to each [GitHub Release](https://github.com/visrosa/Tangent/releases) here. RPM packages are currently untested — if you use an RPM-based distribution, please help test them and report results or issues.
+
+I am not the original author of Tangent — the original project and authorship live at [suchnsuch/Tangent](https://github.com/suchnsuch/Tangent).
+
+---
+
 ![](./apps/tangent-electron/build/icon.png)
 
 This is the monorepo for the [Tangent](https://www.tangentnotes.com) project.

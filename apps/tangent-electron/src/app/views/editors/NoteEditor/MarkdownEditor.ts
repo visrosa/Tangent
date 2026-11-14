@@ -16,6 +16,8 @@ import CodeBlockAutocompleter from '../autocomplete/CodeBlockAutoCompleter'
 import autoWrapping from '../autobraces/autoWrappingModule'
 import { collapsingSections, type CollapsingSectionsModule } from './collapsingSections'
 import TemplateTokenAutocompleter from "../autocomplete/TemplateTokenAutocompleter"
+import type { WritableStore } from "common/stores"
+import { sliceRendering } from "./sliceRendering"
 
 function indentLines(editor: MarkdownEditor, direction: -1 | 1) {
 	const { doc } = editor
@@ -109,6 +111,7 @@ function getCopyRange(editor: Editor, event: ClipboardEvent): EditorRange {
 
 interface MarkdownEditorOptions extends EditorOptions {
 	includeAutocomplete?: boolean
+	slice?: WritableStore<EditorRange>
 }
 
 export default class MarkdownEditor extends Editor {
@@ -129,6 +132,7 @@ export default class MarkdownEditor extends Editor {
 				copy,
 				paste,
 				history,
+				rendering,
 				... trimmedDefaultModules
 			} = defaultModules
 
@@ -149,13 +153,18 @@ export default class MarkdownEditor extends Editor {
 				]) : null,
 
 				...trimmedDefaultModules,
+
+				rendering: options?.slice ? (editor => sliceRendering(editor, {
+					sliceStore: options?.slice
+				})): rendering,
+				
 				history: newHistory,
 
 				tLink: editor => tlinkModule(editor, {
-					linkFollowRequirement: workspace?.settings?.noteLinkFollowBehavior as any ?? 'mod'
+					linkFollowRequirement: workspace?.settings?.noteLinkFollowBehavior ?? 'mod'
 				}),
 				tCheckbox: editor => tCheckboxModule(editor, { 
-					defaultTodoCompleteChar: workspace?.settings?.defaultTodoCompleteChar as any ?? 'x'
+					defaultTodoCompleteChar: workspace?.settings?.defaultTodoCompleteChar ?? 'x'
 				 }),
 				autoWrap: autoWrapping,
 				// This goes before copy/paste to get priority over those events

@@ -1,6 +1,7 @@
 node_modules/
 .DS_Store
 .svelte-kit/
+dist/
 *.env
 *.tsbuildinfo
 
@@ -11,3 +12,4 @@ node_modules/
 **/.tangent/Temp/
 **/.tangent/Generated/
 .obsidian
+Theming.md

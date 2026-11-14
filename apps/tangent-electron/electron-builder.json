@@ -2,10 +2,8 @@
 	"appId": "com.SuchnSuch.Tangent",
 	"productName": "Tangent",
 	"copyright": "Copyright © 2022 Taylor Hadden",
-
 	"generateUpdatesFilesForAllChannels": true,
-	"electronVersion": "44.7.0",
-
+	"electronVersion": "45.0.0",
 	"files": [
 		"node_modules/**/*",
 		"static/**/*",
@@ -14,10 +12,11 @@
 		{
 			"from": "__build",
 			"to": "__build",
-			"filter": ["**/*"]
+			"filter": [
+				"**/*"
+			]
 		}
 	],
-
 	"mac": {
 		"category": "public.app-category.productivity",
 		"target": {
@@ -29,12 +28,17 @@
 		"extendInfo": {
 			"CFBundleDocumentTypes": [
 				{
-					"LSItemContentTypes": ["public.folder", "public.directory"],
+					"LSItemContentTypes": [
+						"public.folder",
+						"public.directory"
+					],
 					"CFBundleTypeRole": "Editor",
 					"LSHandlerRank": "Alternate"
 				},
 				{
-					"LSItemContentTypes": ["public.plain-text"],
+					"LSItemContentTypes": [
+						"public.plain-text"
+					],
 					"CFBundleTypeRole": "Editor",
 					"LSHandlerRank": "Default"
 				},
@@ -53,16 +57,21 @@
 			]
 		}
 	},
-
 	"win": {
 		"target": [
 			{
 				"target": "nsis",
-				"arch": ["x64", "arm64"]
+				"arch": [
+					"x64",
+					"arm64"
+				]
 			},
 			{
 				"target": "portable",
-				"arch": ["x64", "arm64"]
+				"arch": [
+					"x64",
+					"arm64"
+				]
 			}
 		],
 		"signtoolOptions": {
@@ -70,36 +79,49 @@
 		},
 		"fileAssociations": [
 			{
-				"ext": ["md", "mdx"],
+				"ext": [
+					"md",
+					"mdx"
+				],
 				"description": "Markdown Files",
 				"role": "Editor",
 				"rank": "Alternate"
 			},
 			{
-				"ext": ["jpg", "jpeg", "png", "PNG", "gif", "bmp", "svg"],
+				"ext": [
+					"jpg",
+					"jpeg",
+					"png",
+					"PNG",
+					"gif",
+					"bmp",
+					"svg"
+				],
 				"description": "Images Files",
 				"role": "Viewer"
 			}
 		]
 	},
-
 	"nsis": {
 		"artifactName": "${productName}-Setup-${version}.${ext}",
 		"oneClick": false,
 		"allowElevation": true,
 		"allowToChangeInstallationDirectory": true
 	},
-
 	"portable": {
 		"artifactName": "${productName}-Portable-${version}.${ext}"
 	},
-
 	"linux": {
 		"category": "Office",
-		"target": {
-			"target": "AppImage",
-			"arch": ["x64", "arm64"]
-		},
+		"maintainer": "visrosa at https://github.com/visrosa/Tangent",
+		"vendor": "visrosa/Tangent",
+		"target": [
+			{
+				"target": "AppImage",
+				"arch": [
+					"x64"]
+			}
+		],
 		"fileAssociations": [
 			{
 				"ext": "md",
@@ -131,7 +153,10 @@
 			}
 		]
 	},
-
+	"rpm": {
+		"packageCategory": "Applications/Productivity",
+		"synopsis": "Tangent note-writing and thought-mapping app"
+	},
 	"publish": [
 		{
 			"provider": "s3",

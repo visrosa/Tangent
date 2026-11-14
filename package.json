@@ -7,7 +7,10 @@
 	"scripts": {
 		"test": "npm run test --workspaces --if-present",
 		"build": "npm run build --workspaces --if-present",
-		"build:tangent-electron": "npm run build --workspace=lib/typewriter --workspace=packages/tangent-query-parser --workspace=packages/tangent-html-to-markdown --workspace=apps/tangent-electron"
+		"build:tangent-electron": "npm run build --workspace=lib/typewriter --workspace=packages/tangent-query-parser --workspace=packages/tangent-html-to-markdown --workspace=apps/tangent-electron",
+		"package:linux:packages": "node scripts/packaging/build-linux-deb.cjs",
+		"package:ppa-source": "node scripts/packaging/prepare-ppa-source.cjs",
+		"package:gentoo-source": "node scripts/packaging/prepare-gentoo-source.cjs"
 	},
 	"author": "Taylor Hadden",
 	"license": "Apache-2.0",
@@ -21,8 +24,9 @@
 		"apps/tangent-test-workspace-generator"
 	],
 	"devDependencies": {
-		"@vitest/browser": "^4.0.16",
+		"@vitest/browser": "^5.0.5",
 		"rollup-plugin-visualizer": "^7.1.1",
-		"vitest": "^4.0.16"
+		"typescript": "^6.0.3",
+		"vitest": "^5.0.5"
 	}
 }
