@@ -1,13 +1,12 @@
 import { swapRemove } from '@such-n-such/core'
 import paths from 'common/paths'
 import type { TreeChange, TreeNode } from 'common/trees'
-import { getNodeFromReference, isNode, isSubReference, type TreeNodeOrReference, type TreeNodeReference } from 'common/nodeReferences'
+import { getNodeFromReference, getNodeOrReferencePathId, isNode, type TreeNodeOrReference, type TreeNodeReference } from 'common/nodeReferences'
 import type Workspace from '../Workspace'
 import type { NodeViewState } from './NodeViewState'
 import type { Tangent } from '..'
 import UnhandledViewState from './UnhandledViewState'
 import File from '../File'
-import { IndexData } from 'common/indexing/indexTypes'
 
 export type ViewStateContextCreator = (workspace: Workspace, tangent: Tangent, parent: ViewStateContext) => ViewStateContext
 export type ViewStateCreator = (context: ViewStateContext, node: TreeNode, reference: TreeNodeReference) => NodeViewState
@@ -58,10 +57,22 @@ export default class ViewStateContext {
 
 	getState(item: TreeNodeOrReference, createIfNone=false, allowUnhandled=true) {
 		if (!item) return null
-		const pathID = item.path
+		const pathID = getNodeOrReferencePathId(item)
 		let state = this.states.get(pathID)
 		if (createIfNone && !state) {
-			state = this.createNodeViewState(item, allowUnhandled)
+
+			let node: TreeNode = null
+			let reference: TreeNodeReference = null
+
+			if (isNode(item)) {
+				node = item
+			}
+			else {
+				reference = item
+				node = getNodeFromReference(item, this.workspace.directoryStore)
+			}
+
+			state = this.createNodeViewState(node, reference, allowUnhandled)
 			if (state) {
 				this.states.set(pathID, state)
 			}
@@ -115,22 +126,7 @@ export default class ViewStateContext {
 		}) as File
 	}
 
-	protected createNodeViewState(item: TreeNodeOrReference, allowUnhandled=true): NodeViewState {
-
-		let node: TreeNode = null
-		let reference: TreeNodeReference = null
-
-		if (isNode(item)) {
-			node = item
-		}
-		else {
-			reference = item
-			if (isSubReference(item)) {
-				throw "Taylor you dummy, you don't support sub-references yet!"
-			}
-			
-			node = getNodeFromReference(item, this.workspace.directoryStore)
-		}
+	protected createNodeViewState(node: TreeNode, reference: TreeNodeReference, allowUnhandled=true): NodeViewState {
 
 		let context: ViewStateContext = this
 		while (context) {
@@ -143,7 +139,7 @@ export default class ViewStateContext {
 			context = context.parent
 		}
 
-		console.error('No view state created for', item, 'will fall back to empty')
+		console.error('No view state created for', reference ?? node, 'will fall back to empty')
 
 		return allowUnhandled ? new UnhandledViewState(node) : null
 	}
