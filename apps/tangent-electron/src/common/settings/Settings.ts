@@ -657,6 +657,54 @@ export default class Settings extends ObjectStore {
 		defaultValue: []
 	})
 
+	typographicQuotes = new Setting<boolean>({
+		name: 'Typographic Quotes',
+		description: 'Offer quotation marks from the chosen series when you type " or \'.',
+		defaultValue: false
+	})
+
+	/** The id of a preset from `common/quotations`, `custom`, or empty when none was chosen yet. */
+	quotationPreset = new Setting<string>({
+		name: 'Quotation Marks',
+		description: 'The series of quotation marks used for suggestions.',
+		defaultValue: ''
+	})
+
+	quotationCustomPrimaryOpen = new Setting<string>({ name: 'Primary Opening', defaultValue: '“' })
+	quotationCustomPrimaryClose = new Setting<string>({ name: 'Primary Closing', defaultValue: '”' })
+	quotationCustomSecondaryOpen = new Setting<string>({ name: 'Secondary Opening', defaultValue: '‘' })
+	quotationCustomSecondaryClose = new Setting<string>({ name: 'Secondary Closing', defaultValue: '’' })
+
+	arrowSubstitutions = new Setting({
+		name: 'Arrows',
+		description: 'Whether typing -> , => and similar offers an arrow.',
+		validValues: [
+			{ value: 'suggest', displayName: 'Suggest', description: 'Offer to replace arrow sequences as you type.' },
+			{ value: 'off', displayName: 'Off', description: 'Never offer to replace arrow sequences.' }
+		],
+		defaultValue: 'suggest'
+	})
+
+	dashSubstitutions = new Setting({
+		name: 'Dashes',
+		description: 'Whether typing -- or --- inside a line offers an en or em dash.',
+		validValues: [
+			{ value: 'suggest', displayName: 'Suggest', description: 'Offer to replace double and triple hyphens as you type.' },
+			{ value: 'off', displayName: 'Off', description: 'Never offer to replace double and triple hyphens.' }
+		],
+		defaultValue: 'suggest'
+	})
+
+	ellipsisSubstitutions = new Setting({
+		name: 'Ellipsis',
+		description: 'Whether typing .. offers an ellipsis.',
+		validValues: [
+			{ value: 'suggest', displayName: 'Suggest', description: 'Offer to replace periods as you type.' },
+			{ value: 'off', displayName: 'Off', description: 'Never offer to replace periods.' }
+		],
+		defaultValue: 'suggest'
+	})
+
 	// Keymap
 	keymap = new KeymapSettings()
 
