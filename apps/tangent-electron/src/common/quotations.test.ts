@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { opensQuotation, quotationOptions, presetForLocales, seriesFromSettings, validateSeries, quotationPresets } from './quotations'
+import { opensQuotation, quotationSuggestion, remarkQuotation, findQuotationOpener, presetForLocales, seriesFromSettings, validateSeries, quotationPresets } from './quotations'
 
 describe('quotations', () => {
 	it('maps locales, preferring a full tag over its language', () => {
@@ -36,13 +36,39 @@ describe('quotations', () => {
 		expect(opensQuotation('.')).toBe(false)
 	})
 
-	it('offers the chosen series for typed marks', () => {
+	it('offers the whole completed quotation', () => {
+		const en = quotationPresets[0].series
 		const german = quotationPresets.find(p => p.id === 'german').series
-		expect(quotationOptions('"', ' ', german)).toEqual(['„', '“'])
-		expect(quotationOptions('"', 'a', german)).toEqual(['“', '„'])
-		const nordic = quotationPresets.find(p => p.id === 'nordic').series
-		// Closing and apostrophe coincide, so the list has no duplicate
-		expect(quotationOptions("'", 'n', nordic)).toEqual(['’'])
-		expect(quotationOptions("'", ' ', quotationPresets[0].series)).toEqual(['‘', '’'])
+		expect(quotationSuggestion('"teste"', '"', en)).toEqual({ start: 0, options: ['“teste”'] })
+		expect(quotationSuggestion('say "a b"', '"', german)).toEqual({ start: 4, options: ['„a b“'] })
+		expect(quotationSuggestion("he said 'hi'", "'", en)).toEqual({ start: 8, options: ['‘hi’'] })
+	})
+
+	it('offers nothing for an opening mark or an empty or padded pair', () => {
+		const en = quotationPresets[0].series
+		expect(quotationSuggestion('say "', '"', en)).toBeNull()
+		expect(quotationSuggestion('""', '"', en)).toBeNull()
+		expect(quotationSuggestion('" a"', '"', en)).toBeNull()
+		expect(quotationSuggestion('"a "', '"', en)).toBeNull()
+	})
+
+	it('pairs double marks by parity, so finished pairs do not interfere', () => {
+		expect(findQuotationOpener('"a" and "b"', '"')).toBe(8)
+		expect(findQuotationOpener('"a" and "b', '"')).toBe(-1)
+	})
+
+	it('does not treat apostrophes as quotation marks', () => {
+		const en = quotationPresets[0].series
+		expect(quotationSuggestion("don'", "'", en)).toEqual({ start: 3, options: ['’'] })
+		expect(quotationSuggestion("'don't win'", "'", en)).toEqual({ start: 0, options: ["‘don't win’"] })
+		expect(findQuotationOpener("it's 'fine'", "'")).toBe(5)
+	})
+
+	it('re-marks only an intact quotation source', () => {
+		const en = quotationPresets[0].series
+		expect(remarkQuotation('"teste"', en)).toBe('“teste”')
+		expect(remarkQuotation('"teste"x', en)).toBeNull()
+		expect(remarkQuotation('"', en)).toBeNull()
+		expect(remarkQuotation('"a"b"', en)).toBeNull()
 	})
 })

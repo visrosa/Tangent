@@ -128,25 +128,84 @@ export function opensQuotation(before: string | undefined): boolean {
 	return /[\s(\[{–—―]/u.test(before)
 }
 
+const apostrophe = '\u2019'
+
 /**
- * The marks to offer, best first, when a straight `"` or `'` is typed after `before`.
- * A straight `'` after a letter or digit is most often an apostrophe, which is U+2019.
+ * Finds the opening mark that the mark at the end of `text` closes.
+ * `text` is the line up to and including the mark just typed.
+ * Returns the opener's index, or -1 when the mark closes nothing.
+ *
+ * `"` pairs by parity. `'` pairs with a stack that skips apostrophes
+ * (a `'` between two letters or digits) so `don't` does not open a quotation.
  */
-export function quotationOptions(mark: string, before: string | undefined, series: QuotationSeries): string[] {
-	const apostrophe = '\u2019'
-	const opens = opensQuotation(before)
-	let options: string[]
+export function findQuotationOpener(text: string, mark: string): number {
+	const last = text.length - 1
+	if (text[last] !== mark) return -1
+	const chars = [...text]
+	const positions: number[] = []
+	let index = 0
+	for (const char of chars) {
+		if (char === mark) positions.push(index)
+		index += char.length
+	}
+	const typed = positions.pop()
+	if (typed === undefined) return -1
+
+	let opener = -1
 	if (mark === '"') {
-		options = opens ? [series.primaryOpen, series.primaryClose] : [series.primaryClose, series.primaryOpen]
-	}
-	else if (opens) {
-		options = [series.secondaryOpen, series.secondaryClose, apostrophe]
-	}
-	else if (before && /[\p{L}\p{N}]/u.test(before)) {
-		options = [apostrophe, series.secondaryClose, series.secondaryOpen]
+		opener = positions.length % 2 === 1 ? positions[positions.length - 1] : -1
 	}
 	else {
-		options = [series.secondaryClose, apostrophe, series.secondaryOpen]
+		const stack: number[] = []
+		const wordChar = /[\p{L}\p{N}]/u
+		for (const position of positions) {
+			const before = text[position - 1]
+			const after = text[position + 1]
+			if (before && after && wordChar.test(before) && wordChar.test(after)) continue
+			if (opensQuotation(before)) stack.push(position)
+			else stack.pop()
+		}
+		opener = stack.length ? stack[stack.length - 1] : -1
 	}
-	return [...new Set(options)]
+	if (opener < 0) return -1
+
+	const inner = text.slice(opener + 1, typed)
+	if (!inner || /^\s|\s$/.test(inner)) return -1
+	return opener
+}
+
+/**
+ * The replacement(s) to offer when `mark` was typed at the end of `text`:
+ * the whole quotation re-marked in the series, or a lone apostrophe.
+ * Returns the range start within `text` and the options, or null for no offer.
+ */
+export function quotationSuggestion(
+	text: string,
+	mark: string,
+	series: QuotationSeries
+): { start: number, options: string[] } | null {
+	const opener = findQuotationOpener(text, mark)
+	if (opener >= 0) {
+		const inner = text.slice(opener + 1, -1)
+		const [open, close] = mark === '"'
+			? [series.primaryOpen, series.primaryClose]
+			: [series.secondaryOpen, series.secondaryClose]
+		return { start: opener, options: [open + inner + close] }
+	}
+	if (mark === "'" && /[\p{L}\p{N}]$/u.test(text.slice(0, -1))) {
+		return { start: text.length - 1, options: [apostrophe] }
+	}
+	return null
+}
+
+/** Re-marks a source of the form `"inner"` or `'inner'`, or null if it no longer has that form. */
+export function remarkQuotation(source: string, series: QuotationSeries): string | null {
+	const mark = source[0]
+	if ((mark !== '"' && mark !== "'") || source.length < 3 || source[source.length - 1] !== mark) return null
+	const inner = source.slice(1, -1)
+	if (inner.includes(mark) && mark === '"') return null
+	const [open, close] = mark === '"'
+		? [series.primaryOpen, series.primaryClose]
+		: [series.secondaryOpen, series.secondaryClose]
+	return open + inner + close
 }

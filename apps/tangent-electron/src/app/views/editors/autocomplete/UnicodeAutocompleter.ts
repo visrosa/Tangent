@@ -5,7 +5,7 @@ import { lineToText } from 'common/typewriterUtils'
 import { WritableStore } from 'common/stores'
 import { findCharactersBetweenWhitespace } from 'common/stringUtils'
 import { wrappedIndex } from 'common/collections'
-import { quotationOptions, seriesFromSettings } from 'common/quotations'
+import { quotationSuggestion, remarkQuotation, seriesFromSettings, type QuotationSeries } from 'common/quotations'
 
 type MatcherItem = {
 	match: RegExp,
@@ -130,8 +130,8 @@ export default class UnicodeAutocompleter implements AutocompleteHandler {
 		this.editor = autocomplete.editor
 	}
 
-	/** The character before a quotation mark awaiting a choice, or undefined at the start of a line */
-	private quoteContext: { before: string | undefined } | null = null
+	/** Set while the active range is a quotation (or lone apostrophe) awaiting a choice */
+	private quoteSeries: QuotationSeries | null = null
 
 	private isEnabled(matcher: MatcherItem) {
 		const settings = this.workspace?.settings
@@ -144,9 +144,9 @@ export default class UnicodeAutocompleter implements AutocompleteHandler {
 		return true
 	}
 
-	private quotationOptions(mark: string): string[] {
+	private currentSeries(): QuotationSeries {
 		const settings = this.workspace.settings
-		const series = seriesFromSettings(
+		return seriesFromSettings(
 			settings.quotationPreset.value,
 			{
 				primaryOpen: settings.quotationCustomPrimaryOpen.value,
@@ -156,7 +156,6 @@ export default class UnicodeAutocompleter implements AutocompleteHandler {
 			},
 			typeof navigator !== 'undefined' ? navigator.languages : []
 		)
-		return quotationOptions(mark, this.quoteContext?.before, series)
 	}
 
 	canActivateFromTyping(char: string, doc: TextDocument): false | EditorRange {
@@ -174,7 +173,13 @@ export default class UnicodeAutocompleter implements AutocompleteHandler {
 		return this.tryToActivate(doc)
 	}
 
+	/**
+	 * Activates over a whole completed quotation: typing the closing `"` of `"teste"`
+	 * controls the range from the opener to the cursor, so one choice re-marks both ends.
+	 * An opening mark alone offers nothing; a lone `'` after a letter offers an apostrophe.
+	 */
 	tryToActivateQuote(char: string, doc: TextDocument): false | EditorRange {
+		this.quoteSeries = null
 		const selection = normalizeRange(doc.selection)
 		if (!selection || selection[0] != selection[1] || selection[0] < 1) return false
 
@@ -183,18 +188,25 @@ export default class UnicodeAutocompleter implements AutocompleteHandler {
 		const formats = doc.getFormats(selection[0] - 1)
 		if (formats.inline_code) return false
 
-		const start = selection[0] - 1
-		if (doc.getText([start, selection[0]]) !== char) return false
-
 		const [lineStart] = doc.getLineRange(line)
-		this.quoteContext = {
-			before: start > lineStart ? doc.getText([start - 1, start]) : undefined
+		const text = doc.getText([lineStart, selection[0]])
+		if (!text.endsWith(char)) return false
+
+		const series = this.currentSeries()
+		const suggestion = quotationSuggestion(text, char, series)
+		if (!suggestion) return false
+
+		// An opener inside inline code would make the span cross a code boundary
+		for (let i = lineStart + suggestion.start; i < selection[0]; i++) {
+			if (doc.getFormats(i).inline_code) return false
 		}
-		return [start, selection[0]]
+
+		this.quoteSeries = series
+		return [lineStart + suggestion.start, selection[0]]
 	}
 
 	tryToActivate(doc: TextDocument, autoActivate=false): false | EditorRange {
-		this.quoteContext = null
+		this.quoteSeries = null
 		const selection = normalizeRange(doc.selection)
 		if (!selection || selection[0] != selection[1]) return false
 
@@ -231,9 +243,12 @@ export default class UnicodeAutocompleter implements AutocompleteHandler {
 	updateSourceText(text: string, doc: TextDocument): boolean {
 		// Ignore all updates but the first one
 
-		if (this.quoteContext && quoteChars.includes(text) && text.length === 1) {
-			this.options.set(this.quotationOptions(text))
-			this.selectedOption.set(this.options.value[0])
+		if (this.quoteSeries) {
+			// A lone apostrophe is offered as U+2019; anything longer must still be an intact quotation
+			const remarked = text === "'" ? '\u2019' : remarkQuotation(text, this.quoteSeries)
+			if (!remarked) return false
+			this.options.set([remarked])
+			this.selectedOption.set(remarked)
 			return true
 		}
 
