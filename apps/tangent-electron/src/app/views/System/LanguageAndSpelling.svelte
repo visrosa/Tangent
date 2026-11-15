@@ -32,7 +32,7 @@ const fromSystem = presetForLocales(systemLocales)
 let effectivePresetId = $derived(
 	$quotationPreset || fromSystem?.preset.id || defaultQuotationPresetId)
 $effect(() => {
-	if ($typographicQuotes && !$quotationPreset) {
+	if ($typographicQuotes !== 'off' && !$quotationPreset) {
 		$quotationPreset = effectivePresetId
 	}
 })
@@ -92,7 +92,7 @@ async function getSpellCheckLanguages() {
 	<div class="settingsGroup">
 		<SettingView setting={settings.typographicQuotes} />
 	</div>
-	{#if $typographicQuotes}
+	{#if $typographicQuotes !== 'off'}
 		<div class="quotationSeries">
 			<div class="pickerRow">
 				<span>Typographic Quotes</span>
@@ -122,7 +122,9 @@ async function getSpellCheckLanguages() {
 
 	<h2>Substitutions</h2>
 	<p class="info">
-		Typing a source offers its replacement. Choose Off to stop the offers for a group.
+		Suggest offers the replacement as you type a source. Auto-Replace applies it
+		when you type a space, punctuation or Enter after the source; Esc, Backspace
+		or undo straight afterwards restores what you typed. Off leaves the source alone.
 	</p>
 	{#each substitutionGroups as group}
 		<h3>{group.label}</h3>

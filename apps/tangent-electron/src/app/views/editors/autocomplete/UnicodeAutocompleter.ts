@@ -6,108 +6,9 @@ import { WritableStore } from 'common/stores'
 import { findCharactersBetweenWhitespace } from 'common/stringUtils'
 import { wrappedIndex } from 'common/collections'
 import { quotationSuggestion, remarkQuotation, seriesFromSettings, type QuotationSeries } from 'common/quotations'
+import { substitutionRules, type SubstitutionRule } from 'common/substitutions'
 
-type MatcherItem = {
-	match: RegExp,
-	replace: string|string[],
-	mustBeMidLine?: boolean // This is a way to dodge away from `---` markdown formatting collisions
-	/** The substitution setting that can turn this rule off */
-	group?: 'arrows' | 'dashes' | 'ellipsis'
-}
-
-const matches: MatcherItem[] = [
-	{
-		match: /--+>/,
-		replace: [
-			'➞',
-			'➝',
-			'→',
-			'⟶',
-		],
-		group: 'arrows'
-	},
-	{
-		match: /->/,
-		replace: [
-			'→',
-			'➝',
-			'➞',
-			'⟶'
-		],
-		group: 'arrows'
-	},
-	{
-		match: /<--+/,
-		replace: [
-			'⟵',
-			'←'
-		],
-		group: 'arrows'
-	},
-	{
-		match: /<-/,
-		replace: [
-			'←',
-			'⟵'
-		],
-		group: 'arrows'
-	},
-	{
-		match: /==>/,
-		replace: [
-			'⟹',
-			'⇒',
-		],
-		group: 'arrows'
-	},
-	{
-		match: /=>/,
-		replace: [
-			'⇒',
-			'⟹',
-		],
-		group: 'arrows'
-	},
-	{
-		match: /<==/,
-		replace: [
-			'⟸',
-			'⇐',
-		],
-		group: 'arrows'
-	},
-	{
-		match: /<=/,
-		replace: [
-			'⇐',
-			'⟸',
-		],
-		group: 'arrows'
-	},
-	{
-		match: /---/,
-		replace: [
-			'—',
-			'–'
-		],
-		mustBeMidLine: true,
-		group: 'dashes'
-	},
-	{
-		match: /--/,
-		replace: [
-			'–',
-			'—'
-		],
-		mustBeMidLine: true,
-		group: 'dashes'
-	},
-	{
-		match: /\.\.+/, // Only require two periods so that overall keystroke is the same as three (. . enter)
-		replace: ['…'],
-		group: 'ellipsis'
-	}
-]
+const matches = substitutionRules
 
 const activateChars = '-><.="\''
 
@@ -121,8 +22,15 @@ export default class UnicodeAutocompleter implements AutocompleteHandler {
 	options: WritableStore<string[]> = new WritableStore([])
 	selectedOption: WritableStore<string> = new WritableStore(null)
 
-	constructor(workspace: Workspace) {
+	/**
+	 * Where a substitution set to Auto-Replace is not applied (the filename editor
+	 * cannot undo one with Esc), it is offered as a suggestion instead.
+	 */
+	private autoReplaces: boolean
+
+	constructor(workspace: Workspace, options?: { autoReplace?: boolean }) {
 		this.workspace = workspace
+		this.autoReplaces = options?.autoReplace ?? true
 	}
 
 	init(autocomplete: AutocompleteModule) {
@@ -133,15 +41,15 @@ export default class UnicodeAutocompleter implements AutocompleteHandler {
 	/** Set while the active range is a quotation (or lone apostrophe) awaiting a choice */
 	private quoteSeries: QuotationSeries | null = null
 
-	private isEnabled(matcher: MatcherItem) {
+	/** Whether typing the rule's source opens the suggestion popup */
+	private isEnabled(matcher: SubstitutionRule) {
 		const settings = this.workspace?.settings
-		if (!settings || !matcher.group) return true
-		switch (matcher.group) {
-			case 'arrows': return settings.arrowSubstitutions.value !== 'off'
-			case 'dashes': return settings.dashSubstitutions.value !== 'off'
-			case 'ellipsis': return settings.ellipsisSubstitutions.value !== 'off'
-		}
-		return true
+		if (!settings) return true
+		return this.offersSuggestion(settings[`${matcher.group}Substitutions` as const].value)
+	}
+
+	private offersSuggestion(mode: string) {
+		return mode === 'suggest' || (mode === 'auto' && !this.autoReplaces)
 	}
 
 	private currentSeries(): QuotationSeries {
@@ -160,7 +68,7 @@ export default class UnicodeAutocompleter implements AutocompleteHandler {
 
 	canActivateFromTyping(char: string, doc: TextDocument): false | EditorRange {
 		if (quoteChars.includes(char)) {
-			if (!this.workspace?.settings.typographicQuotes.value) return false
+			if (!this.offersSuggestion(this.workspace?.settings.typographicQuotes.value)) return false
 			return this.tryToActivateQuote(char, doc)
 		}
 		if (activateChars.includes(char)) {

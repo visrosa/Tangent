@@ -657,10 +657,15 @@ export default class Settings extends ObjectStore {
 		defaultValue: []
 	})
 
-	typographicQuotes = new Setting<boolean>({
+	typographicQuotes = new Setting({
 		name: 'Typographic Quotes',
-		description: 'Offer quotation marks from the chosen series when you type " or \'.',
-		defaultValue: false
+		description: 'What typing " or \' does with the chosen series of quotation marks.',
+		validValues: [
+			{ value: 'off', displayName: 'Off', description: 'Leave straight quotation marks alone.' },
+			{ value: 'suggest', displayName: 'Suggest', description: 'Offer the chosen marks when you close a quotation.' },
+			{ value: 'auto', displayName: 'Auto-Replace', description: 'Replace a completed quotation with the chosen marks when you type a space, punctuation or Enter after it. Esc, Backspace or undo restores the straight marks.' }
+		],
+		defaultValue: 'off'
 	})
 
 	/** The id of a preset from `common/quotations`, `custom`, or empty when none was chosen yet. */
@@ -679,8 +684,9 @@ export default class Settings extends ObjectStore {
 		name: 'Arrows',
 		description: 'Whether typing -> , => and similar offers an arrow.',
 		validValues: [
+			{ value: 'off', displayName: 'Off', description: 'Never offer to replace arrow sequences.' },
 			{ value: 'suggest', displayName: 'Suggest', description: 'Offer to replace arrow sequences as you type.' },
-			{ value: 'off', displayName: 'Off', description: 'Never offer to replace arrow sequences.' }
+			{ value: 'auto', displayName: 'Auto-Replace', description: 'Replace arrow sequences when you type a space, punctuation or Enter after them. Esc, Backspace or undo restores what you typed.' }
 		],
 		defaultValue: 'suggest'
 	})
@@ -689,8 +695,9 @@ export default class Settings extends ObjectStore {
 		name: 'Dashes',
 		description: 'Whether typing -- or --- inside a line offers an en or em dash.',
 		validValues: [
+			{ value: 'off', displayName: 'Off', description: 'Never offer to replace double and triple hyphens.' },
 			{ value: 'suggest', displayName: 'Suggest', description: 'Offer to replace double and triple hyphens as you type.' },
-			{ value: 'off', displayName: 'Off', description: 'Never offer to replace double and triple hyphens.' }
+			{ value: 'auto', displayName: 'Auto-Replace', description: 'Replace double and triple hyphens when you type a space, punctuation or Enter after them. Esc, Backspace or undo restores what you typed.' }
 		],
 		defaultValue: 'suggest'
 	})
@@ -699,8 +706,9 @@ export default class Settings extends ObjectStore {
 		name: 'Ellipsis',
 		description: 'Whether typing .. offers an ellipsis.',
 		validValues: [
+			{ value: 'off', displayName: 'Off', description: 'Never offer to replace periods.' },
 			{ value: 'suggest', displayName: 'Suggest', description: 'Offer to replace periods as you type.' },
-			{ value: 'off', displayName: 'Off', description: 'Never offer to replace periods.' }
+			{ value: 'auto', displayName: 'Auto-Replace', description: 'Replace periods when you type a space, punctuation or Enter after them. Esc, Backspace or undo restores what you typed.' }
 		],
 		defaultValue: 'suggest'
 	})

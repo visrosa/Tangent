@@ -12,6 +12,7 @@ import tCheckboxModule from '../t-checkboxModule'
 import TagAutocompleter from '../autocomplete/TagAutocompleter'
 import { getRegexMatchIndices } from '@such-n-such/core'
 import UnicodeAutocompleter from '../autocomplete/UnicodeAutocompleter'
+import autoReplaceModule from '../autocomplete/autoReplaceModule'
 import CodeBlockAutocompleter from '../autocomplete/CodeBlockAutoCompleter'
 import autoWrapping from '../autobraces/autoWrappingModule'
 import { collapsingSections, type CollapsingSectionsModule } from './collapsingSections'
@@ -151,6 +152,10 @@ export default class MarkdownEditor extends Editor {
 					new CodeBlockAutocompleter(),
 					new TemplateTokenAutocompleter()
 				]) : null,
+
+				// After autocomplete: its popup claims keys first when one is open
+				autoReplace: (workspace && (options?.includeAutocomplete ?? true))
+					? (editor => autoReplaceModule(editor, workspace)) : null,
 
 				...trimmedDefaultModules,
 
