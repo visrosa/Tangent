@@ -5,6 +5,8 @@ import type Workspace from 'app/model/Workspace'
 
 import SettingView from './SettingView.svelte'
 import CustomWords from './CustomWords.svelte'
+import QuotationPicker from './QuotationPicker.svelte'
+import { systemFirst, systemRank } from 'common/localeOrder'
 import { isMac } from 'common/platform'
 import { substitutionGroups } from 'common/substitutions'
 import {
@@ -35,19 +37,6 @@ $effect(() => {
 	}
 })
 
-const languageNames = new Intl.DisplayNames(['en'], { type: 'language' })
-
-function languageName(tag: string) {
-	try { return languageNames.of(tag) ?? tag } catch { return tag }
-}
-
-/** Dropdown text: the glyphs, then the languages whose CLDR value this is */
-function presetLabel(preset: { name: string, locales: string[] }) {
-	// Region tags (zh-TW) belong to a script or language already listed
-	const names = preset.locales.filter(l => !/-[A-Z]{2}$/.test(l))
-	return `${preset.name} — ${names.map(languageName).join(', ')}`
-}
-
 const substitutionSettings = {
 	arrows: settings.arrowSubstitutions,
 	dashes: settings.dashSubstitutions,
@@ -65,8 +54,10 @@ let series = $derived(seriesFromSettings(effectivePresetId, customSeries, system
 
 async function getSpellCheckLanguages() {
 	const langs = await workspace.api.system.getAllLanguages()
+	const ordered = systemFirst(langs, l => l, systemLocales)
+	const hasSystem = ordered.some(l => systemRank(l, systemLocales) < Infinity)
 
-	return langs.map(l => {
+	return ordered.map(l => {
 		const match = l.match(/(\w+)(-(.+))?/)
 		const name = getLangNameFromCode(match[1])
 
@@ -82,7 +73,9 @@ async function getSpellCheckLanguages() {
 
 		return {
 			value: l,
-			displayName
+			displayName,
+			// Headings only help when there are two groups to tell apart
+			group: hasSystem ? (systemRank(l, systemLocales) < Infinity ? 'Your languages' : 'Other languages') : undefined
 		}
 	})
 }
@@ -101,18 +94,18 @@ async function getSpellCheckLanguages() {
 	</div>
 	{#if $typographicQuotes}
 		<div class="quotationSeries">
-			<label>
+			<div class="pickerRow">
 				<span>Typographic Quotes</span>
-				<select
+				<QuotationPicker
+					presets={quotationPresets}
 					value={effectivePresetId}
-					onchange={e => $quotationPreset = e.currentTarget.value}
-				>
-					{#each quotationPresets as preset}
-						<option value={preset.id}>{presetLabel(preset)}</option>
-					{/each}
-					<option value={customQuotationPresetId}>Custom</option>
-				</select>
-			</label>
+					{systemLocales}
+					customId={customQuotationPresetId}
+					customSeries={customSeries}
+					customValid={validateSeries(customSeries) === null}
+					onselect={id => $quotationPreset = id}
+				/>
+			</div>
 			{#if effectivePresetId === customQuotationPresetId}
 				<div class="settingsGroup">
 					<SettingView setting={settings.quotationCustomPrimaryOpen} />
@@ -175,8 +168,14 @@ async function getSpellCheckLanguages() {
 	gap: .25em 1.5em;
 }
 
-label span {
-	margin-right: .5em;
+.pickerRow {
+	display: flex;
+	align-items: baseline;
+	gap: .5em;
+
+	> span {
+		flex: none;
+	}
 }
 
 .error {

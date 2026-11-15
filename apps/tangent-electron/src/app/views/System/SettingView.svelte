@@ -1,6 +1,6 @@
 <script lang="ts">
 import { getContext } from 'svelte'
-import Setting, { getValue, getDescription, getDisplayName } from 'common/settings/Setting'
+import Setting, { getValue, getDescription, getDisplayName, getGroup } from 'common/settings/Setting'
 import type { SettingType, SettingValue, SettingArrayType, SettingForm } from 'common/settings/Setting'
 import type Workspace from 'app/model/Workspace'
 import SvgIcon from '../smart-icons/SVGIcon.svelte'
@@ -220,7 +220,10 @@ function toggleItem(item) {
 				<div class="range">
 					<PopUpButton name={multiItemDisplay($setting, effectiveValueList)} buttonClass="grow">
 						{#snippet menu()}
-							{#each effectiveValueList as item}
+							{#each effectiveValueList as item, index}
+								{#if getGroup(item) && getGroup(item) !== getGroup(effectiveValueList[index - 1])}
+									<h4 class="group-heading">{getGroup(item)}</h4>
+								{/if}
 								<label class="aligned-switch-item">
 									<input onclick={() => toggleItem(item)} type="checkbox" checked={($setting as SettingArrayType).includes(getValue(item))} />
 									<span>{getDisplayName(item) || 'Default'}</span>
@@ -401,6 +404,19 @@ button.reset {
 
 	&:disabled {
 		visibility: hidden;
+	}
+}
+
+.group-heading {
+	margin: .75em 0 .25em;
+	font-size: .8em;
+	font-weight: normal;
+	text-transform: uppercase;
+	letter-spacing: .06em;
+	color: var(--deemphasizedTextColor);
+
+	&:first-child {
+		margin-top: 0;
 	}
 }
 
