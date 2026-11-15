@@ -6,6 +6,7 @@ import type Workspace from 'app/model/Workspace'
 import SettingView from './SettingView.svelte'
 import CustomWords from './CustomWords.svelte'
 import QuotationPicker from './QuotationPicker.svelte'
+import SubstitutionPairs from './SubstitutionPairs.svelte'
 import { systemFirst, systemRank } from 'common/localeOrder'
 import { isMac } from 'common/platform'
 import { substitutionGroups } from 'common/substitutions'
@@ -125,14 +126,12 @@ async function getSpellCheckLanguages() {
 		Suggest offers the replacement as you type a source. Auto-Replace applies it
 		when you type a space, punctuation or Enter after the source; Esc, Backspace
 		or undo straight afterwards restores what you typed. Off leaves the source alone.
+		Each group sets a default mode; a pair can use its own instead. Edit a source or
+		replacement and press Enter; Reset restores the built-in pair.
 	</p>
 	{#each substitutionGroups as group}
 		<h3>{group.label}</h3>
-		<ul class="pairs" aria-label={`${group.label} substitutions`}>
-			{#each group.pairs as pair}
-				<li><code>{pair.source}</code> → <span>{pair.target}</span></li>
-			{/each}
-		</ul>
+		<SubstitutionPairs group={group.id} label={group.label} />
 		<div class="settingsGroup">
 			<SettingView setting={substitutionSettings[group.id]} />
 		</div>
@@ -159,15 +158,6 @@ async function getSpellCheckLanguages() {
 <style lang="scss">
 .quotationSeries {
 	margin-bottom: 1.5em;
-}
-
-.pairs {
-	list-style: none;
-	margin: 0 0 .5em;
-	padding: 0;
-	display: flex;
-	flex-wrap: wrap;
-	gap: .25em 1.5em;
 }
 
 .pickerRow {

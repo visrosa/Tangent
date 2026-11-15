@@ -2,7 +2,7 @@ import type { Workspace } from 'app/model'
 import { Source, type Editor, type EditorChangeEvent, type EditorRange, normalizeRange } from 'typewriter-editor'
 import { seriesFromSettings, type QuotationSeries } from 'common/quotations'
 import { planAutoReplace, type AutoReplaceModes } from 'common/autoReplace'
-import type { SubstitutionMode } from 'common/substitutions'
+import { resolveFromSettings, type SubstitutionMode } from 'common/substitutions'
 
 /** Inline formats and line attributes whose text a substitution must never rewrite. */
 const protectedFormats = ['inline_code', 'math', 't_link', 't_embed', 'templateToken', 'code_syntax']
@@ -36,13 +36,8 @@ export default function autoReplaceModule(editor: Editor, workspace: Workspace) 
 
 	function modes(): AutoReplaceModes {
 		const s = settings()
-		const groupModes = {
-			arrows: s.arrowSubstitutions.value,
-			dashes: s.dashSubstitutions.value,
-			ellipsis: s.ellipsisSubstitutions.value
-		}
 		return {
-			groups: group => groupModes[group] as SubstitutionMode,
+			rules: resolveFromSettings(s),
 			quotes: s.typographicQuotes.value as SubstitutionMode
 		}
 	}

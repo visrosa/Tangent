@@ -680,6 +680,17 @@ export default class Settings extends ObjectStore {
 	quotationCustomSecondaryOpen = new Setting<string>({ name: 'Secondary Opening', defaultValue: '‘' })
 	quotationCustomSecondaryClose = new Setting<string>({ name: 'Secondary Closing', defaultValue: '’' })
 
+	/**
+	 * Per-pair changes to the built-in substitutions, as JSON keyed by pair id
+	 * (`common/substitutions.ts`). Settings hold only simple values, so this is one
+	 * string that is validated when read.
+	 */
+	substitutionOverrides = new Setting<string>({
+		name: 'Substitution Overrides',
+		description: 'Mode, source and replacement changes for individual substitutions.',
+		defaultValue: ''
+	})
+
 	arrowSubstitutions = new Setting({
 		name: 'Arrows',
 		description: 'Whether typing -> , => and similar offers an arrow.',

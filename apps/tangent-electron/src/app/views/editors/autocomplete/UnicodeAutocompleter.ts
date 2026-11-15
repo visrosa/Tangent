@@ -6,9 +6,10 @@ import { WritableStore } from 'common/stores'
 import { findCharactersBetweenWhitespace } from 'common/stringUtils'
 import { wrappedIndex } from 'common/collections'
 import { quotationSuggestion, remarkQuotation, seriesFromSettings, type QuotationSeries } from 'common/quotations'
-import { substitutionRules, type SubstitutionRule } from 'common/substitutions'
+import { resolveFromSettings, resolveSubstitutions, type ResolvedSubstitution } from 'common/substitutions'
 
-const matches = substitutionRules
+/** What the popup consults when no workspace settings exist: every built-in, suggesting */
+const fallbackRules = resolveSubstitutions({ arrows: 'suggest', dashes: 'suggest', ellipsis: 'suggest' }, {})
 
 const activateChars = '-><.="\''
 
@@ -41,11 +42,15 @@ export default class UnicodeAutocompleter implements AutocompleteHandler {
 	/** Set while the active range is a quotation (or lone apostrophe) awaiting a choice */
 	private quoteSeries: QuotationSeries | null = null
 
-	/** Whether typing the rule's source opens the suggestion popup */
-	private isEnabled(matcher: SubstitutionRule) {
+	/** The substitutions in force, longest source first */
+	private rules(): ResolvedSubstitution[] {
 		const settings = this.workspace?.settings
-		if (!settings) return true
-		return this.offersSuggestion(settings[`${matcher.group}Substitutions` as const].value)
+		return settings ? resolveFromSettings(settings) : fallbackRules
+	}
+
+	/** Whether typing the rule's source opens the suggestion popup */
+	private isEnabled(matcher: ResolvedSubstitution) {
+		return this.offersSuggestion(matcher.mode)
 	}
 
 	private offersSuggestion(mode: string) {
@@ -71,7 +76,8 @@ export default class UnicodeAutocompleter implements AutocompleteHandler {
 			if (!this.offersSuggestion(this.workspace?.settings.typographicQuotes.value)) return false
 			return this.tryToActivateQuote(char, doc)
 		}
-		if (activateChars.includes(char)) {
+		// An edited source may end in a character the built-ins never use
+		if (activateChars.includes(char) || this.rules().some(r => r.customSource && r.source.endsWith(char))) {
 			return this.tryToActivate(doc, true)
 		}
 		return false
@@ -132,7 +138,7 @@ export default class UnicodeAutocompleter implements AutocompleteHandler {
 		const [wordStart, wordEnd] = findCharactersBetweenWhitespace(lineText, selection[0] - lineStart)
 		const text = doc.getText([lineStart + wordStart, lineStart + wordEnd])
 
-		for (const matcher of matches) {
+		for (const matcher of this.rules()) {
 			if (!this.isEnabled(matcher)) continue
 			const match = text.match(matcher.match)
 			if (match) {
@@ -160,7 +166,7 @@ export default class UnicodeAutocompleter implements AutocompleteHandler {
 			return true
 		}
 
-		for (const matcher of matches) {
+		for (const matcher of this.rules()) {
 			if (!this.isEnabled(matcher)) continue
 			const match = text.match(matcher.match)
 			if (match) {

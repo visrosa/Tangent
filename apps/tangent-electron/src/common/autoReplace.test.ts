@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { findAutoQuotation, findAutoReplacement, isBoundary, planAutoReplace } from './autoReplace'
 import { seriesFromSettings } from './quotations'
-import type { SubstitutionGroupId, SubstitutionMode } from './substitutions'
+import { resolveSubstitutions, type SubstitutionGroupId, type SubstitutionMode, type SubstitutionOverrides } from './substitutions'
 
 const allAuto = (_group?: SubstitutionGroupId): SubstitutionMode => 'auto'
+const resolveWith = (
+	mode: (g: SubstitutionGroupId) => SubstitutionMode,
+	overrides: SubstitutionOverrides = {}
+) => resolveSubstitutions({ arrows: mode('arrows'), dashes: mode('dashes'), ellipsis: mode('ellipsis') }, overrides)
 const only = (group: string) => (g: SubstitutionGroupId): SubstitutionMode => (g === group ? 'auto' : 'suggest')
 
 describe('isBoundary', () => {
@@ -16,8 +20,12 @@ describe('isBoundary', () => {
 })
 
 describe('findAutoReplacement', () => {
-	const run = (before: string, mode: (g: SubstitutionGroupId) => SubstitutionMode = allAuto) => {
-		const found = findAutoReplacement(before, mode)
+	const run = (
+		before: string,
+		mode: (g: SubstitutionGroupId) => SubstitutionMode = allAuto,
+		overrides: SubstitutionOverrides = {}
+	) => {
+		const found = findAutoReplacement(before, resolveWith(mode, overrides))
 		return found && { ...found, text: before.slice(found.start, found.end) }
 	}
 
@@ -82,9 +90,44 @@ describe('findAutoQuotation', () => {
 	})
 })
 
+describe('findAutoReplacement with overrides', () => {
+	const run = (before: string, overrides: SubstitutionOverrides, mode = allAuto) => {
+		const found = findAutoReplacement(before, resolveWith(mode, overrides))
+		return found && { ...found, text: before.slice(found.start, found.end) }
+	}
+
+	it('lets one pair differ from its group', () => {
+		const overrides = { 'arrow-right': { mode: 'suggest' as const } }
+		expect(run('a ->', overrides)).toBeNull()
+		expect(run('a <-', overrides)).toMatchObject({ replacement: '←' })
+		expect(run('a ->', { 'arrow-right': { mode: 'auto' } }, () => 'off')).toMatchObject({ replacement: '→' })
+	})
+
+	it('applies an edited target', () => {
+		expect(run('a ->', { 'arrow-right': { target: '⟶' } })).toMatchObject({ replacement: '⟶' })
+	})
+
+	it('matches an edited source literally, not as the family it replaced', () => {
+		const overrides = { 'arrow-right-long': { source: '~>' } }
+		expect(run('a ~>', overrides)).toMatchObject({ replacement: '➞', text: '~>' })
+		expect(run('a -->', overrides)).toBeNull()
+		expect(run('a --->', overrides)).toBeNull()
+	})
+
+	it('tries a longer edited source before a shorter one', () => {
+		expect(run('a <->', { 'dash-em': { source: '<->', target: '↔' } })).toMatchObject({ replacement: '↔', text: '<->' })
+	})
+
+	it('does not take the tail of a longer run of an edited source\'s own characters', () => {
+		const overrides = { 'ellipsis': { source: 'xx' } }
+		expect(run('a xx', overrides)).toMatchObject({ replacement: '…' })
+		expect(run('a xxx', overrides)).toBeNull()
+	})
+})
+
 describe('planAutoReplace', () => {
 	const series = seriesFromSettings('english', {} as any, [])
-	const modes = (quotes: SubstitutionMode, group: SubstitutionMode = 'auto') => ({ groups: () => group, quotes })
+	const modes = (quotes: SubstitutionMode, group: SubstitutionMode = 'auto') => ({ rules: resolveWith(() => group), quotes })
 	const free = () => false
 
 	it('needs a boundary character after the source', () => {

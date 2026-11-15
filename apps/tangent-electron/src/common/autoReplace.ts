@@ -1,6 +1,4 @@
-import {
-	substitutionRules, type SubstitutionGroupId, type SubstitutionMode
-} from './substitutions'
+import type { ResolvedSubstitution, SubstitutionMode } from './substitutions'
 import { findQuotationOpener, remarkQuotation, type QuotationSeries } from './quotations'
 
 /**
@@ -31,11 +29,6 @@ export interface AutoReplacement {
 	replacement: string
 }
 
-const anchored = substitutionRules.map(rule => ({
-	rule,
-	pattern: new RegExp(`(?:${rule.match.source})$`, rule.match.flags)
-}))
-
 /**
  * Finds the substitution that a boundary typed after `before` completes. `before`
  * is the text of the line up to the boundary. The source must end the
@@ -44,15 +37,20 @@ const anchored = substitutionRules.map(rule => ({
  */
 export function findAutoReplacement(
 	before: string,
-	mode: (group: SubstitutionGroupId) => SubstitutionMode
+	rules: ResolvedSubstitution[]
 ): AutoReplacement | null {
 	const wordStart = before.search(/\S*$/u)
 	const word = before.slice(wordStart)
-	for (const { rule, pattern } of anchored) {
-		if (mode(rule.group) !== 'auto') continue
-		const match = pattern.exec(word)
+	for (const rule of rules) {
+		if (rule.mode !== 'auto') continue
+		const match = rule.anchored.exec(word)
 		if (!match) continue
-		if (match.index > 0 && sourceAlphabet.includes(word[match.index - 1])) continue
+		// The character before the match belongs to the same run when it is a
+		// built-in source character or one of this source's own
+		if (match.index > 0) {
+			const previous = word[match.index - 1]
+			if (sourceAlphabet.includes(previous) || match[0].includes(previous)) continue
+		}
 		// A leading `---` is Markdown, not a dash
 		if (rule.mustBeMidLine && wordStart + match.index === 0) continue
 		return {
@@ -80,7 +78,7 @@ export function findAutoQuotation(before: string, series: QuotationSeries): Auto
 }
 
 export interface AutoReplaceModes {
-	groups: (group: SubstitutionGroupId) => SubstitutionMode
+	rules: ResolvedSubstitution[]
 	quotes: SubstitutionMode
 }
 
@@ -97,7 +95,7 @@ export function planAutoReplace(
 	isProtected: (offset: number) => boolean
 ): AutoReplacement | null {
 	if (!isBoundary(boundary) || !before) return null
-	const found = findAutoReplacement(before, modes.groups)
+	const found = findAutoReplacement(before, modes.rules)
 		?? (modes.quotes === 'auto' ? findAutoQuotation(before, series) : null)
 	if (!found) return null
 	for (let i = found.start; i < found.end; i++) {
