@@ -6,13 +6,12 @@ import { tooltip } from 'app/utils/tooltips'
 
 const workspace = getContext('workspace') as Workspace
 
-/** Above this many words the letter rail appears. */
-const RAIL_THRESHOLD = 25
-
 let words = $state<string[] | null>(null)
 let newWord = $state('')
 let announcement = $state('')
 let currentLetter = $state('')
+/** The rail only helps once the list actually scrolls; a count of words cannot tell, since the grid fits several columns. */
+let overflows = $state(false)
 
 let listElement = $state<HTMLElement>()
 let removeButtons = $state<Record<string, HTMLButtonElement>>({})
@@ -84,11 +83,26 @@ function updateCurrentLetter() {
 	currentLetter = current || (letters.keys().next().value ?? '')
 }
 
+function measureOverflow() {
+	overflows = !!listElement && listElement.scrollHeight > listElement.clientHeight + 1
+}
+
 $effect(() => {
 	// Recompute when the words change
 	words
 	letters
-	tick().then(updateCurrentLetter)
+	tick().then(() => {
+		measureOverflow()
+		updateCurrentLetter()
+	})
+})
+
+$effect(() => {
+	if (!listElement) return
+	// The window and the rail itself change how many columns fit
+	const observer = new ResizeObserver(measureOverflow)
+	observer.observe(listElement)
+	return () => observer.disconnect()
 })
 </script>
 
@@ -106,7 +120,7 @@ $effect(() => {
 		<p class="info">No custom words yet.</p>
 	{:else}
 		<div class="listArea">
-			{#if words.length > RAIL_THRESHOLD}
+			{#if overflows}
 				<nav class="rail" aria-label="Jump to letter">
 					{#each [...letters] as [letter, word]}
 						<button
