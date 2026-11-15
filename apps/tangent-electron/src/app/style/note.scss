@@ -203,8 +203,12 @@ article.note {
 					color: var(--accentTextColor);
 				}
 
+				// Display-only: the note keeps `*` and `-`; revealed lines show the source.
 				&[listGlyph='*']::after {
-					content: '•';
+					content: '\2217'; // ∗ ASTERISK OPERATOR
+				}
+				&[listGlyph='-']::after {
+					content: '\2043'; // ⁃ HYPHEN BULLET
 				}
 
 				&.checkbox t-checkbox {
