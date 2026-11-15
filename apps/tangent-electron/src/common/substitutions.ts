@@ -152,6 +152,12 @@ export function resolveSubstitutions(groupModes: GroupModes, overrides: Substitu
 }
 
 /**
+ * Characters a user-chosen source may not start with: the Markdown syntax set that
+ * Custom quotation glyphs also refuse. A built-in's own source is exempt (`<-`).
+ */
+const markdownSyntaxStarts = ['*', '_', '`', '[', ']', '~', '\\', '<', '>']
+
+/**
  * Why `source` → `target` cannot be stored for pair `id`, or null when it can.
  * `resolved` carries the effective sources of every pair, this one included.
  */
@@ -162,6 +168,10 @@ export function validateSubstitution(
 	if (/\s/u.test(source)) return 'The source cannot contain whitespace.'
 	if (!target) return 'The replacement cannot be empty.'
 	if (target.includes(source)) return 'The replacement cannot contain its own source, or it would trigger again.'
+	const def = substitutionDefinitions.find(d => d.id === id)
+	if (source !== def?.source && markdownSyntaxStarts.includes(source[0])) {
+		return `The source cannot start with ${source[0]}, which Markdown uses for syntax.`
+	}
 	const clash = resolved.find(r => r.id !== id && r.source === source)
 	if (clash) return `${source} is already the source of another substitution.`
 	return null

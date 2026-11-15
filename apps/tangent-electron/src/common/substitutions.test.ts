@@ -70,6 +70,12 @@ describe('validateSubstitution', () => {
 		expect(validateSubstitution('arrow-right', '->', '', rules)).toMatch(/empty/)
 		expect(validateSubstitution('dash-en', '-', '--', rules)).toMatch(/own source/)
 	})
+	it('refuses a source starting with a Markdown syntax character, except a built-in\'s own', () => {
+		expect(validateSubstitution('arrow-right', '*>', '→', rules)).toMatch(/Markdown/)
+		expect(validateSubstitution('arrow-right', '>>', '→', rules)).toMatch(/Markdown/)
+		expect(validateSubstitution('arrow-left', '<-', '←', rules)).toBeNull()
+		expect(validateSubstitution('arrow-right', '=>>', '→', rules)).toBeNull()
+	})
 	it('rejects a source another pair already uses', () => {
 		expect(validateSubstitution('arrow-right', '=>', '→', rules)).toMatch(/already/)
 	})
