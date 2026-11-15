@@ -26,7 +26,7 @@ The **Default Complete Todo Glyph** setting lets you configure what character is
 
 Enabling **Inter-Text Underscore Emphasis** allows underscore characters to affect formatting when surrounded on both sides by text. See [[Bold and Italics#Inter-Text Underscores]] for more information.
 
-Spell check, smart paragraph breaks and list glyph behavior are configured under [[Language & Spelling]].
+Spell check, smart paragraph breaks and list glyph behavior are configured under [[Language & Input]].
 
 # Code Options
 **Extra Wide Code** allows code blocks to expand outside of the normal width of a note. This can be very helpful when looking at code from verbose codebases.

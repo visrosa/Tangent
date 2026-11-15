@@ -79,7 +79,7 @@ const menus = [
 		component: Styles
 	},
 	{
-		name: 'Language & Spelling',
+		name: 'Language & Input',
 		component: LanguageAndSpelling
 	},
 	{

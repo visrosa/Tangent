@@ -4,8 +4,9 @@ import { getLangNameFromCode } from 'language-name-map'
 import type Workspace from 'app/model/Workspace'
 
 import SettingView from './SettingView.svelte'
-import CustomDictionary from './CustomDictionary.svelte'
+import CustomWords from './CustomWords.svelte'
 import { isMac } from 'common/platform'
+import { substitutionGroups } from 'common/substitutions'
 import {
 	quotationPresets, customQuotationPresetId, defaultQuotationPresetId,
 	presetForLocales, seriesFromSettings, validateSeries
@@ -33,6 +34,25 @@ $effect(() => {
 		$quotationPreset = effectivePresetId
 	}
 })
+
+const languageNames = new Intl.DisplayNames(['en'], { type: 'language' })
+
+function languageName(tag: string) {
+	try { return languageNames.of(tag) ?? tag } catch { return tag }
+}
+
+/** Dropdown text: the glyphs, then the languages whose CLDR value this is */
+function presetLabel(preset: { name: string, locales: string[] }) {
+	// Region tags (zh-TW) belong to a script or language already listed
+	const names = preset.locales.filter(l => !/-[A-Z]{2}$/.test(l))
+	return `${preset.name} — ${names.map(languageName).join(', ')}`
+}
+
+const substitutionSettings = {
+	arrows: settings.arrowSubstitutions,
+	dashes: settings.dashSubstitutions,
+	ellipsis: settings.ellipsisSubstitutions
+}
 
 let customSeries = $derived({
 	primaryOpen: $customPrimaryOpen,
@@ -69,20 +89,6 @@ async function getSpellCheckLanguages() {
 </script>
 
 <main>
-	<h2>Spelling</h2>
-	<div class="settingsGroup">
-		<SettingView setting={settings.enableSpellCheck} />
-		<SettingView setting={settings.filenameSpellCheck} />
-		<SettingView setting={settings.contentSpellCheck} />
-		{#if !isMac}
-			<SettingView setting={settings.spellCheckLanguages}
-				includeDefault={false}
-				getValuesImmediately={true}
-				showReset={true}
-				getValues={getSpellCheckLanguages}/>
-		{/if}
-	</div>
-
 	<h2>Editing Conventions</h2>
 	<div class="settingsGroup">
 		<SettingView setting={settings.smartParagraphBreaks} />
@@ -96,25 +102,17 @@ async function getSpellCheckLanguages() {
 	{#if $typographicQuotes}
 		<div class="quotationSeries">
 			<label>
-				Series
+				<span>Typographic Quotes</span>
 				<select
 					value={effectivePresetId}
 					onchange={e => $quotationPreset = e.currentTarget.value}
 				>
 					{#each quotationPresets as preset}
-						<option value={preset.id}>{preset.name}</option>
+						<option value={preset.id}>{presetLabel(preset)}</option>
 					{/each}
 					<option value={customQuotationPresetId}>Custom</option>
 				</select>
 			</label>
-			<p class="info">
-				{#if fromSystem}
-					Preselected from your system language ({fromSystem.tag}).
-				{:else}
-					No preset matches your system language; the English series was preselected.
-				{/if}
-				Typing <code>"</code> or <code>'</code> offers these marks; nothing is replaced until you accept.
-			</p>
 			{#if effectivePresetId === customQuotationPresetId}
 				<div class="settingsGroup">
 					<SettingView setting={settings.quotationCustomPrimaryOpen} />
@@ -126,24 +124,41 @@ async function getSpellCheckLanguages() {
 					<p class="error" role="alert">{customError} The English series is used until this is fixed.</p>
 				{/if}
 			{/if}
-			<p class="preview" aria-label="Preview">
-				Quid {series.primaryOpen}Quod {series.secondaryOpen}Quae{series.secondaryClose} quod{series.primaryClose}
-			</p>
 		</div>
 	{/if}
 
 	<h2>Substitutions</h2>
 	<p class="info">
-		Typing these sequences offers a replacement. Choose Off to stop the offers for a group.
+		Typing a source offers its replacement. Choose Off to stop the offers for a group.
 	</p>
-	<div class="settingsGroup">
-		<SettingView setting={settings.arrowSubstitutions} />
-		<SettingView setting={settings.dashSubstitutions} />
-		<SettingView setting={settings.ellipsisSubstitutions} />
-	</div>
+	{#each substitutionGroups as group}
+		<h3>{group.label}</h3>
+		<ul class="pairs" aria-label={`${group.label} substitutions`}>
+			{#each group.pairs as pair}
+				<li><code>{pair.source}</code> → <span>{pair.target}</span></li>
+			{/each}
+		</ul>
+		<div class="settingsGroup">
+			<SettingView setting={substitutionSettings[group.id]} />
+		</div>
+	{/each}
 
-	<h2>Custom Dictionary</h2>
-	<CustomDictionary />
+	<h2>Spell Check</h2>
+	<div class="settingsGroup">
+		<SettingView setting={settings.enableSpellCheck} />
+		{#if isMac}
+			<p class="info">Spell check languages follow your system settings on macOS.</p>
+		{:else}
+			<SettingView setting={settings.spellCheckLanguages}
+				includeDefault={false}
+				getValuesImmediately={true}
+				showReset={true}
+				getValues={getSpellCheckLanguages}/>
+		{/if}
+		<SettingView setting={settings.filenameSpellCheck} />
+		<SettingView setting={settings.contentSpellCheck} />
+	</div>
+	<CustomWords />
 </main>
 
 <style lang="scss">
@@ -151,8 +166,17 @@ async function getSpellCheckLanguages() {
 	margin-bottom: 1.5em;
 }
 
-.preview {
-	font-size: 1.1em;
+.pairs {
+	list-style: none;
+	margin: 0 0 .5em;
+	padding: 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: .25em 1.5em;
+}
+
+label span {
+	margin-right: .5em;
 }
 
 .error {
