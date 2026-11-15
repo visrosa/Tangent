@@ -96,14 +96,14 @@ function unbindEditor() {
 }
 
 function mouseUp(event: MouseEvent) {
-	if (preventMouseUpDefault) {
+	if (event.button === 0 && preventMouseUpDefault) {
 		event.preventDefault()
 	}
 }
 
 function headerMouseUp(event: MouseEvent) {
 	mouseUp(event)
-	if (document.activeElement !== headerEditElement) {
+	if (event.button === 0 && document.activeElement !== headerEditElement) {
 		editor.select([0, editor.doc.length - 1])
 	}
 }

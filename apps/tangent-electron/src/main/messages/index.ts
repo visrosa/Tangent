@@ -575,10 +575,11 @@ async function readClipboardImage() {
 	return null
 }
 
-ipcMain.handle('saveImageFromClipboard', async (event, contextPath) => {
+ipcMain.handle('saveImageFromPaste', async (event, contextPath: string, data: Uint8Array) => {
 	try {
-		const nativeImage = await readClipboardImage()
-		const image = nativeImage.toPNG()
+		const pastedImage = nativeImage.createFromBuffer(Buffer.from(data))
+		if (pastedImage.isEmpty()) return
+		const image = pastedImage.toPNG()
 
 		// This chunk of code heralds from https://stackoverflow.com/questions/31468395/image-dpi-in-javascript-nodejs-and-electron
 		// It was an attempt to read the 'pHYs' chunk of the clipboard png file

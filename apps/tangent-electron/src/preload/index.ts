@@ -116,8 +116,8 @@ const bridge: WindowApi = {
 		getAllLanguages() {
 			return ipcRenderer.invoke('getAllLanguages')
 		},
-		saveImageFromClipboard(contextPath) {
-			return ipcRenderer.invoke('saveImageFromClipboard', contextPath)
+		saveImageFromPaste(contextPath, image) {
+			return ipcRenderer.invoke('saveImageFromPaste', contextPath, image)
 		},
 		copyImageToClipboard(path) {
 			return ipcRenderer.invoke('copyImageToClipboard', path)

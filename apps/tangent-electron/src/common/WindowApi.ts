@@ -60,7 +60,7 @@ export default interface WindowAPI {
 	system: {
 		getAllFonts(): Promise<string[]>
 		getAllLanguages(): Promise<string[]>
-		saveImageFromClipboard(contextPath: string): Promise<string>
+		saveImageFromPaste(contextPath: string, image: Uint8Array): Promise<string>
 		copyImageToClipboard(path: string): Promise<void>
 		updateImageFromClipboard(path: string): Promise<void>
 		messageDialog(options: Electron.MessageBoxOptions): Promise<Electron.MessageBoxReturnValue>

@@ -35,6 +35,28 @@ function getTagFromClassList(classList: DOMTokenList): string {
 }
 
 type LinkFollowType = 'mod' | 'none'
+
+const pendingMiddleReleases = new WeakMap<Document, AbortController>()
+
+function consumeMiddleRelease(document: Document) {
+	pendingMiddleReleases.get(document)?.abort()
+	const controller = new AbortController()
+	pendingMiddleReleases.set(document, controller)
+	const options = { capture: true, signal: controller.signal }
+	const clear = () => {
+		controller.abort()
+		pendingMiddleReleases.delete(document)
+	}
+	// Navigation can unmount the editor before Chromium performs release-time paste.
+	document.addEventListener('mouseup', event => {
+		if (event.button !== 1) return
+		event.preventDefault()
+		clear()
+	}, options)
+	document.addEventListener('mousedown', clear, options)
+	document.defaultView?.addEventListener('blur', clear, options)
+}
+
 export default function tlinkModule(editor: Editor, options?: {
 	/** What modifiers need to be pressed to follow a link */
 	linkFollowRequirement?: LinkFollowType | ReadableStore<LinkFollowType>
@@ -90,7 +112,9 @@ export default function tlinkModule(editor: Editor, options?: {
 	}
 
 	function onMouseDown(event: MouseEvent) {
+		if (event.defaultPrevented) return
 		if (event.button === 1 && TangentLink.isTangentLinkEvent(event)) {
+			consumeMiddleRelease(editor.root.ownerDocument)
 			// On windows, middle clicking a link on a scrollable element enables windows' terrible middle click scrolling feature.
 			// Grabbing on mouse down is a bit hacky, but avoids that issue.
 			return onClick(event)

@@ -2,6 +2,7 @@ import {
 	Editor,
 	EditorChangeEvent,
 	type EditorRange,
+	getPasteSelection,
 	normalizeRange,
 	Op,
 	Line,
@@ -819,27 +820,29 @@ export default function editorModule(editor: Editor, options: {
 	}
 
 	function onPaste(event: ClipboardEvent) {
-
+		if (!editor.enabled || event.defaultPrevented || !event.clipboardData) return
 		const doc = editor.doc
-		const selection = doc.selection
+		const root = editor.root
+		const selection = getPasteSelection(editor, event)
 		if (!selection) return
 		const [start, end] = normalizeRange(selection)
-
-		const html = event.clipboardData.getData('text/html')
-		if (html) {
-			console.log(html)
-		}
+		const isCurrent = () => editor._root === root && editor.enabled && editor.doc.lines === doc.lines
 		
 		const items = event.clipboardData.items
 		for (let i = 0; i < items.length; i++) {
 			const item = items[i]
 			if (item.type.startsWith('image')) {
 				event.preventDefault()
-
-				workspace.api.system.saveImageFromClipboard(filepath).then(path => {
-					if (!path) return 
+				const image = item.getAsFile()
+				if (!image || !workspace) return
+				image.arrayBuffer().then(data => {
+					if (!isCurrent()) return
+					return workspace.api.system.saveImageFromPaste(filepath, new Uint8Array(data))
+				}).then(path => {
+					if (!path || !isCurrent()) return
 
 					subscribeUntil(workspace.getHandle(path), value => {
+						if (!isCurrent()) return true
 						if (handleIsNode(value)) {
 							const workspacePath = workspace.directoryStore.getPathToItem(value, {
 								length: 'short',
@@ -858,7 +861,7 @@ export default function editorModule(editor: Editor, options: {
 						}
 						return false
 					}, 5000)
-				})
+				}).catch(error => console.error('Could not paste image', error))
 
 				return
 			}

@@ -1001,9 +1001,9 @@ function onEditorMouseDown(event: MouseEvent) {
 }
 
 function onEditorMouseUp(event: MouseEvent) {
-	event.preventDefault()
+	if (event.button === 0) event.preventDefault()
 	isEditorMouseDown = false
-	if (focusLevel >= FocusLevel.Typewriter) {
+	if (event.button === 0 && focusLevel >= FocusLevel.Typewriter) {
 		if (editor.doc.selection) {
 			centerOnEditorRange(editor.doc.selection, smoothScrollTime)
 		}
@@ -1329,6 +1329,7 @@ function onContextMenu(event: MouseEvent) {
 }
 
 function selectFromVerticalPosition(event?: MouseEvent) {
+	if (event && event.button !== 0) return
 	if (selectEndEnabled && !event?.defaultPrevented) {
 		if (!event || (event.target != container && (event.target as HTMLElement).parentElement != container)) {
 			return
