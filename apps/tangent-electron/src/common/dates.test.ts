@@ -1,6 +1,9 @@
 import { describe, test, expect, it } from 'vitest'
 
 import * as dates from './dates'
+import { templateLookup } from './markdownModel/templates'
+import CreationRule, { nameFromRule } from './settings/CreationRule'
+import { vi } from 'vitest'
 
 test('Shortest Day Date', () => {
 	const now = new Date(2000, 8, 1)
@@ -49,5 +52,28 @@ describe('Date Format', () => {
 	it('Should handle weeks', () => {
 		expect(dates.fillDateFormat('%W%', new Date(2000, 0, 14, 1, 1))).toEqual('2')
 		expect(dates.fillDateFormat('%WW%', new Date(2000, 0, 14, 1, 1))).toEqual('02')
+	})
+})
+
+describe('Day of year templates', () => {
+	it.each([
+		[2023, 0, 1, '001'], [2024, 1, 29, '060'],
+		[2023, 11, 31, '365'], [2024, 11, 31, '366'],
+		[2024, 2, 10, '070'], [2024, 2, 11, '071'],
+		[2024, 10, 3, '308'], [2024, 10, 4, '309']
+	])('formats local %i-%i-%i as %s', (year, month, day, expected) => {
+		for (const hour of [0, 12, 23]) {
+			const date = new Date(year, month, day, hour, 59)
+			expect(dates.fillDateFormat('%DDD%/%DDD%/%DD%/%D%/%unknown%', date))
+				.toBe(`${expected}/${expected}/${String(day).padStart(2, '0')}/${day}/%unknown%`)
+		}
+	})
+	it('offers the token and expands creation rule names', () => {
+		expect(templateLookup['%DDD%'].text).toBe('%DDD%')
+		vi.useFakeTimers()
+		try {
+			vi.setSystemTime(new Date(2024, 1, 29, 0, 1))
+			expect(nameFromRule(new CreationRule({ nameTemplate: '%YYYY%-%DDD%-%name%' }), 'Daily')).toBe('2024-060-Daily')
+		} finally { vi.useRealTimers() }
 	})
 })

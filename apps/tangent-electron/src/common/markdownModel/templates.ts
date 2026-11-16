@@ -25,6 +25,10 @@ export const dateTemplates: TemplateDefinition[] = [
 		description: 'The single digit month. e.g. "5" for May, "10" for October.'
 	},
 	{
+		text: '%DDD%',
+		description: 'The three digit day of the year, from 001 to 366.'
+	},
+	{
 		text: '%DD%',
 		description: 'The two digit day of the month. e.g. "07".'
 	},

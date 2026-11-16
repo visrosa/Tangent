@@ -8,6 +8,7 @@ The following tokens can be used in [[Template Notes]] and the name template of 
 - `%MONTH%` – The full name of the month in all caps.
 - `%Mth%` – The shortened name of the month.
 - `%MTH%` – The shortened name of the month in all caps.
+- `%DDD%` – The three digit local-calendar day of the year, from "001" to "366".
 - `%DD%` – The two digit day of the month. e.g. "07".
 - `%DDo%` – The two digit ordinal day of the month. e.g. "07th", "02nd".
 - `%D%` – The single digit day of the month. e.g. "5", "15".
