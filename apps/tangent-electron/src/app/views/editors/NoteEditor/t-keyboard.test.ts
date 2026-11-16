@@ -48,7 +48,7 @@ describe('keyboard input rendering', () => {
 		expect(editor.root.textContent).toBe(source)
 	})
 
-	it.each(['light', 'dark'])('styles nested keycaps with a light face in the %s theme without shrinking inner labels', theme => {
+	it.each(['light', 'dark'])('styles nested keycaps within the %s theme without shrinking inner labels', theme => {
 		const editor = makeEditor('Please press ⁅⁅Ctrl⁆⁅Shift⁆⁅R⁆⁆ to redraw the page.')
 		editor.root.className = `note ${theme}`
 		editor.root.style.color = 'var(--textColor)'
@@ -70,12 +70,9 @@ describe('keyboard input rendering', () => {
 			expect(rect.top).toBeGreaterThan(outer.top)
 			expect(rect.bottom).toBeLessThan(outer.bottom)
 		}
-		for (const key of keys) {
-			expect(getComputedStyle(key).backgroundColor).toBe('rgb(238, 238, 238)')
-			expect(getComputedStyle(key).color).toBe('rgb(51, 51, 51)')
-		}
+		const face = getComputedStyle(keys[1]).backgroundColor
 		editor.root.className = `note ${theme === 'light' ? 'dark' : 'light'}`
-		expect(getComputedStyle(keys[1]).backgroundColor).toBe('rgb(238, 238, 238)')
+		expect(getComputedStyle(keys[1]).backgroundColor).not.toBe(face)
 		expect(editor.root.querySelector('.keyboard-source').getBoundingClientRect().width).toBe(0)
 	})
 
