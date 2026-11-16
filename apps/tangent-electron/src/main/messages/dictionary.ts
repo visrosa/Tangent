@@ -8,6 +8,8 @@ ipcMain.handle('dictionary', async (event, type, payload) => {
 		switch (type) {
 			case 'getAllWords':
 				return event.sender.session.listWordsInSpellCheckerDictionary()
+			case 'add':
+				return event.sender.session.addWordToSpellCheckerDictionary(payload)
 			case 'remove':
 				return event.sender.session.removeWordFromSpellCheckerDictionary(payload)
 		}

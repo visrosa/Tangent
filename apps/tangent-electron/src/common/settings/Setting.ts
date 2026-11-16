@@ -5,6 +5,8 @@ interface SettingValueDescription<T> {
 	value: T
 	displayName?: string
 	description?: string
+	/** Consecutive values sharing a group are listed under one heading in a multi-value menu */
+	group?: string
 }
 
 export type SettingType = string | number | boolean
@@ -26,6 +28,10 @@ export function getDescription<T extends SettingType>(value: SettingValue<T>): s
 		return value.description
 	}
 	return getValue(value).toString()
+}
+
+export function getGroup<T extends SettingType>(value: SettingValue<T>): string | undefined {
+	return typeof value === 'object' && !Array.isArray(value) ? value.group : undefined
 }
 
 export function getDisplayName<T extends SettingType>(value: SettingValue<T>): string {

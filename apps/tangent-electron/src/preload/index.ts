@@ -251,6 +251,9 @@ const bridge: WindowApi = {
 		getAllWords() {
 			return ipcRenderer.invoke('dictionary', 'getAllWords')
 		},
+		addWord(word) {
+			return ipcRenderer.invoke('dictionary', 'add', word)
+		},
 		removeWord(word) {
 			return ipcRenderer.invoke('dictionary', 'remove', word)
 		}

@@ -147,7 +147,8 @@ export default interface WindowAPI {
 
 	dictionary: {
 		getAllWords(): Promise<string[]>,
-		removeWord(string)
+		addWord(word: string): Promise<boolean>,
+		removeWord(word: string)
 	}
 
 	update: UpdateAPI

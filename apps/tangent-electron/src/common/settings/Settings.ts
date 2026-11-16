@@ -663,6 +663,73 @@ export default class Settings extends ObjectStore {
 		defaultValue: []
 	})
 
+	typographicQuotes = new Setting({
+		name: 'Typographic Quotes',
+		description: 'What typing " or \' does with the chosen series of quotation marks.',
+		validValues: [
+			{ value: 'off', displayName: 'Off', description: 'Leave straight quotation marks alone.' },
+			{ value: 'suggest', displayName: 'Suggest', description: 'Offer the chosen marks when you close a quotation.' },
+			{ value: 'auto', displayName: 'Auto-Replace', description: 'Replace a completed quotation with the chosen marks when you type a space, punctuation or Enter after it. Esc, Backspace or undo restores the straight marks.' }
+		],
+		defaultValue: 'off'
+	})
+
+	/** The id of a preset from `common/quotations`, `custom`, or empty when none was chosen yet. */
+	quotationPreset = new Setting<string>({
+		name: 'Quotation Marks',
+		description: 'The series of quotation marks used for suggestions.',
+		defaultValue: ''
+	})
+
+	quotationCustomPrimaryOpen = new Setting<string>({ name: 'Primary Opening', defaultValue: '“' })
+	quotationCustomPrimaryClose = new Setting<string>({ name: 'Primary Closing', defaultValue: '”' })
+	quotationCustomSecondaryOpen = new Setting<string>({ name: 'Secondary Opening', defaultValue: '‘' })
+	quotationCustomSecondaryClose = new Setting<string>({ name: 'Secondary Closing', defaultValue: '’' })
+
+	/**
+	 * Per-pair changes to the built-in substitutions, as JSON keyed by pair id
+	 * (`common/substitutions.ts`). Settings hold only simple values, so this is one
+	 * string that is validated when read.
+	 */
+	substitutionOverrides = new Setting<string>({
+		name: 'Substitution Overrides',
+		description: 'Mode, source and replacement changes for individual substitutions.',
+		defaultValue: ''
+	})
+
+	arrowSubstitutions = new Setting({
+		name: 'Arrows',
+		description: 'Whether typing -> , => and similar offers an arrow.',
+		validValues: [
+			{ value: 'off', displayName: 'Off', description: 'Never offer to replace arrow sequences.' },
+			{ value: 'suggest', displayName: 'Suggest', description: 'Offer to replace arrow sequences as you type.' },
+			{ value: 'auto', displayName: 'Auto-Replace', description: 'Replace arrow sequences when you type a space, punctuation or Enter after them. Esc, Backspace or undo restores what you typed.' }
+		],
+		defaultValue: 'suggest'
+	})
+
+	dashSubstitutions = new Setting({
+		name: 'Dashes',
+		description: 'Whether typing -- or --- inside a line offers an en or em dash.',
+		validValues: [
+			{ value: 'off', displayName: 'Off', description: 'Never offer to replace double and triple hyphens.' },
+			{ value: 'suggest', displayName: 'Suggest', description: 'Offer to replace double and triple hyphens as you type.' },
+			{ value: 'auto', displayName: 'Auto-Replace', description: 'Replace double and triple hyphens when you type a space, punctuation or Enter after them. Esc, Backspace or undo restores what you typed.' }
+		],
+		defaultValue: 'suggest'
+	})
+
+	ellipsisSubstitutions = new Setting({
+		name: 'Ellipsis',
+		description: 'Whether typing .. offers an ellipsis.',
+		validValues: [
+			{ value: 'off', displayName: 'Off', description: 'Never offer to replace periods.' },
+			{ value: 'suggest', displayName: 'Suggest', description: 'Offer to replace periods as you type.' },
+			{ value: 'auto', displayName: 'Auto-Replace', description: 'Replace periods when you type a space, punctuation or Enter after them. Esc, Backspace or undo restores what you typed.' }
+		],
+		defaultValue: 'suggest'
+	})
+
 	// Keymap
 	keymap = new KeymapSettings()
 

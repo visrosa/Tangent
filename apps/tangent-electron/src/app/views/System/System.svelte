@@ -15,7 +15,7 @@ import About from './About.svelte'
 import Maps from './Maps.svelte'
 import Notes from './Notes.svelte'
 import Styles from './Styles.svelte'
-import Dictionary from './Dictionary.svelte'
+import LanguageAndSpelling from './LanguageAndSpelling.svelte'
 import Shortcuts from './Shortcuts.svelte'
 import Debug from './Debug.svelte'
 
@@ -79,8 +79,8 @@ const menus = [
 		component: Styles
 	},
 	{
-		name: 'Dictionary',
-		component: Dictionary
+		name: 'Language & Input',
+		component: LanguageAndSpelling
 	},
 	{
 		name: 'Updates',

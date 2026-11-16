@@ -33,7 +33,7 @@ export default class OneLineEditor extends Editor {
 			options.modules = {
 
 				autocomplete: autocompleteWithHandlers([
-					new UnicodeAutocompleter(workspace)
+					new UnicodeAutocompleter(workspace, { autoReplace: false })
 				]),
 				noArrowNavigate,
 

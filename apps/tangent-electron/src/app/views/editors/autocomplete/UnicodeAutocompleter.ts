@@ -5,108 +5,35 @@ import { lineToText } from 'common/typewriterUtils'
 import { WritableStore } from 'common/stores'
 import { findCharactersBetweenWhitespace } from 'common/stringUtils'
 import { wrappedIndex } from 'common/collections'
+import { quotationSuggestion, remarkQuotation, seriesFromSettings, type QuotationSeries } from 'common/quotations'
+import { resolveFromSettings, resolveSubstitutions, type SubstitutionMode } from 'common/substitutions'
 
 type MatcherItem = {
-	match: RegExp,
-	replace: string|string[],
-	mustBeMidLine?: boolean // This is a way to dodge away from `---` markdown formatting collisions
+	match: RegExp
+	replace: string[]
+	/** A way to dodge away from `---` markdown formatting collisions */
+	mustBeMidLine?: boolean
+	/** Matched against the line up to the caret rather than the word under it */
 	atCaret?: boolean
+	/** The rule's mode for a substitution pair; none means always offered */
+	mode?: SubstitutionMode
+	/** Set on a substitution whose source the user edited */
+	customSource?: boolean
+	source?: string
 }
 
-const matches: MatcherItem[] = [
-	{
-		match: /\[[+-]$/,
-		replace: '⁅',
-		atCaret: true
-	},
-	{
-		match: /[+-]\]$/,
-		replace: '⁆',
-		atCaret: true
-	},
-	{
-		match: /--+>/,
-		replace: [
-			'➞',
-			'➝',
-			'→',
-			'⟶',
-		]
-	},
-	{
-		match: /->/,
-		replace: [
-			'→',
-			'➝',
-			'➞',
-			'⟶'
-		]
-	},
-	{
-		match: /<--+/,
-		replace: [
-			'⟵',
-			'←'
-		]
-	},
-	{
-		match: /<-/,
-		replace: [
-			'←',
-			'⟵'
-		]
-	},
-	{
-		match: /==>/,
-		replace: [
-			'⟹',
-			'⇒',
-		]
-	},
-	{
-		match: /=>/,
-		replace: [
-			'⇒',
-			'⟹',
-		]
-	},
-	{
-		match: /<==/,
-		replace: [
-			'⟸',
-			'⇐',
-		]
-	},
-	{
-		match: /<=/,
-		replace: [
-			'⇐',
-			'⟸',
-		]
-	},
-	{
-		match: /---/,
-		replace: [
-			'—',
-			'–'
-		],
-		mustBeMidLine: true
-	},
-	{
-		match: /--/,
-		replace: [
-			'–',
-			'—'
-		],
-		mustBeMidLine: true
-	},
-	{
-		match: /\.\.+/, // Only require two periods so that overall keystroke is the same as three (. . enter)
-		replace: ['…']
-	}
+/** Keycap delimiters are not substitution pairs, so no group setting gates them. */
+const keycapDelimiterRules: MatcherItem[] = [
+	{ match: /\[[+-]$/, replace: ['⁅'], atCaret: true },
+	{ match: /[+-]\]$/, replace: ['⁆'], atCaret: true }
 ]
 
-const activateChars = '-><.=+]'
+/** What the popup consults when no workspace settings exist: every built-in, suggesting */
+const fallbackRules = resolveSubstitutions({ arrows: 'suggest', dashes: 'suggest', ellipsis: 'suggest' }, {})
+
+const activateChars = '-><.=+]"\''
+
+const quoteChars = '"\''
 
 export default class UnicodeAutocompleter implements AutocompleteHandler {
 	workspace: Workspace
@@ -116,8 +43,15 @@ export default class UnicodeAutocompleter implements AutocompleteHandler {
 	options: WritableStore<string[]> = new WritableStore([])
 	selectedOption: WritableStore<string> = new WritableStore(null)
 
-	constructor(workspace: Workspace) {
+	/**
+	 * Where a substitution set to Auto-Replace is not applied (the filename editor
+	 * cannot undo one with Esc), it is offered as a suggestion instead.
+	 */
+	private autoReplaces: boolean
+
+	constructor(workspace: Workspace, options?: { autoReplace?: boolean }) {
 		this.workspace = workspace
+		this.autoReplaces = options?.autoReplace ?? true
 	}
 
 	init(autocomplete: AutocompleteModule) {
@@ -125,8 +59,45 @@ export default class UnicodeAutocompleter implements AutocompleteHandler {
 		this.editor = autocomplete.editor
 	}
 
+	/** Set while the active range is a quotation (or lone apostrophe) awaiting a choice */
+	private quoteSeries: QuotationSeries | null = null
+
+	/** Whether typing the rule's source opens the suggestion popup */
+	private isEnabled(matcher: MatcherItem) {
+		return !matcher.mode || this.offersSuggestion(matcher.mode)
+	}
+
+	/** The substitutions in force, longest source first, after the always-on keycap rules */
+	private rules(): MatcherItem[] {
+		const settings = this.workspace?.settings
+		return [...keycapDelimiterRules, ...(settings ? resolveFromSettings(settings) : fallbackRules)]
+	}
+
+	private offersSuggestion(mode: string) {
+		return mode === 'suggest' || (mode === 'auto' && !this.autoReplaces)
+	}
+
+	private currentSeries(): QuotationSeries {
+		const settings = this.workspace.settings
+		return seriesFromSettings(
+			settings.quotationPreset.value,
+			{
+				primaryOpen: settings.quotationCustomPrimaryOpen.value,
+				primaryClose: settings.quotationCustomPrimaryClose.value,
+				secondaryOpen: settings.quotationCustomSecondaryOpen.value,
+				secondaryClose: settings.quotationCustomSecondaryClose.value
+			},
+			typeof navigator !== 'undefined' ? navigator.languages : []
+		)
+	}
+
 	canActivateFromTyping(char: string, doc: TextDocument): false | EditorRange {
-		if (activateChars.includes(char)) {
+		if (quoteChars.includes(char)) {
+			if (!this.offersSuggestion(this.workspace?.settings.typographicQuotes.value)) return false
+			return this.tryToActivateQuote(char, doc)
+		}
+		// An edited source may end in a character the built-ins never use
+		if (activateChars.includes(char) || this.rules().some(r => r.customSource && r.source?.endsWith(char))) {
 			return this.tryToActivate(doc, true, char === '+' || char === ']')
 		}
 		return false
@@ -136,7 +107,40 @@ export default class UnicodeAutocompleter implements AutocompleteHandler {
 		return this.tryToActivate(doc)
 	}
 
+	/**
+	 * Activates over a whole completed quotation: typing the closing `"` of `"teste"`
+	 * controls the range from the opener to the cursor, so one choice re-marks both ends.
+	 * An opening mark alone offers nothing; a lone `'` after a letter offers an apostrophe.
+	 */
+	tryToActivateQuote(char: string, doc: TextDocument): false | EditorRange {
+		this.quoteSeries = null
+		const selection = normalizeRange(doc.selection)
+		if (!selection || selection[0] != selection[1] || selection[0] < 1) return false
+
+		const line = doc.getLineAt(selection[0])
+		if (line.attributes.code) return false
+		const formats = doc.getFormats(selection[0] - 1)
+		if (formats.inline_code) return false
+
+		const [lineStart] = doc.getLineRange(line)
+		const text = doc.getText([lineStart, selection[0]])
+		if (!text.endsWith(char)) return false
+
+		const series = this.currentSeries()
+		const suggestion = quotationSuggestion(text, char, series)
+		if (!suggestion) return false
+
+		// An opener inside inline code would make the span cross a code boundary
+		for (let i = lineStart + suggestion.start; i < selection[0]; i++) {
+			if (doc.getFormats(i).inline_code) return false
+		}
+
+		this.quoteSeries = series
+		return [lineStart + suggestion.start, selection[0]]
+	}
+
 	tryToActivate(doc: TextDocument, autoActivate=false, atCaretOnly=false): false | EditorRange {
+		this.quoteSeries = null
 		const selection = normalizeRange(doc.selection)
 		if (!selection || selection[0] != selection[1]) return false
 
@@ -154,8 +158,9 @@ export default class UnicodeAutocompleter implements AutocompleteHandler {
 		const [wordStart, wordEnd] = findCharactersBetweenWhitespace(lineText, selection[0] - lineStart)
 		const text = doc.getText([lineStart + wordStart, lineStart + wordEnd])
 
-		for (const matcher of matches) {
+		for (const matcher of this.rules()) {
 			if (atCaretOnly && !matcher.atCaret) continue
+			if (!this.isEnabled(matcher)) continue
 			const matchText = matcher.atCaret ? lineText.slice(0, selection[0] - lineStart) : text
 			const match = matchText.match(matcher.match)
 			if (match) {
@@ -182,7 +187,17 @@ export default class UnicodeAutocompleter implements AutocompleteHandler {
 	updateSourceText(text: string, doc: TextDocument): boolean {
 		// Ignore all updates but the first one
 
-		for (const matcher of matches) {
+		if (this.quoteSeries) {
+			// A lone apostrophe is offered as U+2019; anything longer must still be an intact quotation
+			const remarked = text === "'" ? '\u2019' : remarkQuotation(text, this.quoteSeries)
+			if (!remarked) return false
+			this.options.set([remarked])
+			this.selectedOption.set(remarked)
+			return true
+		}
+
+		for (const matcher of this.rules()) {
+			if (!this.isEnabled(matcher)) continue
 			const match = text.match(matcher.match)
 			if (match) {
 				if (match.index != 0 || match[0].length < text.length) {
