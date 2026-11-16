@@ -9,6 +9,8 @@ import { type IndentDefinition, parseBlockquote, parseHorizontalRule } from './l
 import { parseListItem } from './list'
 import { parseInlineMath, parseMathBlock } from './math'
 import { parseInlineFurigana } from './furigana'
+import { parseInlineGloss } from './gloss'
+import { parseAssociationListBlock, parseAssociationListSeparator } from './associationList'
 import { parseLink, parseRawLink } from './links'
 import { type ParsingContext, ParsingContextType, type ParsingProgram } from './parsingContext'
 import { parseTag } from './tag'
@@ -23,11 +25,14 @@ const blockPrograms: ParsingProgram[] = [
 	parseBlockquote,
 	parseListItem,
 	parseCodeBlock,
-	parseMathBlock
+	parseMathBlock,
+	parseAssociationListBlock
 ]
 
 const inlineObjectPrograms = [
 	parseInlineMath,
+	parseAssociationListSeparator,
+	parseInlineGloss, // before furigana: an unescaped `::` wins over `|`
 	parseInlineFurigana,
 	parseLink,
 	parseRawLink,

@@ -79,7 +79,7 @@ article.note {
 		margin-bottom: rhythmUnit(.5);
 		font-weight: 600;
 	}
-	
+
 	h2.line {
 		padding: 0;
 		font-size: 150%;
@@ -187,7 +187,7 @@ article.note {
 					line-height: 0;
 					tab-size: 0; // Without this, tabs are always rendered. Silly.
 				}
-				
+
 				&:not(.checkbox)::after {
 					font-size: 100%;
 					position: absolute;
@@ -247,6 +247,251 @@ article.note {
 		}
 	}
 
+	.editor-association-list {
+		// Grid columns and line placement are set inline by the renderer
+		--associationListBarWidth: calc(var(--fontSize) * .125);
+		--associationListBarPadding: calc(var(--fontSize) * .5);
+		--associationListTermGap: .45em;
+		// Tracks resolve percentages against this grid; descendant content uses
+		// its query container so both bounds refer to the same available width.
+		--associationListTermLimit: min(18em, calc(50cqi / var(--associationListDepthCount, var(--associationListBlockDepthCount, 1))));
+		--associationListTermTrackLimit: min(18em, calc(50% / var(--associationListDepthCount, var(--associationListBlockDepthCount, 1))));
+		--associationListRowGap: calc(var(--fontSize) * .2);
+
+		margin: 0;
+		display: grid;
+		container-type: inline-size;
+		grid-auto-rows: minmax(1.3em, auto);
+		row-gap: var(--associationListRowGap);
+
+		.association-list-line {
+			min-width: 0;
+			min-height: 1.3em;
+			line-height: 1.3em;
+			white-space: normal;
+			&.revealed { white-space: pre-wrap; }
+		}
+
+		.association-list-term {
+			display: grid;
+			grid-template-columns: subgrid;
+			grid-template-rows: subgrid;
+			align-items: start;
+			font-weight: 600;
+		}
+
+		.association-list-value {
+			padding-inline-start: var(--associationListBarPadding);
+			border-inline-start: var(--associationListBarWidth) solid var(--accentDeemphasizedBackgroundColor);
+			transition: border-color .12s ease;
+
+			&:hover,
+			&:focus-within {
+				border-inline-start-color: var(--accentTextColor);
+			}
+		}
+
+		.association-list-term-content {
+			box-sizing: border-box;
+			font-weight: 400;
+			font-style: normal;
+			padding-inline-end: var(--associationListTermGap);
+			min-width: 0;
+			max-inline-size: var(--associationListTermLimit);
+			overflow-wrap: anywhere;
+			// Keeps the box at its content width so it can be measured for alignment
+			justify-self: start;
+		}
+
+		[data-association-list-depth="0"] > .association-list-term-content {
+			font-weight: 700;
+			font-style: normal;
+		}
+
+		[data-association-list-depth="1"] > .association-list-term-content {
+			font-weight: 600;
+			font-style: italic;
+		}
+
+		// Line a nested term up with its parent's value text
+		.association-list-term.association-list-nested .association-list-term-content {
+			padding-inline-start: calc(var(--associationListBarWidth) + var(--associationListBarPadding));
+		}
+
+		.association-list-inline {
+
+			.association-list-term-content {
+				grid-column: 1;
+				grid-row: var(--associationListTermRow, 1);
+				align-self: start;
+				transition: color .12s ease;
+			}
+
+			.association-list-value-content {
+				grid-column: 3 / -1;
+				grid-row: 1 / span var(--associationValueSpan, 1);
+				display: block;
+				font-weight: 400;
+				min-width: 0;
+				min-height: 0;
+				padding-inline-start: var(--associationListBarPadding);
+				border-inline-start: var(--associationListBarWidth) solid var(--accentDeemphasizedBackgroundColor);
+				transition: border-color .12s ease;
+			}
+
+			&:hover .association-list-value-content,
+			&:focus-within .association-list-value-content {
+				border-inline-start-color: var(--accentTextColor);
+			}
+
+			&.association-list-values-collapsed:not(.revealed) .association-list-value-content:not(:has(.revealed)) {
+				white-space: nowrap;
+				overflow: hidden;
+
+				code.inline_code { white-space: pre; }
+			}
+		}
+
+		// Shared source wrappers overlap earlier term rows. Only their fragments
+		// should receive pointer hits, so those earlier terms remain editable.
+		.association-list-shared-owner {
+			pointer-events: none;
+			> span { pointer-events: auto; }
+			.association-list-separator { grid-row: var(--associationListTermRow, 1); }
+		}
+
+		.association-list-separator {
+			grid-column: 2;
+			align-self: center;
+			display: inline-flex;
+			align-items: baseline;
+		}
+
+		.association-list-term:not(.association-list-inline) .association-list-term-content {
+			grid-column: 1;
+			// Spread wrapped-label sizing across the subtree instead of its first child.
+			grid-row: var(--associationListTermRow, 1) / -1;
+		}
+
+		.association-list-term.collapse-parent::after {
+			content: none;
+		}
+
+		.association-list-value, .association-list-value-content, .association-list-summary {
+			font-size: .9em;
+			color: color-mix(in srgb, var(--textColor) 85%, var(--noteBackgroundColor));
+			line-height: 1.3em;
+		}
+
+		.association-list-value, .association-list-value-content, .association-list-summary { position: relative; }
+		.association-list-collapse-bar {
+			position: absolute;
+			inset-block: 0;
+			inset-inline-start: calc(-1 * var(--associationListBarWidth));
+			width: var(--associationListBarPadding);
+			cursor: pointer;
+			font-size: 1em;
+			font-weight: 400;
+			color: var(--accentTextColor);
+			&:hover, &:focus-visible { background: var(--accentDeemphasizedBackgroundColor); }
+			&.association-list-bar-joined::after {
+				content: '';
+				position: absolute;
+				inset-block-start: 100%;
+				inset-inline-start: calc(var(--associationListBarWidth) / 3);
+				width: calc(var(--associationListBarWidth) / 3);
+				height: var(--associationListRowGap);
+				background: var(--accentDeemphasizedBackgroundColor);
+			}
+		}
+
+		.association-list-value-content { min-height: 0; }
+
+		.association-list-summary {
+			grid-column: 3 / -1;
+			grid-row: 1 / -1;
+			min-width: 0;
+			padding-inline-start: var(--associationListBarPadding);
+			border-inline-start: var(--associationListBarWidth) solid var(--accentDeemphasizedBackgroundColor);
+			white-space: nowrap;
+			overflow: hidden;
+			font-weight: 400;
+			& .association-list-summary-text::before { content: attr(data-summary); }
+		}
+
+		code.inline_code { white-space: pre-wrap; }
+
+		.inline-association_separator-container {
+			display: inline-flex;
+			align-items: baseline;
+
+			.association_separator-source {
+				font-size: 0 !important;
+				line-height: 0 !important;
+				tab-size: 0 !important;
+			}
+
+			&.revealed .association_separator-source {
+				font-size: unset !important;
+				line-height: unset !important;
+				tab-size: unset !important;
+			}
+		}
+
+		span.association_separator-source {
+			font-family: var(--codeFontFamily);
+			color: var(--accentTextColor);
+		}
+	}
+
+	.editor-association-list.association-list-editing {
+		display: block;
+		margin-inline-start: 0 !important;
+		container-type: normal;
+
+		> .association-list-line,
+		> .association-list-line.collapsed {
+			display: block;
+			white-space: pre-wrap;
+			line-height: rhythmUnit(1);
+			min-height: rhythmUnit(1);
+			font-weight: 400;
+			font-size: 1em;
+			color: var(--textColor);
+			border: 0;
+			padding: 0;
+			pointer-events: auto;
+			&.collapsed-revealed { opacity: 1; }
+
+			> .association-list-term-content,
+			> .association-list-separator,
+			> .association-list-value-content {
+				display: inline;
+				padding: 0;
+				border: 0;
+				font-size: 1em;
+				line-height: inherit;
+				color: inherit;
+				white-space: inherit;
+				overflow: visible;
+			}
+		}
+
+		.inline-association_separator-container { display: inline; }
+		.line_format, .association_separator-source {
+			font-size: inherit !important;
+			line-height: inherit !important;
+			tab-size: inherit !important;
+		}
+		.association-list-collapse-bar, .association-list-summary,
+		.folded-text-marker { display: none; }
+		.folded-text, .folded-text-content, .folded-text-source,
+		.folded-text-content[data-overflow] {
+			display: contents;
+			mask-image: none;
+		}
+	}
+
 	// We want large lists to have extra space around them, but we don't want extra space when adjacent to blank lines.
 	// We also don't want extra space between a large list item and a child normal list item.
 	// Technically a large followed by a small sibling also doesn't have space, but I'm okay with that slight glitch.
@@ -266,14 +511,57 @@ article.note {
 			opacity: .7;
 		}
 
-		&.collapse-parent {
-			&::after {
-				content: "…";
-				font-size: var(--fontSize);
-				color: var(--deemphasizedTextColor);
-				padding-inline-start: .5em;
-				line-height: 1em; // Not sure why this is needed, but it prevents children from moving down
+	}
+
+	.line.collapse-parent:not(.association-list-line)::after {
+		content: "…";
+		font-size: var(--fontSize);
+		color: var(--deemphasizedTextColor);
+		padding-inline-start: .5em;
+		line-height: 1em;
+	}
+
+	.editor-association-list {
+		.folded-text {
+			display: inline-grid;
+			grid-template-columns: minmax(0, auto) auto;
+			max-width: 100%;
+			vertical-align: top;
+			text-indent: 0;
+			white-space: nowrap;
+		}
+		.folded-text-content {
+			min-width: 0;
+			overflow: hidden;
+			white-space: nowrap;
+			code.inline_code { white-space: pre; }
+		}
+		.folded-text-source {
+			display: inline-block;
+			width: max-content;
+		}
+		.folded-text-content[data-overflow] {
+			mask-image: linear-gradient(to right, black calc(100% - 1.5em), transparent);
+		}
+		.folded-text-content[data-overflow]:dir(rtl) {
+			mask-image: linear-gradient(to left, black calc(100% - 1.5em), transparent);
+		}
+		.folded-text-marker::after {
+			content: "⋯";
+			font-size: var(--fontSize);
+			line-height: 1em;
+			color: var(--deemphasizedTextColor);
+			padding-inline-start: .15em;
+		}
+		.revealed > .folded-text,
+		.folded-text:has(.revealed) {
+			display: contents;
+			> .folded-text-content {
+				display: contents;
+				> .folded-text-source { display: contents; }
+				code.inline_code { white-space: pre-wrap; }
 			}
+			> .folded-text-marker { display: none; }
 		}
 	}
 
@@ -324,7 +612,7 @@ article.note {
 		&.start, &.end {
 			height: rhythmUnit(1);
 			position: relative;
-			
+
 			&:not(.revealed):not(.collapse-parent)::after {
 				content: "";
 				display: block;
@@ -339,23 +627,21 @@ article.note {
 			}
 		}
 
-		&.start.collapse-parent {
-			&::after {
-				content: "--- front matter ---";
-				font-style: italic;
-				font-weight: 200;
-				display: inline-block;
-				border-top: 1px solid var(--deemphasizedTextColor);
-				border-bottom: 1px solid var(--deemphasizedTextColor);
-				opacity: .5;
-				line-height: rhythmUnit(1);
-
-				position: absolute;
-				left: 0;
-				right: .5em;
-				height: rhythmUnit(1);
-			}
+		&.start.collapse-parent::after {
+			content: "--- front matter ---";
+			font-style: italic;
+			font-weight: 200;
+			display: inline-block;
+			border-top: 1px solid var(--deemphasizedTextColor);
+			border-bottom: 1px solid var(--deemphasizedTextColor);
+			opacity: .5;
+			line-height: rhythmUnit(1);
+			position: absolute;
+			left: 0;
+			right: .5em;
+			height: rhythmUnit(1);
 		}
+
 	}
 
 	code, .code_wrapper {
@@ -458,7 +744,7 @@ article.note {
 				padding: .075em .3em;
 				background: var(--accentBackgroundColor);
 				border: 1px solid var(--accentBackgroundColor);
-				
+
 				&:not(.last) {
 					padding-inline-end: 0;
 					border-inline-end: none;
@@ -483,7 +769,7 @@ article.note {
 						inset-inline-start: 0.45em;
 						inset-block-start: 50%;
 						transform: translateY(-50%);
-						
+
 						background: var(--noteBackgroundColor);
 						border-radius: .25em;
 					}
@@ -551,6 +837,21 @@ article.note {
 
 	span.math-source,
 	span.furigana-source {
+		font-family: var(--codeFontFamily);
+		color: var(--accentTextColor);
+
+		&.revealed {
+			padding-right: .5em;
+		}
+	}
+
+	.inline-gloss-container.revealed {
+		outline: 2px solid var(--textColor);
+		outline-offset: 4px;
+		border-radius: var(--inputBorderRadius);
+	}
+
+	span.gloss-source {
 		font-family: var(--codeFontFamily);
 		color: var(--accentTextColor);
 
@@ -702,7 +1003,7 @@ article.note {
 	.line {
 		padding-inline-start: fontUnit(.5);
 	}
-	
+
 	h1, h2, h3, h4, h5, h6 {
 		&.line {
 			padding: 0;
@@ -737,7 +1038,7 @@ t-link {
 		&:not(.start):not(.end) {
 			color: inherit;
 		}
-		
+
 		&.hidden.revealed {
 			color: inherit;
 		}
@@ -836,7 +1137,7 @@ t-link[form="wiki"] {
 			font-size: 0;
 			min-height: 0;
 
-			
+
 			--lineIndent: 0;
 			t-embed {
 				margin-inline-start: calc(var(--spaceWidth) * var(--lineIndent));
@@ -883,7 +1184,7 @@ t-embed {
 		float: left;
 		margin-right: 1em;
 	}
-	
+
 	&.float-right {
 		float: right;
 		margin-left: 1em;

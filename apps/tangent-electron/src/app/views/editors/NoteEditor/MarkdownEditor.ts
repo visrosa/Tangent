@@ -15,6 +15,8 @@ import UnicodeAutocompleter from '../autocomplete/UnicodeAutocompleter'
 import CodeBlockAutocompleter from '../autocomplete/CodeBlockAutoCompleter'
 import autoWrapping from '../autobraces/autoWrappingModule'
 import { collapsingSections, type CollapsingSectionsModule } from './collapsingSections'
+import { associationListAlignment } from './associationListAlignment'
+import { associationListOverflow } from './associationListOverflow'
 import TemplateTokenAutocompleter from "../autocomplete/TemplateTokenAutocompleter"
 import type { WritableStore } from "common/stores"
 import { sliceRendering } from "./sliceRendering"
@@ -171,6 +173,8 @@ export default class MarkdownEditor extends Editor {
 				tangent: editor => editorModule(editor, { workspace }),
 				// After the main pass so that on-edit-uncollapse occurs after markdown reparse
 				collapsingSections,
+				associationListAlignment,
+				associationListOverflow,
 				
 				copy: editor => copy(editor, {
 					copyHTML: false,

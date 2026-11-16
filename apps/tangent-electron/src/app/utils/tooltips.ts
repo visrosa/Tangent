@@ -15,6 +15,8 @@ export type TooltipConfig = {
 	interactive?: boolean
 	minWidth?: string
 	maxWidth?: string
+	/** Hover delay in milliseconds; zero opens immediately. */
+	delay?: number
 }
 
 export type TooltipDefOrConfig = TooltipLiteral | TooltipConfig
@@ -73,7 +75,8 @@ export function requestTooltip(element: HTMLElement, config: TooltipDefOrConfig,
 		liveCount: 1
 	}
 
-	if (tooltips.value.length === 0 && requireDelay) {
+	const delay = config.delay ?? 1000
+	if (tooltips.value.length === 0 && requireDelay && delay > 0) {
 		// No active tooltips
 		queuedTooltip = requestedTooltip
 		tooltipTimeout = setTimeout(() => {
@@ -81,7 +84,7 @@ export function requestTooltip(element: HTMLElement, config: TooltipDefOrConfig,
 			tooltips.value.push(requestedTooltip)
 			tooltips.notifyObservers()
 			queuedTooltip = null
-		}, 1000)
+		}, delay)
 	}
 	else {
 		// TODO: Something something children & multiple tooltips

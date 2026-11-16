@@ -1,5 +1,6 @@
 import type { FormatType, LineType, TypesetTypes } from 'typewriter-editor/typesetting'
 import { h } from 'typewriter-editor/rendering/vdom'
+import { foldedLineChildren, foldedText } from './foldedText'
 import type { IndentDefinition } from './line'
 import { isEqual, type AttributeMap } from '@typewriter/document'
 import { isLargeList, type ListDefinition } from './list'
@@ -7,6 +8,8 @@ import type { TagSectionData } from './tag'
 import type { CodeData } from './code'
 import type { MathData } from './math'
 import type { FuriganaData } from './furigana'
+import type { GlossData } from './gloss'
+import { getAssociationListTermKey, type AssociationListLineData, type AssociationListSeparatorData } from './associationList'
 import { hiddenGroupEmbedFormat } from './hiddenGroupEmbed'
 import { getHiddenGroupAttributes } from './inline'
 import { hasCollapsedChildren, isCollapsed } from './sections'
@@ -33,7 +36,7 @@ function getHideableFormatClass(attributes, baseClass = '') {
 		// Inject focus classes at the top so that opacity is applied in the right place
 		className += ' ' + attributes.decoration?.focus.class
 	}
-	
+
 	return className
 }
 
@@ -52,7 +55,7 @@ function hideableFormat(
 		name: formatName,
 		selector: `${elementName}.${formatName}`,
 		render: (attributes, children) => {
-			
+
 			let className = getHideableFormatClass(attributes, formatName)
 
 			let formatAttribute = attributes[formatName]
@@ -115,7 +118,7 @@ function getCoreLineProperties(attributes, baseClass = ''): AttributeMap {
 			props.className += ' collapse-parent'
 		}
 	}
-	
+
 	if (attributes.collapsedReveal) {
 		props.className += ' collapsed-revealed'
 	}
@@ -152,7 +155,7 @@ function getCoreLineProperties(attributes, baseClass = ''): AttributeMap {
 			}
 		}
 	}
-	
+
 	return props
 }
 
@@ -196,13 +199,268 @@ function fillTooltip(source: string|object, props: AttributeMap) {
 	}
 }
 
+function isAssociationListSeparatorNode(child): boolean {
+	if (typeof child !== 'object' || !child) return false
+	const className = child.props?.className ?? child.props?.class
+	return typeof className === 'string'
+		&& className.split(/\s+/).includes('inline-association_separator-container')
+}
+
+function splitAssociationListChildren(children: any[]) {
+	const separatorIndex = children.findIndex(isAssociationListSeparatorNode)
+	if (separatorIndex < 0) return { term: children, separator: undefined, value: [] }
+
+	return {
+		term: children.slice(0, separatorIndex),
+		separator: children[separatorIndex],
+		value: children.slice(separatorIndex + 1)
+	}
+}
+
+function withoutAssociationListSourceFormatting(children: any[]) {
+	const visible = children.filter(child => {
+		if (typeof child !== 'object' || !child) return true
+		const className = child.props?.className ?? child.props?.class
+		return typeof className !== 'string'
+			|| !className.split(/\s+/).includes('line_format')
+	})
+
+	const firstText = visible.findIndex(child => typeof child === 'string')
+	if (firstText >= 0) visible[firstText] = visible[firstText].trimStart()
+	return visible
+}
+
+// Typewriter substitutes NBSPs before typesetting. Restore only substituted
+// ordinary spaces so CSS can collapse them without changing authored NBSPs.
+function restoreAssociationListSpaces(children: any[], source: string) {
+	let offset = 0
+	const visit = child => {
+		if (typeof child === 'string') {
+			const text = Array.from({ length: child.length }, (_, index) =>
+				child[index] === '\u00a0' && source[offset + index] === ' ' ? ' ' : child[index]).join('')
+			offset += child.length
+			return text
+		}
+		if (!child?.children) return child
+		return { ...child, children: child.children.map(visit) }
+	}
+	return children.map(visit)
+}
+
+function associationListSummaryText(children: any[]): string {
+	return children.map(child => {
+		if (typeof child === 'string') return child
+		const classes = (child?.props?.className ?? child?.props?.class ?? '').split(/\s+/)
+		if (classes.includes('hidden') || classes.includes('line_format')) return ''
+		if (child?.props?.base) return child.props.base
+		if (child?.props?.['math-source']) return child.props['math-source']
+		return child?.children ? associationListSummaryText(child.children) : ''
+	}).join('').replace(/[ \t\u00a0]+/g, ' ').trim()
+}
+
+function collapsedAssociationListSummary(lineData: AssociationListLineEntry[], index: number, hidden: boolean[]) {
+	const nextVisible = lineData.findIndex((_entry, next) => next > index && !hidden[next])
+	return lineData.slice(index + 1, nextVisible < 0 ? undefined : nextVisible)
+		.map(([_attributes, content]) => associationListSummaryText(content)).filter(Boolean).join(' · ')
+}
+
+function appendStyle(props: AttributeMap, declaration: string) {
+	const style = props.style as string ?? ''
+	props.style = `${style}${style && !style.endsWith(';') ? ';' : ''}${declaration}`
+}
+
+type AssociationListLineEntry = [AttributeMap, any[], string]
+
+/**
+ * Each term depth gets a term/separator column pair, and a term's values
+ * start at the next pair, so a nested group begins in its parent's value
+ * column.
+ */
+function getAssociationListColumns(lineData: AssociationListLineEntry[]) {
+	const termDepths = new Map<string, number>()
+	let maxDepth = 0
+	const lines = lineData.map(([attributes]) => {
+		const associationList = attributes.associationList as AssociationListLineData
+		const parentDepth = associationList.termIndent === undefined ? -1 : termDepths.get(associationList.termIndent) ?? -1
+		if (associationList.role === 'value') return { start: 2 * parentDepth + 3, depth: undefined }
+
+		const depth = parentDepth + 1
+		termDepths.set(getAssociationListTermKey(attributes.indent?.indent ?? '', associationList), depth)
+		maxDepth = Math.max(maxDepth, depth)
+		return { start: 2 * depth + 1, depth }
+	})
+	return { lines, maxDepth }
+}
+type AssociationListTreeNode = { entry: AssociationListLineEntry, children: AssociationListTreeNode[] }
+
+function buildAssociationListTree(lineData: AssociationListLineEntry[]): AssociationListTreeNode[] {
+	const roots: AssociationListTreeNode[] = []
+	const latestTermByIndent = new Map<string, AssociationListTreeNode>()
+
+	for (const entry of lineData) {
+		const [attributes] = entry
+		const associationList = attributes.associationList as AssociationListLineData
+		const node: AssociationListTreeNode = { entry, children: [] }
+		const parent = associationList.termIndent === undefined
+			? undefined
+			: latestTermByIndent.get(associationList.termIndent)
+
+		;(parent?.children ?? roots).push(node)
+		if (associationList.role === 'term') latestTermByIndent.set(getAssociationListTermKey(attributes.indent?.indent ?? '', associationList), node)
+	}
+
+	return roots
+}
+
+function getAssociationListLayouts(lineData: AssociationListLineEntry[], hidden: boolean[]) {
+	const indices = new Map(lineData.map((entry, index) => [entry[2], index]))
+	const layouts: Array<{ row: number, span: number, termRow?: number, valueSpan?: number } | undefined> = []
+	const valuesCollapsed: boolean[] = []
+	const groupedTerms = new Set<string>()
+	const owners = new Map<string, AssociationListTreeNode>()
+	const visible = (node: AssociationListTreeNode) => !hidden[indices.get(node.entry[2])]
+
+	const place = (nodes: AssociationListTreeNode[], firstRow: number): number => {
+		let nextRow = firstRow
+		for (let index = 0; index < nodes.length; index++) {
+			let owner = nodes[index]
+			let associationList = owner.entry[0].associationList as AssociationListLineData
+			if (associationList.role === 'value') {
+				if (visible(owner)) layouts[indices.get(owner.entry[2])] = { row: nextRow++, span: 1 }
+				continue
+			}
+
+			const group = [owner]
+			while (!associationList.hasValue && owner.children.length === 0 && index + 1 < nodes.length) {
+				const next = nodes[index + 1]
+				if ((next.entry[0].associationList as AssociationListLineData).role !== 'term'
+					|| next.entry[0].indent?.indent !== owner.entry[0].indent?.indent) break
+				groupedTerms.add(owner.entry[2])
+				group.push(next)
+				owner = next
+				associationList = owner.entry[0].associationList as AssociationListLineData
+				index++
+			}
+
+			for (const child of owner.children) {
+				if ((child.entry[0].associationList as AssociationListLineData).role === 'value') owners.set(child.entry[2], owner)
+			}
+			owners.set(owner.entry[2], owner)
+			const terms = group.filter(visible)
+			const childRow = nextRow + (associationList.hasValue && visible(owner) ? 1 : 0)
+			const childEnd = place(owner.children, childRow)
+			const endRow = Math.max(nextRow + terms.length, childEnd)
+			terms.forEach((term, offset) => {
+				const row = nextRow + offset
+				layouts[indices.get(term.entry[2])] = {
+					row: term === owner ? nextRow : row,
+					span: term === owner ? endRow - nextRow : 1,
+					termRow: term === owner ? offset + 1 : undefined,
+					valueSpan: term === owner && associationList.hasValue && childEnd === childRow ? terms.length : 1
+				}
+			})
+
+			valuesCollapsed[indices.get(owner.entry[2])] = visible(owner)
+				&& hasCollapsedChildren(owner.entry[0].collapsed)
+				&& (!!associationList.hasValue || childEnd === childRow)
+
+			// A shared value's bar must cover every term, even when there
+			// are fewer values than terms.
+			const lastChild = owner.children.findLast(visible)
+			if (!associationList.hasValue && childEnd < endRow && (lastChild?.entry[0].associationList as AssociationListLineData)?.role === 'value') {
+				layouts[indices.get(lastChild.entry[2])].span += endRow - childEnd
+			}
+			nextRow = endRow
+		}
+		return nextRow
+	}
+	place(buildAssociationListTree(lineData), 1)
+	const joinedValues = new Set<string>()
+	let previous: { id: string, endRow: number } | undefined
+	lineData.forEach(([attributes, , id], index) => {
+		const layout = layouts[index]
+		if (!layout) return
+		const data = attributes.associationList as AssociationListLineData
+		if (data.role !== 'value' && !data.hasValue) {
+			previous = undefined
+			return
+		}
+		if (previous?.endRow === layout.row && owners.get(previous.id) === owners.get(id)) {
+			joinedValues.add(previous.id)
+		}
+		previous = { id, endRow: layout.row + (data.hasValue ? layout.valueSpan : layout.span) }
+	})
+	return { layouts, valuesCollapsed, groupedTerms, owners, joinedValues }
+}
+
+function getAssociationListExportProps(attributes: AttributeMap, role: AssociationListLineData['role'], key: string) {
+	const associationList = attributes.associationList as AssociationListLineData
+	const props = getCoreLineProperties(attributes, `association-list-${role}`)
+	props.key = key
+	props['data-association-list-role'] = role
+	if (associationList.marker) props['data-association-list-marker'] = associationList.marker
+	if (associationList.hasValue !== undefined) props['data-association-list-has-value'] = String(associationList.hasValue)
+	if (associationList.termIndent !== undefined) props['data-association-list-term-indent'] = associationList.termIndent
+	if (associationList.rootIndent !== undefined) props['data-association-list-root-indent'] = associationList.rootIndent
+	return props
+}
+
+/**
+ * HTML reads consecutive `<dt>`s as terms sharing the `<dd>`s that follow,
+ * so nested terms are wrapped in a `<dd>` of their parent instead of being
+ * emitted beside it.
+ */
+function renderAssociationListExportItems(nodes: AssociationListTreeNode[]) {
+	const items = []
+
+	for (const node of nodes) {
+		const [attributes, children, id] = node.entry
+		const associationList = attributes.associationList as AssociationListLineData
+
+		if (associationList.role === 'value') {
+			items.push(h('dd', getAssociationListExportProps(attributes, 'value', id), withoutAssociationListSourceFormatting(children)))
+		}
+		else if (associationList.hasValue) {
+			const split = splitAssociationListChildren(children)
+			items.push(h('dt', getAssociationListExportProps(attributes, 'term', `${id}-term`), withoutAssociationListSourceFormatting(split.term)))
+			items.push(h('dd', getAssociationListExportProps(attributes, 'value', `${id}-value`), split.value))
+		}
+		else {
+			const split = splitAssociationListChildren(children)
+			items.push(h('dt', getAssociationListExportProps(attributes, 'term', id), withoutAssociationListSourceFormatting(split.term)))
+		}
+
+		let subtree: AssociationListTreeNode[] = []
+		const flushSubtree = () => {
+			if (!subtree.length) return
+			items.push(h('dd', { className: 'association-list-subtree', key: `${subtree[0].entry[2]}-subtree` }, [
+				h('dl', { className: 'association-list' }, renderAssociationListExportItems(subtree))
+			]))
+			subtree = []
+		}
+
+		for (const child of node.children) {
+			if ((child.entry[0].associationList as AssociationListLineData).role === 'term') {
+				subtree.push(child)
+			}
+			else {
+				flushSubtree()
+				items.push(...renderAssociationListExportItems([child]))
+			}
+		}
+		flushSubtree()
+	}
+
+	return items
+}
+
 const noteTypeset:TypesetTypes = {
 	lines: [
 		{
 			name: 'line',
 			selector: 'p',
 			render: (attributes, children) => {
-				return h('p', getCoreLineProperties(attributes), children)	
+				return h('p', getCoreLineProperties(attributes), children)
 			},
 			fromDom: defaultLineFromDom('line')
 		},
@@ -212,6 +470,165 @@ const noteTypeset:TypesetTypes = {
 			defaultFollows: true,
 			render: (attributes, children) => h(`h${attributes.header}`, getCoreLineProperties(attributes), children),
 			fromDom: defaultLineFromDom('header') // Technically incorrect, but will be re-parsed anyhow
+		},
+		{
+			name: 'associationList',
+			selector: 'dl.association-list > dt, dl.association-list > dd:not(.association-list-subtree), div.editor-association-list > div.association-list-line',
+			defaultFollows: true,
+			fromDom(node: HTMLElement) {
+				const role = node.getAttribute('data-association-list-role') === 'value' ? 'value' : 'term'
+				const associationList: AssociationListLineData = {
+					role,
+					glyph: undefined
+				}
+
+				const hasValue = node.getAttribute('data-association-list-has-value')
+				if (hasValue !== null) associationList.hasValue = hasValue === 'true'
+
+				const termIndent = node.getAttribute('data-association-list-term-indent')
+				if (node.getAttribute('data-association-list-marker') === ':') associationList.marker = ':'
+				if (termIndent !== null) associationList.termIndent = termIndent
+
+				const rootIndent = node.getAttribute('data-association-list-root-indent')
+				if (rootIndent !== null) associationList.rootIndent = rootIndent
+
+				const attributes: AttributeMap = { associationList }
+				extractCoreLineProperties(node, attributes)
+				return attributes
+			},
+			shouldCombine: (first, next) => {
+				const firstAssociationList = first.associationList as AssociationListLineData
+				const nextAssociationList = next.associationList as AssociationListLineData
+				if (!firstAssociationList || !nextAssociationList) return false
+
+				const firstRootIndent = firstAssociationList.rootIndent
+					?? firstAssociationList.termIndent
+					?? first.indent?.indent
+					?? ''
+				const nextRootIndent = nextAssociationList.rootIndent
+					?? nextAssociationList.termIndent
+					?? next.indent?.indent
+					?? ''
+				return firstRootIndent === nextRootIndent
+					&& first.blockquote === next.blockquote
+			},
+			renderMultiple: (lineData, editor, forHTML) => {
+				let revealed = false
+				const wrap = content => {
+					const depth = lineData[0][0].blockquote
+					if (!depth) return content
+
+					return h('blockquote', {
+						className: `depth-${depth}${revealed ? ' revealed' : ''}`
+					}, content)
+				}
+
+				if (!forHTML) {
+					const editing = lineData.some(([attributes]) => attributes.associationListEditing)
+					const hidden = lineData.map(([attributes]) => isCollapsed(attributes.collapsed)
+						&& !attributes.collapsedReveal)
+					const columns = getAssociationListColumns(lineData)
+					const { layouts, valuesCollapsed, groupedTerms, owners, joinedValues } = getAssociationListLayouts(lineData, hidden)
+
+					const lines = lineData.map(([attributes, children, id], index) => {
+						const sourceLine = editor.doc.getLineBy(id)
+						if (sourceLine) {
+							const source = sourceLine.content.ops.map(op => typeof op.insert === 'string' ? op.insert : '\ufffc').join('')
+							children = restoreAssociationListSpaces(children, source)
+						}
+						const associationList = attributes.associationList as AssociationListLineData
+						if (attributes.revealed) revealed = true
+
+						let className = `association-list-line association-list-${associationList.role}`
+						if (associationList.termIndent !== undefined) className += ' association-list-nested'
+						if (groupedTerms.has(id)) className += ' association-list-group-term'
+						if (layouts[index]?.termRow > 1) className += ' association-list-shared-owner'
+						if (valuesCollapsed[index]) className += ' association-list-values-collapsed'
+
+						const owner = owners.get(id)
+						const bar = () => h('span', {
+							className: 'association-list-collapse-bar' + (joinedValues.has(id) ? ' association-list-bar-joined' : ''),
+							contenteditable: 'false',
+							role: 'button',
+							tabindex: '0',
+							'aria-label': hasCollapsedChildren(owner.entry[0].collapsed) ? 'Expand values' : 'Collapse values',
+							'aria-expanded': String(!hasCollapsedChildren(owner.entry[0].collapsed)),
+							'data-association-list-owner': owner.entry[2]
+						}, [])
+						let lineChildren = children
+						if (associationList.role === 'term') {
+							const split = splitAssociationListChildren(children)
+							if (split.separator) {
+								const separator = h('span', { className: 'association-list-separator' }, [split.separator])
+
+								if (associationList.hasValue) {
+									className += ' association-list-inline'
+									lineChildren = [
+										h('span', { className: 'association-list-term-content' }, split.term),
+										separator,
+										h('span', { className: 'association-list-value-content' }, [bar(), ...(valuesCollapsed[index] ? [foldedText(split.value)] : split.value)])
+									]
+								}
+								else {
+									const summary = collapsedAssociationListSummary(lineData, index, hidden)
+									lineChildren = [
+										h('span', { className: 'association-list-term-content' }, split.term),
+										separator,
+										...(valuesCollapsed[index] ? [h('span', {
+											className: 'association-list-summary',
+											'data-summary': summary
+										}, [bar(), foldedText([h('span', {
+											className: 'association-list-summary-text', 'data-summary': summary
+										}, [])])])] : [])
+									]
+								}
+							}
+						}
+
+						if (associationList.role === 'value' && owner) lineChildren = [bar(), ...foldedLineChildren(attributes, lineChildren)]
+
+						const props = getCoreLineProperties(attributes, className)
+						const layout = layouts[index]
+						if (layout?.termRow) appendStyle(props, `--associationListTermRow:${layout.termRow};--associationValueSpan:${layout.valueSpan};`)
+						if (layout) {
+							appendStyle(props, layout.span > 1
+								? `grid-row:${layout.row} / span ${layout.span};`
+								: `grid-row:${layout.row};`)
+						}
+						const { start, depth } = columns.lines[index]
+						const end = associationList.role === 'value' || associationList.hasValue || valuesCollapsed[index] ? -1 : start + 2
+						appendStyle(props, `grid-column:${start} / ${end};`)
+						if (depth !== undefined) props['data-association-list-depth'] = String(depth)
+						props.key = id
+						props['data-association-list-role'] = associationList.role
+						if (associationList.marker) props['data-association-list-marker'] = associationList.marker
+						if (associationList.hasValue !== undefined) props['data-association-list-has-value'] = String(associationList.hasValue)
+						if (associationList.termIndent !== undefined) props['data-association-list-term-indent'] = associationList.termIndent
+						if (associationList.rootIndent !== undefined) props['data-association-list-root-indent'] = associationList.rootIndent
+						return h('div', props, lineChildren)
+					})
+
+					// associationListAlignment sets the widths to align blocks separated by blank lines
+					const termTracks = Array.from({ length: columns.maxDepth + 1 },
+						(_track, depth) => `minmax(min(var(--associationListTermWidth${depth}, 0px), var(--associationListTermTrackLimit)), max-content) max-content`)
+					const rootIndent = lineData[0][0].indent?.indentSize ?? 0
+					return wrap(h('div', {
+						className: (revealed
+							? 'association-list editor-association-list revealed'
+							: 'association-list editor-association-list') + (editing ? ' association-list-editing' : ''),
+						'data-association-list-block': lineData[0][2],
+						style: `--associationListBlockDepthCount:${columns.maxDepth + 1};grid-template-columns:${termTracks.join(' ')} minmax(0, 1fr);`
+							+ `margin-inline-start:calc(var(--spaceWidth) * ${rootIndent});`
+					}, lines))
+				}
+
+				if (lineData.some(([attributes]) => attributes.revealed)) revealed = true
+				const items = renderAssociationListExportItems(buildAssociationListTree(lineData))
+
+				return wrap(h('dl', {
+					className: revealed ? 'association-list revealed' : 'association-list'
+				}, items))
+			}
 		},
 		{
 			name: 'list',
@@ -328,7 +745,7 @@ const noteTypeset:TypesetTypes = {
 				if (isRevealed) {
 					preClass += ' revealed'
 				}
-				
+
 				const content = h(
 					'pre',
 					{
@@ -511,6 +928,14 @@ const noteTypeset:TypesetTypes = {
 			}
 		},
 
+		hiddenGroupEmbedFormat<AssociationListSeparatorData>({
+			name: 'association_separator',
+			renderOutput: () => h('span', {
+				className: 'association-list-separator-output',
+				'aria-hidden': 'true'
+			})
+		}),
+
 		{
 			name: 'list_format',
 			selector: 'span.list_format',
@@ -542,7 +967,7 @@ const noteTypeset:TypesetTypes = {
 					className,
 					listGlyph: listData.glyph
 				}, children)
-			}	
+			}
 		},
 
 		{
@@ -758,6 +1183,20 @@ const noteTypeset:TypesetTypes = {
 				}
 
 				return h('t-math', tMathAttr, [])
+			}
+		}),
+
+		hiddenGroupEmbedFormat<GlossData>({
+			name: 'gloss',
+			renderOutput: (gloss, attributes) => {
+				const tGlossAttr = { base: gloss.base, description: gloss.description } as any
+
+				if (attributes.decoration?.focus) {
+					// Inject the focus decoration onto the shadow root, as math does.
+					tGlossAttr.className = attributes.decoration.focus.class
+				}
+
+				return h('t-gloss', tGlossAttr, [])
 			}
 		}),
 

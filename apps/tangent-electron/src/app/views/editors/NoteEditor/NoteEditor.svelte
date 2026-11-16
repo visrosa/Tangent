@@ -54,8 +54,7 @@ import { revealContentAroundRange } from './editorModule'
 import { fly } from 'svelte/transition'
 import { derived } from 'svelte/store'
 import { EmbedFile } from 'app/model'
-import LineGutterLeft from './LineGutterLeft.svelte'
-import LineGutterRight from './LineGutterRight.svelte'
+import LineGutters from './LineGutters.svelte'
 import { dropTooltip, requestTooltip, type TooltipConfig } from 'app/utils/tooltips'
 import YamlTooltip from './YamlTooltip.svelte'
 import TemplateTokenTooltip from './TemplateTokenTooltip.svelte'
@@ -131,6 +130,7 @@ let headerElement: HTMLElement = $state()
 let headerEditElement: HTMLElement = $state()
 let editorElement: HTMLElement = $state()
 let container: HTMLElement = $state()
+let gutterWidth = $state(32)
 
 let _lastFile: NoteFile
 let _lastFileLoadState: FileLoadState = null
@@ -1069,64 +1069,6 @@ function onEditorMouseOut(event: MouseEvent) {
 	}
 }
 
-/////////////////////////////
-// Line gutter adornments //
-///////////////////////////
-type LineTarget = { element: HTMLElement, index: number }
-let leftHoveredLineTarget: LineTarget = $state(null)
-let rightHoveredLineTarget: LineTarget = $state(null)
-
-function onMouseMove(event: MouseEvent) {
-
-	const bounds = editorElement.getBoundingClientRect()
-	const lines = editorElement.querySelectorAll('.line')
-
-	const count = lines.length
-
-	let clearLeft = true
-	let clearRight = true
-	
-	for (let i = 0 ; i < count; i++) {
-		const lineElement = lines.item(i) as HTMLElement
-		const lineBounds = lineElement.getBoundingClientRect()
-
-		const leftBound = Math.min(bounds.left, lineBounds.left)
-		const rightBound = Math.max(bounds.right, lineBounds.right)
-
-		if (event.clientY > lineBounds.top && event.clientY <= lineBounds.bottom) {
-			if (event.clientX > leftBound - 50 && event.clientX < lineBounds.left + 150) {
-				if (leftHoveredLineTarget?.element !== lineElement) {
-					leftHoveredLineTarget = {
-						element: lineElement,
-						index: i
-					}
-				}
-				clearLeft = false
-			}
-
-			if (event.clientX > lineBounds.right - 150 && event.clientX < rightBound + 50) {
-				if (rightHoveredLineTarget?.element !== lineElement) {
-					rightHoveredLineTarget = {
-						element: lineElement,
-						index: i
-					}
-				}
-				clearRight = false
-			}
-			break
-		}
-	}
-
-	if (clearLeft) leftHoveredLineTarget = null
-	if (clearRight) rightHoveredLineTarget = null
-}
-
-function onMouseLeave(event: MouseEvent) {
-	if (leftHoveredLineTarget) leftHoveredLineTarget = null
-	if (rightHoveredLineTarget) rightHoveredLineTarget = null
-}
-//// End ////
-
 function onContextMenu(event: MouseEvent) {
 	// Holy sweet baby jesus this function though..
 	const menu: ContextMenuConstructorOptions[] = []
@@ -1494,8 +1436,6 @@ function updateCodeBlockSizing(pre: HTMLElement, context: CodeBlockSizingContext
 	bind:this={container}
 	onmousedown={onMouseDown}
 	onmouseup={selectFromVerticalPosition}
-	onmousemove={onMouseMove}
-	onmouseleave={onMouseLeave}
 	onwheel={onWheel}
 	onkeydown={onNoteKeydown}
 	class={`noteEditor layout-${layout} background-${background} margins-${$margins}`}
@@ -1506,6 +1446,7 @@ function updateCodeBlockSizing(pre: HTMLElement, context: CodeBlockSizingContext
 	class:typewriter={focusLevel >= FocusLevel.Typewriter}
 	style={`--noteWidthMax: ${$maxWidth}px;`}
 	style:--extraTop={extraTop + 'px'}
+	style:--lineGutterExtraWidth={`${Math.max(0, gutterWidth - 32)}px`}
 >
 	<div class="extraTop" style={`height: ${effectiveExtraTop}px;`}></div>
 	{#if header}
@@ -1562,8 +1503,7 @@ function updateCodeBlockSizing(pre: HTMLElement, context: CodeBlockSizingContext
 			<TemplateTokenAutocompleteMenu {handler} />
 		{/if}
 	</AutoCompleteMenu>
-	<LineGutterLeft {editor} target={leftHoveredLineTarget} />
-	<LineGutterRight {editor} target={rightHoveredLineTarget} />
+	<LineGutters {editor} {container} onWidth={width => gutterWidth = width} />
 </main>
 
 {#if fallbackErrors?.length}
@@ -1595,6 +1535,7 @@ function updateCodeBlockSizing(pre: HTMLElement, context: CodeBlockSizingContext
 <style lang="scss">
 main {
 	position: relative;
+	padding-left: calc(var(--outlineWidth, 0px) + var(--lineGutterExtraWidth, 0px));
 
 	text-align: unset;
 
