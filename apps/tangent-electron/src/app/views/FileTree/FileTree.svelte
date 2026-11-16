@@ -208,6 +208,10 @@ function itemContext(event: MouseEvent, item: TreeNode) {
 				target: item
 			}
 		})
+		menu.push({
+			command: workspace.commands.deleteNodePermanently,
+			commandContext: { target: item }
+		})
 	}
 	
 	appendContextTemplate(event, menu)

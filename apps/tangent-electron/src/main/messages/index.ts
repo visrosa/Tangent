@@ -1,4 +1,5 @@
 import path from 'path'
+import { confirmPermanentDeletion, validateDeletionMode } from 'main/fileDeletion'
 import fs from 'fs'
 import { load } from 'cheerio/slim'
 import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeImage, shell } from 'electron'
@@ -331,13 +332,23 @@ ipcMain.handle('copy', async (event, filepath, newPath) => {
 	}
 })
 
-ipcMain.handle('delete', async (event, filepath) => {
+const pendingDeletions = new Set<string>()
+
+ipcMain.handle('delete', async (event, filepath, mode = 'trash') => {
 	const windowHandle = getWindowHandle(event.sender)
 	const workspace = validateWorkspaceForHandleFilepath(windowHandle, filepath)
 
 	if (workspace) {
 		try {
-			await workspace.delete(filepath)
+			validateDeletionMode(mode)
+			if (pendingDeletions.has(filepath)) return
+			pendingDeletions.add(filepath)
+			try {
+				if (mode === 'permanent' && !await confirmPermanentDeletion(windowHandle.window, filepath)) return
+				await workspace.delete(filepath, mode)
+			} finally {
+				pendingDeletions.delete(filepath)
+			}
 		}
 		catch (err) {
 			log.error('Failed to delete', filepath, err)

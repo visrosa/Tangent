@@ -1,3 +1,4 @@
+import { isWindows } from '../src/common/platform'
 import fs from 'fs'
 import path from 'path'
 
@@ -248,7 +249,7 @@ test('Working with and then deleting files in folder', async ({ tangent, workspa
 	await window.shortcut('Mod+Alt+ArrowLeft')
 	await wait(500)
 	await window.shortcut('Mod+P')
-	await keyboard.type('Delete')
+	await keyboard.type(isWindows ? 'Move to Recycle Bin' : 'Move to Trash')
 	await wait(500)
 	await keyboard.press('Enter')
 

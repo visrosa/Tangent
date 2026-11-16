@@ -165,8 +165,8 @@ const bridge: WindowApi = {
 		copy(filepath, newPath) {
 			return ipcRenderer.invoke('copy', filepath, newPath)
 		},
-		delete(filepath) {
-			return ipcRenderer.invoke('delete', filepath)
+		delete(filepath, mode = 'trash') {
+			return ipcRenderer.invoke('delete', filepath, mode)
 		},
 		getFileContents(filepath) {
 			return ipcRenderer.invoke('getFileContents', filepath)

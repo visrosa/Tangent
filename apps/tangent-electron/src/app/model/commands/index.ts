@@ -138,6 +138,7 @@ function createAllCommands(workspace: Workspace) {
 		moveFile: new MoveFileCommand(workspace),
 		duplicateNode: new DuplicateNodeCommand(workspace),
 		deleteNode: new DeleteNodeCommand(workspace),
+		deleteNodePermanently: new DeleteNodeCommand(workspace, 'permanent'),
 
 		copyAbsolutePath: new CopyAbsolutePathCommand(workspace, { shortcut: 'Mod+Shift+C' }),
 		copyRealtivePath: new CopyRelativePathCommand(workspace, { shortcut: 'Mod+Alt+C' }),
