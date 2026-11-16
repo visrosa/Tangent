@@ -1,3 +1,4 @@
+import { shortcutsMatch } from 'app/utils/shortcuts'
 import { type TreeNode, validatePath } from 'common/trees'
 import { rawOrStoreValue } from 'common/stores'
 import paths from 'common/paths'
@@ -295,7 +296,7 @@ export default class CreateNewFileCommand extends WorkspaceCommand {
 		// Do shenanigans to check for other rules, modifying the context if necessary
 		if (!super.canExecuteFromShortcut(shortcut, context) && !context?.rule) {
 			for (const rule of this.workspace.workspaceSettings.value.creationRules.value) {
-				if (rule.shortcut.value === shortcut) {
+				if (shortcutsMatch(rule.shortcut.value, shortcut)) {
 					if (context) context.rule = rule
 					if (this.canExecute(context)) {
 						return true
