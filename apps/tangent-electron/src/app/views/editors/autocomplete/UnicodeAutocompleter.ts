@@ -10,9 +10,20 @@ type MatcherItem = {
 	match: RegExp,
 	replace: string|string[],
 	mustBeMidLine?: boolean // This is a way to dodge away from `---` markdown formatting collisions
+	atCaret?: boolean
 }
 
 const matches: MatcherItem[] = [
+	{
+		match: /\[[+-]$/,
+		replace: '⁅',
+		atCaret: true
+	},
+	{
+		match: /[+-]\]$/,
+		replace: '⁆',
+		atCaret: true
+	},
 	{
 		match: /--+>/,
 		replace: [
@@ -95,7 +106,7 @@ const matches: MatcherItem[] = [
 	}
 ]
 
-const activateChars = '-><.='
+const activateChars = '-><.=+]'
 
 export default class UnicodeAutocompleter implements AutocompleteHandler {
 	workspace: Workspace
@@ -116,7 +127,7 @@ export default class UnicodeAutocompleter implements AutocompleteHandler {
 
 	canActivateFromTyping(char: string, doc: TextDocument): false | EditorRange {
 		if (activateChars.includes(char)) {
-			return this.tryToActivate(doc, true)
+			return this.tryToActivate(doc, true, char === '+' || char === ']')
 		}
 		return false
 	}
@@ -125,7 +136,7 @@ export default class UnicodeAutocompleter implements AutocompleteHandler {
 		return this.tryToActivate(doc)
 	}
 
-	tryToActivate(doc: TextDocument, autoActivate=false): false | EditorRange {
+	tryToActivate(doc: TextDocument, autoActivate=false, atCaretOnly=false): false | EditorRange {
 		const selection = normalizeRange(doc.selection)
 		if (!selection || selection[0] != selection[1]) return false
 
@@ -137,19 +148,29 @@ export default class UnicodeAutocompleter implements AutocompleteHandler {
 		const formats = doc.getFormats(selection[0] - 1)
 		if (formats.inline_code) return false
 		
-		const [lineStart, lineEnd] = doc.getLineRange(line)
+		const [lineStart] = doc.getLineRange(line)
 		const lineText = lineToText(line)
 
 		const [wordStart, wordEnd] = findCharactersBetweenWhitespace(lineText, selection[0] - lineStart)
 		const text = doc.getText([lineStart + wordStart, lineStart + wordEnd])
 
 		for (const matcher of matches) {
-			const match = text.match(matcher.match)
+			if (atCaretOnly && !matcher.atCaret) continue
+			const matchText = matcher.atCaret ? lineText.slice(0, selection[0] - lineStart) : text
+			const match = matchText.match(matcher.match)
 			if (match) {
+				const matchStart = (matcher.atCaret ? 0 : wordStart) + match.index
+				if (matcher.atCaret) {
+					if (formats.math || formats.t_link || formats.link_internal || formats.code_syntax ||
+						line.attributes.front_matter || line.attributes.math || line.attributes.html) continue
+					let backslashes = 0
+					for (let index = matchStart - 1; index >= 0 && lineText[index] === '\\'; index--) backslashes++
+					if (backslashes % 2) continue
+				}
 				if (autoActivate && matcher.mustBeMidLine && wordStart === 0 && match.index === 0) {
 					continue
 				}
-				const start = lineStart + wordStart + match.index
+				const start = lineStart + matchStart
 				const end = start + match[0].length
 				return [start, end]
 			}

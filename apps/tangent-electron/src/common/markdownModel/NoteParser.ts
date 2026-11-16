@@ -17,6 +17,7 @@ import { type ParsingContext, ParsingContextType, type ParsingProgram } from './
 import { parseTag } from './tag'
 import { parseCodeBlock, parseInlineCode, readCodeLines } from './code'
 import { getLanguage } from './codeSyntax'
+import { parseInlineKeyboard } from './keyboard'
 import { parseHtml } from './html'
 import { parseTemplateTokens } from './templates'
 
@@ -36,6 +37,7 @@ const inlineObjectPrograms = [
 	parseAssociationListSeparator,
 	parseInlineGloss, // before furigana: an unescaped `::` wins over `|`
 	parseInlineFurigana,
+	parseInlineKeyboard,
 	parseLink,
 	parseRawLink,
 	parseTag,

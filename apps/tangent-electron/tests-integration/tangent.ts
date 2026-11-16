@@ -31,7 +31,7 @@ export const defaultWorkspace = path.resolve(path.join(
 export const test = base.extend<TangentFixtures & TangentOptions>({
 
 	workspaceInfoName: ['test_', { option: true }],
-	workspace: [defaultWorkspace, { option: true }],
+	workspace: [process.env.TANGENT_TEST_WORKSPACE ?? defaultWorkspace, { option: true }],
 	resetWorkspaceInfo: [true, { option: true }],
 	resetWorkspace: [true, { option: true }],
 
@@ -44,12 +44,26 @@ export const test = base.extend<TangentFixtures & TangentOptions>({
 		// Set up the app
 
 		if (workspace) {
-			await fs.promises.mkdir(workspace, { recursive: true })
+			// Prevent discovery from selecting an existing workspace above the fixture.
+			await fs.promises.mkdir(path.join(workspace, '.tangent'), { recursive: true })
+		}
+
+		const environment = { ...process.env }
+		delete environment.ELECTRON_RUN_AS_NODE
+		const forceX11 = environment.TANGENT_TEST_X11 === '1'
+		if (forceX11) {
+			// DISPLAY alone does not override an inherited Wayland connection.
+			delete environment.WAYLAND_DISPLAY
+			delete environment.WAYLAND_SOCKET
+			environment.XDG_SESSION_TYPE = 'x11'
+			environment.ELECTRON_OZONE_PLATFORM_HINT = 'x11'
 		}
 
 		const electronApp = await electron.launch({
-			args: ['.', workspace],
+			// Integration argument parsing expects the app path immediately after the executable.
+			args: ['.', workspace, ...(forceX11 ? ['--ozone-platform=x11'] : [])],
 			env: {
+				...environment,
 				INTEGRATION_TEST: '1',
 				WORKSPACE_NAME: workspaceInfoName,
 				// forward other integration test environment variables

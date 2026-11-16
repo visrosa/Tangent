@@ -81,6 +81,7 @@ export default class Workspace extends EventDispatcher {
 	codeThemeManager: CodeThemeManager
 	styleManager: CustomStyleManager
 
+	isDocumentation = false
 	version: string
 	client: ClientInfo
 
@@ -146,6 +147,7 @@ export default class Workspace extends EventDispatcher {
 		this.tangentsFolder = workspaceFolderCreator('tangents')
 
 
+		this.isDocumentation = state.isDocumentation ?? false
 		this.version = state.version
 		this.client = state.client
 

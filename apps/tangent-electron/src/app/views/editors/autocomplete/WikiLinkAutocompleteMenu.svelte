@@ -8,7 +8,7 @@ import SvgIcon from 'app/views/smart-icons/SVGIcon.svelte';
 import { noteIcon } from 'common/icons';
 import { getContext } from 'svelte'
 import type { Workspace } from 'app/model'
-import { shortcutDisplayString } from 'app/utils/shortcuts'
+import KeyboardShortcut from 'app/views/KeyboardShortcut.svelte'
 import { isImplicitExtension } from 'common/fileExtensions'
 
 let workspace = getContext('workspace') as Workspace
@@ -122,7 +122,7 @@ function nodeOptionEvent(option: any, event: Event) {
 					{/if}
 				</div>
 			{/if}
-			<div>Press <span class="key">{shortcutDisplayString("Alt+Enter")}</span> to make a markdown link.</div>
+			<div>Press <KeyboardShortcut shortcut="Alt+Enter" /> to make a markdown link.</div>
 			<div>Press <span class="key">Enter</span> to accept, <span class="key">Esc</span> to cancel.</div>
 		</div>
 	{/if}

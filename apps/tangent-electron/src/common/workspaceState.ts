@@ -7,6 +7,7 @@ export interface ClientInfo {
 }
 
 export interface WorkspaceInitState {
+	isDocumentation?: boolean
 	client: ClientInfo
 	/** The root of the workspace directory */
 	files: TreeNode,
