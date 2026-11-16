@@ -12,6 +12,14 @@ export interface SortMode {
 	order: SortOrder
 }
 
+export type FolderToggleScope = 'level' | 'all'
+
+export interface FolderToggleState {
+	parent: TreeNode
+	folders: TreeNode[]
+	collapse: boolean
+}
+
 const defaultSortMode: SortMode = { key: 'name', order: 'ascending' }
 
 const sortKeys = [ 'name', 'created', 'modified' ]
@@ -156,10 +164,7 @@ export default class DirectoryView extends ObjectStore {
 				return 0
 			},
 			item => {
-				if (item.meta?.virtual) {
-					return TreePredicateResult.Ignore
-				}
-				if (item.name.startsWith('.')) {
+				if (!this.isItemVisible(item)) {
 					return TreePredicateResult.Ignore
 				}
 				if (item.children) {
@@ -173,6 +178,51 @@ export default class DirectoryView extends ObjectStore {
 				return TreePredicateResult.Ignore
 			}
 		)
+	}
+
+	protected isItemVisible(item: TreeNode): boolean {
+		return !item.meta?.virtual && !item.name.startsWith('.')
+	}
+
+	getFolderToggleState(scope: FolderToggleScope, focusedItem?: TreeNode): FolderToggleState {
+		let parent = this.root
+		if (scope === 'level') {
+			const visible = new Set(this.visibleItems)
+			const candidates = [focusedItem, ...this.selection.value.slice().reverse()]
+			for (const candidate of candidates) {
+				let item = candidate && this.store.get(candidate.path)
+				while (item && item !== this.root && !visible.has(item)) {
+					item = this.store.getParent(item)
+				}
+				if (item && visible.has(item)) {
+					parent = this.store.getParent(item) || this.root
+					break
+				}
+			}
+		}
+
+		const folders: TreeNode[] = []
+		const remaining = [...(parent.children || [])]
+		while (remaining.length) {
+			const item = remaining.pop()
+			if (item.fileType !== 'folder' || !this.isItemVisible(item)) continue
+			folders.push(item)
+			if (scope === 'all') remaining.push(...(item.children || []))
+		}
+		return { parent, folders, collapse: folders.some(item => this.isItemOpen(item)) }
+	}
+
+	toggleFolders(scope: FolderToggleScope, focusedItem?: TreeNode) {
+		const { folders, collapse } = this.getFolderToggleState(scope, focusedItem)
+		if (!folders.length) return
+		const open = new Set(this.openDirectories.value)
+		for (const folder of folders) {
+			if (collapse) open.delete(folder)
+			else open.add(folder)
+		}
+		// One replacement keeps a recursive operation to one persisted view-state patch.
+		this.openDirectories.set(open)
+		this.notifyChanged()
 	}
 
 	toggleOpen(item: TreeNode) {

@@ -11,6 +11,8 @@ import { startDrag } from 'app/utils'
 import PopUpButton from 'app/utils/PopUpButton.svelte'
 
 import FileTree from './FileTree/FileTree.svelte'
+import FolderCollapseButtons from './FileTree/FolderCollapseButtons.svelte'
+import type { TreeNode } from 'common/trees'
 import SortingOptions from './FileTree/SortingOptions.svelte'
 import SortModeIcon from './smart-icons/SortModeIcon.svelte'
 import SvgIcon from './smart-icons/SVGIcon.svelte'
@@ -60,6 +62,7 @@ $effect(() => {
 })
 
 let sortMenuIsOpen = $state(false)
+let focusedFileItem: TreeNode = $state(null)
 const directoryViewSort = workspace.viewState.directoryView.sortMode
 const tagTreeViewSort = workspace.viewState.tagTreeView.sortMode
 
@@ -134,6 +137,7 @@ function onKeydown(event: KeyboardEvent) {
 		return
 	}
 	if (event.key === 'Tab') {
+		if ((event.target as HTMLElement).closest('button, input, select, textarea, [contenteditable="true"]')) return
 		event.preventDefault()
 		// TODO: An actual tab model!
 		if ($currentTab === 'files') {
@@ -242,6 +246,11 @@ function onDropRoot(event: DragEvent) {
 					{/snippet}
 				</PopUpButton>
 
+				<FolderCollapseButtons
+					directoryView={workspace.viewState.directoryView}
+					focusedItem={focusedFileItem}
+				/>
+
 				<span class="spacer"></span>
 
 				<!-- svelte-ignore a11y_consider_explicit_label -->
@@ -275,7 +284,7 @@ function onDropRoot(event: DragEvent) {
 	</header>
 	<div class="scroller custom-scrollbar">
 		{#if $currentTab === 'files'}
-			<FileTree directoryView={workspace.viewState.directoryView} />
+			<FileTree directoryView={workspace.viewState.directoryView} bind:focusedItem={focusedFileItem} />
 		{:else if $currentTab === 'tags'}
 			<FileTree directoryView={workspace.viewState.tagTreeView} />
 		{/if}
