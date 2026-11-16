@@ -1,3 +1,4 @@
+import { selectWorkspacePath } from 'main/selectWorkspacePath'
 import path from 'path'
 import { confirmPermanentDeletion, validateDeletionMode } from 'main/fileDeletion'
 import fs from 'fs'
@@ -221,64 +222,7 @@ ipcMain.handle('createFolder', async (event, filepath) => {
 ipcMain.handle('selectPath', async (event, options: SelectPathOptions) => {
 	const windowHandle = getWindowHandle(event.sender)
 	const workspace = windowHandle?.workspace
-	if (!workspace) return
-
-	const mode = options?.mode ?? 'path'
-
-	let eOptions: Electron.OpenDialogOptions = {
-		defaultPath: options?.initialPath ?? workspace.rootPath,
-		message: options?.message ?? ('Select a ' + mode + '.'),
-	}
-
-	let buttonLabel = ''
-	switch (mode) {
-		case 'file':
-			buttonLabel = 'Select File'
-			eOptions.properties = ['createDirectory', 'openFile']
-			break
-		case 'folder':
-			buttonLabel = 'Select Folder'
-			eOptions.properties = ['createDirectory', 'openDirectory']
-			break
-		case 'path':
-			buttonLabel = 'Select Path'
-			eOptions.properties = ['createDirectory', 'openFile', 'openDirectory']
-			break
-	}
-
-	eOptions.title = options?.title ?? buttonLabel
-	eOptions.buttonLabel = buttonLabel
-
-	async function selectPath() {
-		let result = await dialog.showOpenDialog(windowHandle.window, eOptions)
-	
-		if (result && !result.canceled && result.filePaths.length > 0) {
-			if (!options?.allowExternal && result.filePaths.find(f => !workspace.containsPath(f))) {
-				const errorResult = await dialog.showMessageBox(
-					windowHandle.window,
-					{
-						title: 'Must Be Within Workspace',
-						message: `The selected ${mode} must be within the workspace.`,
-						type: 'warning',
-						buttons: ['Cancel', 'Select Folder']
-					})
-				if (errorResult.response === 1) {
-					// Let the user select the folder again
-					return await selectPath()
-				}
-			}
-			else {
-				// Workspace folders should always be relative
-				const list = result.filePaths.map(f => workspace.contentsStore.pathToRelativePath(f))
-				if (options?.selectMultiple) {
-					return list
-				}
-				return list[0]
-			}
-		}
-	}
-
-	return await selectPath()
+	if (workspace) return selectWorkspacePath(windowHandle.window, workspace, options)
 })
 
 ipcMain.handle('messageDialog', (event, args) => {
