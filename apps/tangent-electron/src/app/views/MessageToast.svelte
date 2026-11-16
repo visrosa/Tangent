@@ -1,4 +1,5 @@
 <script lang="ts">
+import { onDestroy, onMount } from 'svelte'
 import { flip } from 'svelte/animate'
 import { fly } from 'svelte/transition'
 import type WindowAPI from 'common/WindowApi'
@@ -11,13 +12,30 @@ let nextId = 0
 interface Message extends UserMessage {
 	id: number
 	timeout?: number
+	hovered?: boolean
+	focused?: boolean
 }
 
 let messages: Message[] = []
 
 api.onMessage(addMessageToStack)
 
+let reducedMotion = false
+let destroyed = false
+onMount(() => {
+	const preference = window.matchMedia('(prefers-reduced-motion: reduce)')
+	const update = () => reducedMotion = preference.matches
+	update()
+	preference.addEventListener('change', update)
+	return () => preference.removeEventListener('change', update)
+})
+onDestroy(() => {
+	destroyed = true
+	for (const message of messages) cancelTimeout(message)
+})
+
 function addMessageToStack(message: UserMessage) {
+	if (destroyed) return
 	const newMessage: Message = {
 		...message,
 		id: nextId,
@@ -32,6 +50,7 @@ function addMessageToStack(message: UserMessage) {
 }
 
 function removeMessage(message: Message) {
+	cancelTimeout(message)
 	const index = messages.indexOf(message)
 	if (index >= 0) {
 		messages.splice(index, 1)
@@ -40,7 +59,8 @@ function removeMessage(message: Message) {
 }
 
 function startTimeout(message: Message, time=10000) {
-	if (message.type !== 'error') {
+	cancelTimeout(message)
+	if (message.type !== 'error' && !message.hovered && !message.focused) {
 		message.timeout = window.setTimeout(() => {
 			removeMessage(message)
 		}, time);
@@ -50,30 +70,48 @@ function startTimeout(message: Message, time=10000) {
 function cancelTimeout(message: Message) {
 	if (message.timeout) {
 		window.clearTimeout(message.timeout)
+		message.timeout = undefined
 	}
 }
 
+function hoverMessage(message: Message, hovered: boolean) {
+	message.hovered = hovered
+	if (hovered) cancelTimeout(message)
+	else startTimeout(message, 2000)
+}
+
+function focusMessage(message: Message, event: FocusEvent, focused: boolean) {
+	if (!focused && event.currentTarget instanceof HTMLElement
+		&& event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget)) return
+	message.focused = focused
+	if (focused) cancelTimeout(message)
+	else startTimeout(message, 2000)
+}
 </script>
 
-<main>
+<main aria-label="Notifications">
 	{#each messages as message (message.id)}
 		<article
 			class={message.type}
-			animate:flip={{ duration: 300 }}
-			transition:fly|global={{ x: 500 }}
-			on:mouseenter={ e => cancelTimeout(message)}
-			on:mouseleave={ e => startTimeout(message, 2000)}
+			animate:flip={{ duration: reducedMotion ? 0 : 300 }}
+			transition:fly|global={{ x: reducedMotion ? 0 : 500, duration: reducedMotion ? 0 : 400 }}
+			on:mouseenter={() => hoverMessage(message, true)}
+			on:mouseleave={() => hoverMessage(message, false)}
+			on:focusin={event => focusMessage(message, event, true)}
+			on:focusout={event => focusMessage(message, event, false)}
 		>
 			<button
-				aria-label="Remove Message"
+				aria-label="Dismiss notification"
 				on:click={e => removeMessage(message)}
 			><svg style={`width: 24px; height: 24px;`}>
 					<use href="close.svg#close"/>
 			</svg></button>
-			{#if message.title}
-				<h1>{@html message.title}</h1>
-			{/if}
-			<p>{@html message.message}</p>
+			<div role={message.type === 'error' ? 'alert' : 'status'} aria-atomic="true">
+				{#if message.title}
+					<h1>{@html message.title}</h1>
+				{/if}
+				<p>{@html message.message}</p>
+			</div>
 		</article>
 	{/each}
 </main>
@@ -95,7 +133,9 @@ article {
 	border: 2px solid var(--borderColor);
 	background: var(--backgroundColor);
 
-	padding: .5em .75em;
+	padding: .5em 2.75em .5em .75em;
+	box-sizing: border-box;
+	max-width: calc(100vw - 2em);
 	margin-bottom: 1em;
 
 	border-radius: var(--inputBorderRadius);
@@ -104,7 +144,7 @@ article {
 	overflow-wrap: break-word;
 
 	button {
-		opacity: 0;
+		opacity: 1;
 
 		position: absolute;
 		top: .25em;
