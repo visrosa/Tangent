@@ -388,5 +388,5 @@ export default function htmlToMarkdown(html: string): string {
 	// Clean tokens intentionally retained
 	result = cleanPlaceholders(result)
 
-	return result
+	return result.replace(/\u00a0/g, ' ')
 }
