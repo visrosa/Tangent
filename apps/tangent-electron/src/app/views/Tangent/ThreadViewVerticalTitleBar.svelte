@@ -1,5 +1,7 @@
 <script lang="ts">
 import { getContext } from 'svelte'
+import { readable, type Readable } from 'svelte/store'
+import type { NoteOutlineControl } from '../editors/NoteEditor/outline'
 import type { TreeNode } from 'common/trees'
 import { File, Tangent, Workspace } from 'app/model'
 
@@ -13,6 +15,7 @@ export let tangent: Tangent
 
 export let collapsedWidth = 32
 export let supportDirty = false
+export let outlineControl: Readable<NoteOutlineControl> = readable(null)
 
 const workspace = getContext('workspace') as Workspace
 
@@ -41,11 +44,19 @@ const {
 		><SvgIcon
 			ref={isDirty ? 'close.svg#close-dirty' : 'close.svg#close'}
 		/></button>
+		{#if $outlineControl}
+			<button class="outline subtle" type="button"
+				aria-label={$outlineControl.expanded ? 'Collapse outline' : 'Expand outline'}
+				aria-expanded={$outlineControl.expanded}
+				title={$outlineControl.expanded ? 'Collapse outline' : 'Expand outline'}
+				on:click|stopPropagation={() => $outlineControl.toggle()}
+			>☷</button>
+		{/if}
 		<!-- svelte-ignore a11y_consider_explicit_label -->
 		<button use:command={{
 			command: closeLeftFiles,
 			context: { node, tangent }
-		}} class="subtle"
+		}} class="subtle" aria-label="Close files to the left"
 		><svg style={`width: 24px; height: 24px;`}>
 			<use href="close.svg#close-left"/>
 		</svg></button>
@@ -53,7 +64,7 @@ const {
 		<button use:command={{
 			command: closeRightFiles,
 			context: { node, tangent }
-		}} class="subtle"
+		}} class="subtle" aria-label="Close files to the right"
 		><svg style={`width: 24px; height: 24px;`}>
 			<use href="close.svg#close-right"/>
 		</svg></button>
@@ -117,7 +128,7 @@ const {
 			transition: opacity .3s;
 			pointer-events: all;
 
-			&.close {
+			&.close, &.outline {
 				opacity: .5;
 			}
 		}

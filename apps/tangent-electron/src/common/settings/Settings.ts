@@ -438,6 +438,12 @@ export default class Settings extends ObjectStore {
 		defaultValue: true
 	})
 
+	numericFootnoteReferences = new Setting<boolean>({
+		name: 'Numeric Footnote References',
+		description: 'Show footnote references as numbers in order of first appearance. Hover or focus a reference to reveal its original ID.',
+		defaultValue: false
+	})
+
 	defaultTodoCompleteChar = new Setting<'x' | '+'>({
 		name: 'Default Complete Todo Glyph',
 		description: 'The character applied to a checkbox when you toggled it completed.',

@@ -40,6 +40,7 @@ import { appendContextTemplate, type ContextMenuConstructorOptions } from 'app/m
 import { eventHasSelectionRequest } from 'app/events'
 import { createCommandHandler } from 'app/model/commands/Command'
 import { verifyListContext } from './editorActions'
+import { footnoteModule } from './footnoteModule'
 
 function clampRange(range: EditorRange, clampingRange: EditorRange): EditorRange {
 	range = normalizeRange(range)
@@ -202,6 +203,7 @@ export default function editorModule(editor: Editor, options: {
 	// all default modules in MarkdownEditor
 	const markdownEditor = editor as MarkdownEditor
 	const { workspace } = options
+	const footnotes = footnoteModule(editor, workspace?.settings?.numericFootnoteReferences)
 
 	let allowVerification = true
 	let verificationInstructions: (VerificationInstruction<unknown>)[] = []
@@ -880,6 +882,7 @@ export default function editorModule(editor: Editor, options: {
 
 	return {
 		init() {
+			footnotes.init()
 			editor.on('changing', onChanging)
 			editor.on('decorate', onDecorate)
 			
@@ -891,6 +894,7 @@ export default function editorModule(editor: Editor, options: {
 			editor.root.addEventListener('paste', onPaste)
 		},
 		destroy() {
+			footnotes.destroy()
 			editor.off('changing', onChanging)
 			editor.off('decorate', onDecorate)
 			

@@ -55,6 +55,7 @@ import { fly } from 'svelte/transition'
 import { derived } from 'svelte/store'
 import { EmbedFile } from 'app/model'
 import LineGutters from './LineGutters.svelte'
+import NoteOutline from './NoteOutline.svelte'
 import { dropTooltip, requestTooltip, type TooltipConfig } from 'app/utils/tooltips'
 import YamlTooltip from './YamlTooltip.svelte'
 import TemplateTokenTooltip from './TemplateTokenTooltip.svelte'
@@ -131,6 +132,10 @@ let headerEditElement: HTMLElement = $state()
 let editorElement: HTMLElement = $state()
 let container: HTMLElement = $state()
 let gutterWidth = $state(32)
+let outlineWidth = $state(0)
+let outlineControl = $derived(noteState.outlineControl)
+let hasOutline = $derived(layout === 'fill' && !!outlineControl)
+let outlineInfo = $derived(noteState.noteViewInfo)
 
 let _lastFile: NoteFile
 let _lastFileLoadState: FileLoadState = null
@@ -147,6 +152,8 @@ let lastFocusLevel = focusLevel
 
 let hasInitializedSelection = false
 let allowSelectionScroll = true
+let outlineNavigationRequest = 0
+let placingOutlineHeading = false
 let saveTimeout = null
 let hasSelection = $state(false)
 let justScrolled = $state(true)
@@ -248,6 +255,7 @@ function onEditorRoot() {
 }
 
 onDestroy(() => {
+	outlineNavigationRequest++
 	if (note) {
 		note.dropFile()
 	}
@@ -564,6 +572,33 @@ function ensureRangeInView(range: EditorRange, buffer=50, scrollTime?: number) {
 	})
 }
 
+async function navigateOutline(position: number) {
+	const request = ++outlineNavigationRequest
+	placingOutlineHeading = true
+	try {
+		editor.collapsingSections.expandToPosition(position)
+		editor.select(position)
+		editor.root.focus({ preventScroll: true })
+		await tick()
+		await new Promise<void>(resolve => requestAnimationFrame(() => resolve()))
+		if (request !== outlineNavigationRequest || !container?.isConnected || !editor._root) return
+
+		const heading = editor.doc.getLineAt(position)
+		const element = Array.from(editor.root.querySelectorAll<HTMLElement>('.line'))
+			.find(element => (element as HTMLElement & { key?: string }).key === heading.id)
+		const bounds = element?.getBoundingClientRect() ?? editor.getBounds([position, position])
+		const headerHeight = willFixTitle ? headerElement.getBoundingClientRect().height : 0
+		const top = container.getBoundingClientRect().top + extraTop + headerHeight + 24
+		const y = Math.max(0, Math.min(container.scrollHeight - container.clientHeight,
+			container.scrollTop + bounds.top - top))
+		// A timed scroll cancels any in-flight caret animation.
+		scrollTo({ container, y, duration: 1 })
+	}
+	finally {
+		if (request === outlineNavigationRequest) placingOutlineHeading = false
+	}
+}
+
 function onEditorChange(changeEvent: EditorChangeEvent) {
 
 	// Manage annotation interactions
@@ -667,7 +702,7 @@ function onEditorChange(changeEvent: EditorChangeEvent) {
 			note.realizeFile()
 		}
 
-		if (selectionChanged && !isEditorMouseDown) {
+		if (selectionChanged && !isEditorMouseDown && !placingOutlineHeading) {
 			if (container && focusLevel >= FocusLevel.Typewriter) {
 				if (changeEvent.doc.selection) {
 					// Microtask means that layout is finished and the scroll appears to happen seemlessly
@@ -1447,7 +1482,14 @@ function updateCodeBlockSizing(pre: HTMLElement, context: CodeBlockSizingContext
 	style={`--noteWidthMax: ${$maxWidth}px;`}
 	style:--extraTop={extraTop + 'px'}
 	style:--lineGutterExtraWidth={`${Math.max(0, gutterWidth - 32)}px`}
+	style:--outlineWidth={`${hasOutline ? outlineWidth : 0}px`}
 >
+	{#if container && editorElement && hasOutline}
+		<NoteOutline {editor} {container} info={$outlineInfo} {extraTop} {gutterWidth}
+			onWidth={width => outlineWidth = width}
+			onControl={control => outlineControl?.set(control)}
+			onNavigate={navigateOutline} />
+	{/if}
 	<div class="extraTop" style={`height: ${effectiveExtraTop}px;`}></div>
 	{#if header}
 		<div bind:this={headerElement} class="headerContainer">
@@ -1477,6 +1519,10 @@ function updateCodeBlockSizing(pre: HTMLElement, context: CodeBlockSizingContext
 		class="note"
 		class:focusing={$focusing}
 		spellcheck={showSpellCheck}
+		onnote-position-request={(event: CustomEvent) => {
+			event.preventDefault()
+			tick().then(() => ensureRangeInView([event.detail, event.detail]))
+		}}
 	></article>
 	{#if (!editorIsFocused || !editable) && virtual}
 		<div
